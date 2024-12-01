@@ -1,0 +1,5 @@
+#Merge plugin should be configured
+libraries:
+  - 'com.zaxxer:HikariCP:5.0.0'
+  - 'mysql:mysql-connector-java:8.0.27'
+  - 'org.jooq:jooq:3.19.11'
