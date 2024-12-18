@@ -5,6 +5,7 @@ import me.ceze88.vortexcore.VortexPlugin;
 import me.ceze88.vortexcore.utils.CommandUtils;
 import me.ceze88.vortexcore.vinject.annotation.RegisterCommand;
 import net.vortexdevelopment.vinject.annotation.Registry;
+import net.vortexdevelopment.vinject.di.DependencyContainer;
 import net.vortexdevelopment.vinject.di.registry.AnnotationHandler;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -28,7 +29,7 @@ public class RegisterCommandHandler extends AnnotationHandler {
     }
 
     @Override
-    public void handle(Class<?> aClass) {
+    public void handle(Class<?> aClass, DependencyContainer dependencyContainer) {
         //Check if it implements CommandExecutor and/or TabCompleter and register them
         boolean isCommandExecutor = CommandExecutor.class.isAssignableFrom(aClass);
         boolean isTabCompleter = TabCompleter.class.isAssignableFrom(aClass);
@@ -42,19 +43,13 @@ public class RegisterCommandHandler extends AnnotationHandler {
         String command = registerCommand.commandName();
 
         // Create a new instance of the class
-        try {
-            Constructor<?> constructor = aClass.getDeclaredConstructor();
-            constructor.setAccessible(true);
-            Object instance = constructor.newInstance();
+        Object instance = dependencyContainer.newInstance(aClass);
 
-            // Register the command
-            if (isTabCompleter) {
-                CommandUtils.registerCommand(command, (CommandExecutor) instance, (TabCompleter) instance);
-            } else {
-                CommandUtils.registerCommand(command, (CommandExecutor) instance, null);
-            }
-        } catch (ReflectiveOperationException ex) {
-            ex.printStackTrace();
+        // Register the command
+        if (isTabCompleter) {
+            CommandUtils.registerCommand(command, (CommandExecutor) instance, (TabCompleter) instance);
+        } else {
+            CommandUtils.registerCommand(command, (CommandExecutor) instance, null);
         }
     }
 }

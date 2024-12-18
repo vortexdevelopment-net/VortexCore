@@ -54,7 +54,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         database = new Database(
                 databaseConfig.getString("Connection Settings.Hostname"),
                 databaseConfig.getString("Connection Settings.Port"),
-                databaseConfig.getString("Connection Settings.database"),
+                databaseConfig.getString("Connection Settings.Database"),
                 databaseConfig.getString("Connection Settings.Username"),
                 databaseConfig.getString("Connection Settings.Password"),
                 databaseConfig.getInt("Connection Settings.Pool Size")
