@@ -109,6 +109,27 @@
 
     <dependencies>
         <dependency>
+            <groupId>net.vortexdevelopment</groupId>
+            <artifactId>VInject</artifactId>
+            <version>1.0-SNAPSHOT</version>
+            <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.zaxxer</groupId>
+                    <artifactId>HikariCP</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>mysql</groupId>
+                    <artifactId>mysql-connector-java</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.mariadb.jdbc</groupId>
+                    <artifactId>mariadb-java-client</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
             <groupId>org.spigotmc</groupId>
             <artifactId>spigot-api</artifactId>
             <version>1.17.1-R0.1-SNAPSHOT</version>
@@ -132,12 +153,14 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.27</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
             <version>3.19.11</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
