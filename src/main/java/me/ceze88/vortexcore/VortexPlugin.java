@@ -44,6 +44,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         instance = this;
         VortexCore.setPlugin(this);
         this.dataManager = new DataManager(this);
+        onPreComponentLoad();
 
         String pluginRoot = getClass().getAnnotation(Root.class).packageName();
         if (pluginRoot == null) {
@@ -65,7 +66,6 @@ public abstract class VortexPlugin extends JavaPlugin {
         repositoryContainer = new RepositoryContainer(database);
         dependencyContainer.inject(this); //inject root class after all components are loaded
 
-
         onPluginEnable();
         getLogger().info("§aEnabled successfully!");
         getLogger().info(ChatColor.GREEN + "===================");
@@ -80,6 +80,8 @@ public abstract class VortexPlugin extends JavaPlugin {
         getLogger().info("§cDisabled successfully!");
         getLogger().info(ChatColor.RED + "===================");
     }
+
+    public abstract void onPreComponentLoad();
 
     public abstract void onPluginLoad();
 
