@@ -29,7 +29,7 @@ public class RegisterCommandHandler extends AnnotationHandler {
     }
 
     @Override
-    public void handle(Class<?> aClass, DependencyContainer dependencyContainer) {
+    public void handle(Class<?> aClass, Object component, DependencyContainer dependencyContainer) {
         //Check if it implements CommandExecutor and/or TabCompleter and register them
         boolean isCommandExecutor = CommandExecutor.class.isAssignableFrom(aClass);
         boolean isTabCompleter = TabCompleter.class.isAssignableFrom(aClass);
