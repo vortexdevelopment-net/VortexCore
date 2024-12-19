@@ -39,36 +39,43 @@ public abstract class VortexPlugin extends JavaPlugin {
 
     @Override
     public final void onEnable() {
-        getLogger().info(ChatColor.GREEN + "===================");
-        getLogger().info("Enabling " + getDescription().getName() + " v" + getDescription().getVersion());
-        instance = this;
-        VortexCore.setPlugin(this);
-        this.dataManager = new DataManager(this);
-        onPreComponentLoad();
+        try {
+            getLogger().info(ChatColor.GREEN + "===================");
+            getLogger().info("Enabling " + getDescription().getName() + " v" + getDescription().getVersion());
+            instance = this;
+            VortexCore.setPlugin(this);
+            this.dataManager = new DataManager(this);
+            onPreComponentLoad();
 
-        String pluginRoot = getClass().getAnnotation(Root.class).packageName();
-        if (pluginRoot == null) {
-            throw new RuntimeException("Plugin root not found");
+            String pluginRoot = getClass().getAnnotation(Root.class).packageName();
+            if (pluginRoot == null) {
+                throw new RuntimeException("Plugin root not found");
+            }
+
+            Config databaseConfig = new Config("database.yml");
+
+            //Scan the packages for
+            database = new Database(
+                    databaseConfig.getString("Connection Settings.Hostname"),
+                    databaseConfig.getString("Connection Settings.Port"),
+                    databaseConfig.getString("Connection Settings.Database"),
+                    databaseConfig.getString("Connection Settings.Username"),
+                    databaseConfig.getString("Connection Settings.Password"),
+                    databaseConfig.getInt("Connection Settings.Pool Size")
+            );
+            dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
+            repositoryContainer = new RepositoryContainer(database);
+            dependencyContainer.inject(this); //inject root class after all components are loaded
+
+            onPluginEnable();
+            getLogger().info("§aEnabled successfully!");
+            getLogger().info(ChatColor.GREEN + "===================");
+        } catch (Exception e) {
+            getLogger().severe("An error occurred while enabling the plugin: " + e.getMessage());
+            e.printStackTrace();
+            getLogger().severe(ChatColor.RED + "===================");
+            Bukkit.getPluginManager().disablePlugin(this);
         }
-
-        Config databaseConfig = new Config("database.yml");
-
-        //Scan the packages for
-        database = new Database(
-                databaseConfig.getString("Connection Settings.Hostname"),
-                databaseConfig.getString("Connection Settings.Port"),
-                databaseConfig.getString("Connection Settings.Database"),
-                databaseConfig.getString("Connection Settings.Username"),
-                databaseConfig.getString("Connection Settings.Password"),
-                databaseConfig.getInt("Connection Settings.Pool Size")
-        );
-        dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
-        repositoryContainer = new RepositoryContainer(database);
-        dependencyContainer.inject(this); //inject root class after all components are loaded
-
-        onPluginEnable();
-        getLogger().info("§aEnabled successfully!");
-        getLogger().info(ChatColor.GREEN + "===================");
     }
 
     @Override
