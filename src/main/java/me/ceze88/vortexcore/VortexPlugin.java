@@ -3,6 +3,8 @@ package me.ceze88.vortexcore;
 import me.ceze88.vortexcore.config.Config;
 import me.ceze88.vortexcore.database.DataManager;
 import me.ceze88.vortexcore.database.DataMigration;
+import net.vortexdevelopment.vinject.annotation.Component;
+import net.vortexdevelopment.vinject.annotation.MultipleClasses;
 import net.vortexdevelopment.vinject.annotation.Root;
 
 import net.vortexdevelopment.vinject.database.Database;
@@ -97,5 +99,19 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Deprecated
     protected void initDatabase(DataMigration... migrations) {
         dataManager.init(migrations);
+    }
+
+    protected void replaceBean(Class<?> holder, Object bean) {
+        //Get subclasses if present
+        MultipleClasses multipleClasses = holder.getAnnotation(MultipleClasses.class);
+        if (multipleClasses == null) {
+            //Just register the bean
+            dependencyContainer.replaceBean(holder, bean);
+            return;
+        }
+        dependencyContainer.replaceBean(holder, bean);
+        for (Class<?> clazz : multipleClasses.registerSubclasses()) {
+            dependencyContainer.replaceBean(clazz, bean);
+        }
     }
 }
