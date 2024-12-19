@@ -2,4 +2,5 @@
 libraries:
   - 'com.zaxxer:HikariCP:5.0.0'
   - 'mysql:mysql-connector-java:8.0.27'
+  - 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
   - 'org.jooq:jooq:3.19.11'

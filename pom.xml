@@ -41,6 +41,8 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <minimizeJar>true</minimizeJar>
+
                     <relocations>
                         <relocation>
                             <pattern>net.kyori</pattern>
@@ -73,6 +75,20 @@
                                 <exclude>META-INF/*.RSA</exclude>
                                 <exclude>**/LICENSE*</exclude>
                                 <exclude>**/NOTICE*</exclude>
+                            </excludes>
+                        </filter>
+                        <filter>
+                            <artifact>me.ceze88.vortexcore:VortexCore</artifact>
+                            <includes>
+                                <include>**</include>
+                            </includes>
+                        </filter>
+                        <filter>
+                            <artifact>net.vortexdevelopment:VInject</artifact>
+                            <excludes>
+                                <exclude>com/zaxxer/**</exclude>
+                                <exclude>com/mysql/**</exclude>
+                                <exclude>org/mariadb/**</exclude>
                             </excludes>
                         </filter>
                     </filters>
@@ -115,14 +131,6 @@
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
-                    <groupId>com.zaxxer</groupId>
-                    <artifactId>HikariCP</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>mysql</groupId>
-                    <artifactId>mysql-connector-java</artifactId>
-                </exclusion>
-                <exclusion>
                     <groupId>org.mariadb.jdbc</groupId>
                     <artifactId>mariadb-java-client</artifactId>
                 </exclusion>
@@ -147,18 +155,28 @@
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>5.1.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.27</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mariadb.jdbc</groupId>
+            <artifactId>mariadb-java-client</artifactId>
+            <version>3.4.1</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.jooq</groupId>
             <artifactId>jooq</artifactId>
             <version>3.19.11</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
