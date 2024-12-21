@@ -65,6 +65,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             );
             dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
             repositoryContainer = new RepositoryContainer(database);
+            dependencyContainer.injectStatic(this.getClass());
             dependencyContainer.inject(this); //inject root class after all components are loaded
 
             onPluginEnable();
