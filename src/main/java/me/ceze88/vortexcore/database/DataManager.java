@@ -59,7 +59,7 @@ public class DataManager implements DatabaseConnector {
         }
 
         hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl("jdbc:mysql://" + host + ":" + port + "/" + database);
+        hikariConfig.setJdbcUrl("jdbc:mariadb://" + host + ":" + port + "/" + database);
         hikariConfig.setUsername(username);
         hikariConfig.setPassword(password);
         hikariConfig.setMaximumPoolSize(maxConnections);
