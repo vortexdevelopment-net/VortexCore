@@ -20,13 +20,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Map;
 
-@Registry
+@Registry(annotation = RegisterCommand.class)
 public class RegisterCommandHandler extends AnnotationHandler {
-
-    @Override
-    public Class<? extends Annotation> getAnnotation() {
-        return RegisterCommand.class;
-    }
 
     @Override
     public void handle(Class<?> aClass, Object component, DependencyContainer dependencyContainer) {

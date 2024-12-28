@@ -9,13 +9,8 @@ import org.bukkit.Bukkit;
 
 import java.lang.annotation.Annotation;
 
-@Registry
+@Registry(annotation = RegisterListener.class)
 public class RegisterListenerHandler extends AnnotationHandler {
-
-    @Override
-    public Class<? extends Annotation> getAnnotation() {
-        return RegisterListener.class;
-    }
 
     @Override
     public void handle(Class<?> aClass, Object component, DependencyContainer dependencyContainer) {
