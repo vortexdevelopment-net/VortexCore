@@ -35,6 +35,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Override
     public final void onLoad() {
         onPluginLoad();
+        Database.setTablePrefix(this.getName().toLowerCase() + "_");
     }
 
     @Override
@@ -63,8 +64,8 @@ public abstract class VortexPlugin extends JavaPlugin {
                     databaseConfig.getString("Connection Settings.Password"),
                     databaseConfig.getInt("Connection Settings.Pool Size")
             );
-            dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
             repositoryContainer = new RepositoryContainer(database);
+            dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
             dependencyContainer.injectStatic(this.getClass());
             dependencyContainer.inject(this); //inject root class after all components are loaded
 
