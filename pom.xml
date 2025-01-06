@@ -126,7 +126,7 @@
     <dependencies>
         <dependency>
             <groupId>net.vortexdevelopment</groupId>
-            <artifactId>VInject</artifactId>
+            <artifactId>VInject-Framework</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>compile</scope>
             <exclusions>
