@@ -86,6 +86,8 @@ public abstract class VortexPlugin extends JavaPlugin {
         getLogger().info("Disabling " + getDescription().getName() + " v" + getDescription().getVersion());
         Bukkit.getScheduler().cancelTasks(this); //Make sure all tasks are cancelled
         onPluginDisable();
+        dataManager.shutdown();
+        database.shutdown();
         getLogger().info("§cDisabled successfully!");
         getLogger().info(ChatColor.RED + "===================");
     }
