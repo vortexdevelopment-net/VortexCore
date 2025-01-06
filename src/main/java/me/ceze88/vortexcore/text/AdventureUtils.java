@@ -1,7 +1,9 @@
 package me.ceze88.vortexcore.text;
 
+import me.ceze88.vortexcore.VortexCore;
 import me.ceze88.vortexcore.compatibility.ServerProject;
 import me.ceze88.vortexcore.compatibility.ServerVersion;
+import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -12,6 +14,8 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
 import org.bukkit.ChatColor;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -485,6 +489,22 @@ public class AdventureUtils {
     public static void sendActionBar(JavaPlugin hijackedPlugin, Component message, CommandSender sender) {
         try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(hijackedPlugin)) {
             bukkitAudiences.sender(sender).sendActionBar(message);
+        }
+    }
+
+    public static BossBar createBossBar(String title, BarColor color, BarStyle style, float progress, MiniMessagePlaceholder... placeholders) {
+        return BossBar.bossBar(formatComponent(title, placeholders), progress, BossBar.Color.valueOf(color.name()), BossBar.Overlay.valueOf(style.name()));
+    }
+
+    public static void showBossBar(BossBar bossBar, CommandSender sender) {
+        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
+            bukkitAudiences.sender(sender).showBossBar(bossBar);
+        }
+    }
+
+    public static void hideBossBar(BossBar bossBar, CommandSender sender) {
+        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
+            bukkitAudiences.sender(sender).hideBossBar(bossBar);
         }
     }
 }
