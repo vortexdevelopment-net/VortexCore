@@ -1,5 +1,6 @@
 package me.ceze88.vortexcore.text;
 
+import de.tr7zw.changeme.nbtapi.NBT;
 import me.ceze88.vortexcore.VortexCore;
 import me.ceze88.vortexcore.compatibility.ServerProject;
 import me.ceze88.vortexcore.compatibility.ServerVersion;
@@ -13,10 +14,13 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
@@ -37,11 +41,12 @@ public class AdventureUtils {
     private static Method getLoreMethod = null;
     private static Object gsonComponentSerializer;
     private static Method gsonDeserializeMethod;
+    private static Class<?> componentClass;
 
     static {
         if (ServerProject.isServer(ServerProject.PAPER) && ServerVersion.isServerVersionAtLeast(ServerVersion.V1_18)) {
             try {
-                Class<?> componentClass = Class.forName("net;kyori;adventure;text;Component".replace(";", "."));
+                componentClass = Class.forName("net;kyori;adventure;text;Component".replace(";", "."));
                 displayNameMethod = ItemMeta.class.getDeclaredMethod("displayName", componentClass);
                 setLoreMethod = ItemMeta.class.getDeclaredMethod("lore", List.class);
                 setLoreMethod = ItemMeta.class.getDeclaredMethod("lore");
@@ -150,12 +155,30 @@ public class AdventureUtils {
     }
 
     //Items
+    public static void addGlow(ItemStack itemStack) {
+        NBT.modify(itemStack, readWriteItemNBT -> {
+            if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_20_5)) {
+                readWriteItemNBT.mergeCompound(NBT.parseNBT("{minecraft:enchantments:[]}"));
+            } else {
+                readWriteItemNBT.mergeCompound(NBT.parseNBT("{ench:[]}"));
+            }
+        });
+    }
+
     public static void formatItemName(ItemStack item, String name) {
         formatItemName(item, formatComponent(name));
     }
 
+    public static void formatItemName(ItemStack item, String name, MiniMessagePlaceholder... placeholders) {
+        formatItemName(item, formatComponent(name, placeholders));
+    }
+
     public static void formatItemLore(ItemStack item, List<String> lore) {
         formatItemLore(item, lore.toArray(new String[0]));
+    }
+
+    public static void formatItemLore(ItemStack item, List<String> lore, MiniMessagePlaceholder... placeholders) {
+        formatItemLore(item, lore.toArray(new String[0]), placeholders);
     }
 
     public static void formatItemLore(ItemStack item, String... lore) {
@@ -164,6 +187,14 @@ public class AdventureUtils {
 
     public static void formatItemLore(ItemStack item, List<Component> lore, String... unused) {
         formatItemLore(item, lore.toArray(new Component[0]));
+    }
+
+    public static void formatItemLore(ItemStack item, String[] lore, MiniMessagePlaceholder... placeholders) {
+        LinkedList<Component> components = new LinkedList<>();
+        for (String line : lore) {
+            components.add(formatComponent(line, placeholders));
+        }
+        formatItemLore(item, components.toArray(new Component[0]));
     }
 
     public static void formatItemName(ItemStack item, Component name) {
@@ -505,6 +536,16 @@ public class AdventureUtils {
     public static void hideBossBar(BossBar bossBar, CommandSender sender) {
         try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
             bukkitAudiences.sender(sender).hideBossBar(bossBar);
+        }
+    }
+
+    public static Inventory createInventory(InventoryHolder owner, int rows, String title) {
+        //return (Inventory) Bukkit.createInventory(owner, rows * 9, convertToOriginalComponent(formatComponent(title)));
+        try {
+            Method createInventoryMethod = Bukkit.class.getDeclaredMethod("createInventory", InventoryHolder.class, int.class, componentClass);
+            return (Inventory) createInventoryMethod.invoke(null, owner, rows * 9, convertToOriginalComponent(formatComponent(title)));
+        } catch (Exception e) {
+            throw new RuntimeException("Could not create inventory. Old server version?", e);
         }
     }
 }

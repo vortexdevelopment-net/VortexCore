@@ -3,6 +3,7 @@ package me.ceze88.vortexcore;
 import me.ceze88.vortexcore.config.Config;
 import me.ceze88.vortexcore.database.DataManager;
 import me.ceze88.vortexcore.database.DataMigration;
+import me.ceze88.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vinject.annotation.Bean;
 import net.vortexdevelopment.vinject.annotation.Component;
 import net.vortexdevelopment.vinject.annotation.Root;
@@ -45,6 +46,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             getLogger().info("Enabling " + getDescription().getName() + " v" + getDescription().getVersion());
             instance = this;
             VortexCore.setPlugin(this);
+            GuiManager.register(this); //TODO add lang support
             this.dataManager = new DataManager(this);
             onPreComponentLoad();
 
@@ -77,11 +79,13 @@ public abstract class VortexPlugin extends JavaPlugin {
             e.printStackTrace();
             getLogger().severe(ChatColor.RED + "===================");
             Bukkit.getPluginManager().disablePlugin(this);
+            GuiManager.disable();
         }
     }
 
     @Override
     public final void onDisable() {
+        GuiManager.disable();
         getLogger().info(ChatColor.RED + "===================");
         getLogger().info("Disabling " + getDescription().getName() + " v" + getDescription().getVersion());
         Bukkit.getScheduler().cancelTasks(this); //Make sure all tasks are cancelled
