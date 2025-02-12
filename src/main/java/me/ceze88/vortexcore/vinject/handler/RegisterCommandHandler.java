@@ -38,7 +38,7 @@ public class RegisterCommandHandler extends AnnotationHandler {
         String command = registerCommand.commandName();
 
         // Create a new instance of the class
-        Object instance = dependencyContainer.newInstance(aClass);
+        Object instance = component == null ? dependencyContainer.newInstance(aClass) : component;
 
         // Register the command
         if (isTabCompleter) {
