@@ -17,6 +17,17 @@ public class RegisterListenerHandler extends AnnotationHandler {
         //Check if the class is a org.bukkit.event.Listener
         if (org.bukkit.event.Listener.class.isAssignableFrom(aClass)) {
             Object instance = dependencyContainer.newInstance(aClass);
+
+            String registerWhenClassPresent = aClass.getAnnotation(RegisterListener.class).registerWhenClassPresent();
+
+            if (!registerWhenClassPresent.isEmpty()) {
+                try {
+                    Class.forName(registerWhenClassPresent);
+                } catch (ClassNotFoundException e) {
+                    return;
+                }
+            }
+
             //Register the listener
             Bukkit.getPluginManager().registerEvents((org.bukkit.event.Listener) instance, VortexPlugin.getInstance());
         }
