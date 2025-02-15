@@ -42,9 +42,9 @@ public class RegisterCommandHandler extends AnnotationHandler {
 
         // Register the command
         if (isTabCompleter) {
-            CommandUtils.registerCommand(command, (CommandExecutor) instance, (TabCompleter) instance);
+            CommandUtils.registerCommand(command, (CommandExecutor) instance, (TabCompleter) instance, registerCommand.permission());
         } else {
-            CommandUtils.registerCommand(command, (CommandExecutor) instance, null);
+            CommandUtils.registerCommand(command, (CommandExecutor) instance, null, registerCommand.permission());
         }
     }
 }

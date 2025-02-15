@@ -11,4 +11,6 @@ import java.lang.annotation.Target;
 public @interface RegisterCommand {
 
     String commandName();
+
+    String permission() default "";
 }

@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class CommandUtils {
 
-    public static void registerCommand(String command, CommandExecutor executor, TabCompleter tabCompleter) {
+    public static void registerCommand(String command, CommandExecutor executor, TabCompleter tabCompleter, String permission) {
         try {
             // Retrieve the SimpleCommandMap from the server
             Class<?> clazzCraftServer = Bukkit.getServer().getClass();
@@ -30,6 +30,11 @@ public class CommandUtils {
 
             // Set command action
             commandObject.setExecutor(executor);
+
+            //Set permission if provided
+            if (permission != null && !permission.isEmpty()) {
+                commandObject.setPermission(permission);
+            }
 
             // Set tab complete
             commandObject.setTabCompleter(tabCompleter);
