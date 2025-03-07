@@ -1,0 +1,8 @@
+package ${PACKAGE_NAME};
+
+import me.ceze88.vortexcore.vinject.annotation.RegisterListener;
+import org.bukkit.event.Listener;
+
+@RegisterListener
+public class ${NAME} implements Listener {
+}
