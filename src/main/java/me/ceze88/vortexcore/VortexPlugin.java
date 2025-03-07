@@ -1,5 +1,6 @@
 package me.ceze88.vortexcore;
 
+import me.ceze88.vortexcore.chat.PromptManager;
 import me.ceze88.vortexcore.config.Config;
 import me.ceze88.vortexcore.database.DataManager;
 import me.ceze88.vortexcore.database.DataMigration;
@@ -13,6 +14,7 @@ import net.vortexdevelopment.vinject.database.repository.RepositoryContainer;
 import net.vortexdevelopment.vinject.di.DependencyContainer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public abstract class VortexPlugin extends JavaPlugin {
@@ -26,12 +28,12 @@ public abstract class VortexPlugin extends JavaPlugin {
         DOWNLOAD_ID = "%%DOWNLOAD_ID%%";
     }
     private static VortexPlugin instance;
-    @Deprecated
     private DataManager dataManager;
-
     private DependencyContainer dependencyContainer;
     private RepositoryContainer repositoryContainer;
     private Database database;
+
+    private PromptManager promptManager;
 
     @Override
     public final void onLoad() {
@@ -71,6 +73,8 @@ public abstract class VortexPlugin extends JavaPlugin {
             dependencyContainer.injectStatic(this.getClass());
             dependencyContainer.inject(this); //inject root class after all components are loaded
 
+            getServer().getPluginManager().registerEvents(new PromptManager(), this);
+
             onPluginEnable();
             getLogger().info("§aEnabled successfully!");
             getLogger().info(ChatColor.GREEN + "===================");
@@ -94,6 +98,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         database.shutdown();
         getLogger().info("§cDisabled successfully!");
         getLogger().info(ChatColor.RED + "===================");
+        HandlerList.unregisterAll(this);
     }
 
     public abstract void onPreComponentLoad();
@@ -108,14 +113,13 @@ public abstract class VortexPlugin extends JavaPlugin {
         return instance;
     }
 
-    @Deprecated
     public DataManager getDataManager() {
         return dataManager;
     }
 
-    @Deprecated
     protected void initDatabase(DataMigration... migrations) {
         dataManager.init(migrations);
+        database.init();
     }
 
     protected void replaceBean(Class<?> holder, Object bean) {
