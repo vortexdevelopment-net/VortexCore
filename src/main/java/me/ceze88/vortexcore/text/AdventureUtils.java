@@ -165,12 +165,20 @@ public class AdventureUtils {
         });
     }
 
+    public static void formatItemName(ItemMeta meta, String name) {
+        setItemName(meta, formatComponent(name));
+    }
+
     public static void formatItemName(ItemStack item, String name) {
         formatItemName(item, formatComponent(name));
     }
 
     public static void formatItemName(ItemStack item, String name, MiniMessagePlaceholder... placeholders) {
         formatItemName(item, formatComponent(name, placeholders));
+    }
+
+    public static void formatItemLore(ItemMeta meta, String name) {
+        setItemLore(meta, formatComponent(name));
     }
 
     public static void formatItemLore(ItemStack item, List<String> lore) {
@@ -229,14 +237,8 @@ public class AdventureUtils {
     }
 
     private static void setItemName(ItemStack item, Component name) {
-        if (name == null) {
-            return;
-        }
-
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
-            return;
-        }
+        if (meta == null) return;
 
         if (isMiniMessageEnabled()) {
             //Set name as a component
@@ -249,6 +251,42 @@ public class AdventureUtils {
         }
         meta.setDisplayName(toLegacy(name));
         item.setItemMeta(meta);
+    }
+
+    private static void setItemName(ItemMeta meta, Component name) {
+        if (name == null) {
+            return;
+        }
+
+        if (meta == null) {
+            return;
+        }
+
+        if (isMiniMessageEnabled()) {
+            //Set name as a component
+            try {
+                displayNameMethod.invoke(meta, convertToOriginalComponent(name));
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+        meta.setDisplayName(toLegacy(name));
+    }
+
+    private static void setItemLore(ItemMeta meta, Component... lore) {
+        if (lore == null || lore.length == 0) {
+            return;
+        }
+
+        if (isMiniMessageEnabled()) {
+            //Set lore as component
+            try {
+                setLoreMethod.invoke(meta, convertToOriginalComponent(lore));
+                return;
+            } catch (Exception ignored) {
+            }
+        }
+        meta.setLore(toLegacy(lore));
     }
 
     private static void setItemLore(ItemStack item, Component... lore) {
