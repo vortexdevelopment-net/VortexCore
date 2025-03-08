@@ -6,6 +6,7 @@ import me.ceze88.vortexcore.database.DataManager;
 import me.ceze88.vortexcore.database.DataMigration;
 import me.ceze88.vortexcore.gui.GuiManager;
 import me.ceze88.vortexcore.hooks.internal.ReloadHook;
+import me.ceze88.vortexcore.vinject.annotation.RegisterReloadHook;
 import net.vortexdevelopment.vinject.annotation.Bean;
 import net.vortexdevelopment.vinject.annotation.Component;
 import net.vortexdevelopment.vinject.annotation.Root;
@@ -151,6 +152,9 @@ public abstract class VortexPlugin extends JavaPlugin {
     }
 
     public void runReloadHooks() {
-        reloadHooks.forEach(ReloadHook::onReload);
+        //Order by priority
+        List<ReloadHook> hooks = new ArrayList<>(reloadHooks);
+        hooks.sort((o1, o2) -> Integer.compare(o2.getClass().getAnnotation(RegisterReloadHook.class).priority(), o1.getClass().getAnnotation(RegisterReloadHook.class).priority()));
+        hooks.forEach(ReloadHook::onReload);
     }
 }
