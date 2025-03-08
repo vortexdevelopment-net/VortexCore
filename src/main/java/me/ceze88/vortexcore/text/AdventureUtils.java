@@ -177,8 +177,12 @@ public class AdventureUtils {
         formatItemName(item, formatComponent(name, placeholders));
     }
 
-    public static void formatItemLore(ItemMeta meta, String name) {
-        setItemLore(meta, formatComponent(name));
+    public static void formatItemLore(ItemMeta meta, List<String> lore) {
+        setItemLore(meta, formatComponent(lore).toArray(new Component[0]));
+    }
+
+    public static void formatItemLore(ItemMeta meta, List<String> lore, MiniMessagePlaceholder... placeholders) {
+        setItemLore(meta, formatComponent(lore, placeholders).toArray(new Component[0]));
     }
 
     public static void formatItemLore(ItemStack item, List<String> lore) {
