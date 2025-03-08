@@ -16,7 +16,7 @@ public class RegisterListenerHandler extends AnnotationHandler {
     public void handle(Class<?> aClass, Object component, DependencyContainer dependencyContainer) {
         //Check if the class is a org.bukkit.event.Listener
         if (org.bukkit.event.Listener.class.isAssignableFrom(aClass)) {
-            Object instance = dependencyContainer.newInstance(aClass);
+            Object instance = component != null ? component : dependencyContainer.newInstance(aClass);
 
             String registerWhenClassPresent = aClass.getAnnotation(RegisterListener.class).registerWhenClassPresent();
 

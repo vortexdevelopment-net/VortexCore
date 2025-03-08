@@ -5,6 +5,7 @@ import me.ceze88.vortexcore.config.Config;
 import me.ceze88.vortexcore.database.DataManager;
 import me.ceze88.vortexcore.database.DataMigration;
 import me.ceze88.vortexcore.gui.GuiManager;
+import me.ceze88.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vinject.annotation.Bean;
 import net.vortexdevelopment.vinject.annotation.Component;
 import net.vortexdevelopment.vinject.annotation.Root;
@@ -16,6 +17,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public abstract class VortexPlugin extends JavaPlugin {
 
@@ -34,6 +40,8 @@ public abstract class VortexPlugin extends JavaPlugin {
     private Database database;
 
     private PromptManager promptManager;
+
+    private Set<ReloadHook> reloadHooks = new HashSet<>();
 
     @Override
     public final void onLoad() {
@@ -136,5 +144,13 @@ public abstract class VortexPlugin extends JavaPlugin {
             }
         }
         dependencyContainer.replaceBean(holder, bean);
+    }
+
+    public void registerReloadHook(ReloadHook hook) {
+        reloadHooks.add(hook);
+    }
+
+    public void runReloadHooks() {
+        reloadHooks.forEach(ReloadHook::onReload);
     }
 }
