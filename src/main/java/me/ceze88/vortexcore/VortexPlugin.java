@@ -108,6 +108,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         getLogger().info("§cDisabled successfully!");
         getLogger().info(ChatColor.RED + "===================");
         HandlerList.unregisterAll(this);
+        dependencyContainer.release();
     }
 
     public abstract void onPreComponentLoad();

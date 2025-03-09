@@ -39,7 +39,6 @@ public class DataManager implements DatabaseConnector {
 
     protected final ExecutorService asyncPool = new ThreadPoolExecutor(1, 5, 30L, TimeUnit.SECONDS, new LinkedBlockingQueue<>(), new ThreadFactoryBuilder().setNameFormat(getClass().getSimpleName() + "-Database-Async-%d").build());
 
-
     public DataManager(VortexPlugin plugin) {
         this.plugin = plugin;
     }
@@ -523,7 +522,9 @@ public class DataManager implements DatabaseConnector {
         this.asyncPool.shutdownNow();
 
         try {
-            this.hikariPool.shutdown();
+            if (hikariPool != null) {
+                this.hikariPool.shutdown();
+            }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

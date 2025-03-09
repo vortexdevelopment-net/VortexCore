@@ -41,6 +41,7 @@ public class AdventureUtils {
     private static Method getLoreMethod = null;
     private static Object gsonComponentSerializer;
     private static Method gsonDeserializeMethod;
+    private static Method gsonSerializeMethod;
     private static Class<?> componentClass;
 
     static {
@@ -53,9 +54,25 @@ public class AdventureUtils {
                 gsonComponentSerializer = Class.forName("net;kyori;adventure;text;serializer;gson;GsonComponentSerializer".replace(";", ".")).getDeclaredMethod("gson").invoke(null);
                 gsonDeserializeMethod = gsonComponentSerializer.getClass().getDeclaredMethod("deserialize", String.class);
                 gsonDeserializeMethod.setAccessible(true);
-
+                gsonSerializeMethod = gsonComponentSerializer.getClass().getDeclaredMethod("serialize", componentClass);
+                gsonSerializeMethod.setAccessible(true);
             } catch (Exception ignored) {
             }
+        }
+    }
+
+    public static Class<?> getComponentClass() {
+        return componentClass;
+    }
+
+    //Convert from non-shaded to shaded component
+    public static Component convertToShadedComponent(Object original) {
+        //Serialize with gson
+        try {
+            String json = gsonSerializeMethod.invoke(gsonComponentSerializer, original).toString();
+            return GsonComponentSerializer.gson().deserialize(json);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -146,8 +163,8 @@ public class AdventureUtils {
         }
     }
 
-    public static void sendMessage(Plugin plugin, Component message, CommandSender... target) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(plugin)) {
+    public static void sendMessage(Component message, CommandSender... target) {
+        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
             for (CommandSender sender : target) {
                 bukkitAudiences.sender(sender).sendMessage(message);
             }

@@ -157,9 +157,7 @@ public class Gui implements GuiHolder {
         if (clear) {
             inventory.clear();
             for (GuiItem item : items) {
-                if (item.shouldUpdate()) {
-                    item.updateItem();
-                }
+                item.updateItem();
                 inventory.setItem(item.getX() + item.getY() * 9, item.getItem());
             }
         } else {
@@ -196,6 +194,11 @@ public class Gui implements GuiHolder {
     }
 
     public Gui close(Player player) {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), () -> close(player));
+            return this;
+        }
+
         player.closeInventory();
         openers.remove(player);
         if (openers.isEmpty()) {
@@ -361,6 +364,14 @@ public class Gui implements GuiHolder {
     @Override
     public void updateItem(GuiItem item) {
         inventory.setItem(item.getX() + item.getY() * 9, item.updateItem());
+    }
+
+    @Override
+    public void updateItemAt(int slot) {
+        GuiItem item = getItem(slot);
+        if (item != null) {
+            inventory.setItem(slot, item.updateItem());
+        }
     }
 
     public UUID getUID() {

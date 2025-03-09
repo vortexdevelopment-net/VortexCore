@@ -48,4 +48,6 @@ public interface GuiHolder extends InventoryHolder {
     void onClose(Player player);
 
     void updateItem(GuiItem item);
+
+    void updateItemAt(int slot);
 }
