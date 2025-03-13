@@ -10,18 +10,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GuiManager {
 
     private static final GuiListener inventoryListener = new GuiListener();
-    private static final Set<Gui> openGuis = ConcurrentHashMap.newKeySet();
+    private static final Set<GuiHolder> openGuis = ConcurrentHashMap.newKeySet();
 
-    public static void markAsOpen(Gui gui) {
+    public static void markAsOpen(GuiHolder gui) {
         openGuis.add(gui);
     }
 
-    public static void markAsClosed(Gui gui) {
+    public static void markAsClosed(GuiHolder gui) {
         openGuis.remove(gui);
     }
 
     public static void disable() {
-        for (Gui gui : new HashSet<>(openGuis)) {
+        for (GuiHolder gui : new HashSet<>(openGuis)) {
             gui.closeAll();
         }
     }

@@ -40,6 +40,11 @@ public class GuiListener implements Listener {
                 }
             }
 
+            if (gui instanceof PaginatedGui paginatedGui) {
+                paginatedGui.handleClick(event);
+                return;
+            }
+
             GuiItem item = gui.getItem(event.getSlot());
 
             if (item != null) {

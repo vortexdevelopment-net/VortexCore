@@ -50,4 +50,6 @@ public interface GuiHolder extends InventoryHolder {
     void updateItem(GuiItem item);
 
     void updateItemAt(int slot);
+
+    GuiHolder closeAll();
 }
