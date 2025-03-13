@@ -4,3 +4,4 @@ libraries:
   - 'mysql:mysql-connector-java:8.0.27'
   - 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
   - 'org.jooq:jooq:3.19.11'
+  - 'com.google.code.gson:gson:2.8.8'
