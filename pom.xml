@@ -89,7 +89,6 @@
                                 <exclude>com/mysql/**</exclude>
                                 <exclude>org/mariadb/**</exclude>
                                 <exclude>com/sun/**</exclude>
-                                <exclude>javassist/**</exclude>
                                 <exclude>waffle/**</exclude>
                             </excludes>
                         </filter>
