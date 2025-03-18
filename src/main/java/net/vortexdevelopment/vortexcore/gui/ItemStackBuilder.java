@@ -94,7 +94,7 @@ public class ItemStackBuilder {
         if (itemStack.getType() == Material.AIR) {
             throw new IllegalArgumentException("Cannot add glow to AIR ItemStack");
         }
-        AdventureUtils.addGlow(itemStack);
+        //AdventureUtils.addGlow(itemStack);
         return this;
     }
 

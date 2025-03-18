@@ -1,6 +1,5 @@
 package net.vortexdevelopment.vortexcore.text;
 
-import de.tr7zw.changeme.nbtapi.NBT;
 import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
@@ -172,13 +171,13 @@ public class AdventureUtils {
 
     //Items
     public static void addGlow(ItemStack itemStack) {
-        NBT.modify(itemStack, readWriteItemNBT -> {
-            if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_20_5)) {
-                readWriteItemNBT.mergeCompound(NBT.parseNBT("{minecraft:enchantments:[]}"));
-            } else {
-                readWriteItemNBT.mergeCompound(NBT.parseNBT("{ench:[]}"));
-            }
-        });
+//        NBT.modify(itemStack, readWriteItemNBT -> {
+//            if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_20_5)) {
+//                readWriteItemNBT.mergeCompound(NBT.parseNBT("{minecraft:enchantments:[]}"));
+//            } else {
+//                readWriteItemNBT.mergeCompound(NBT.parseNBT("{ench:[]}"));
+//            }
+//        });
     }
 
     public static void formatItemName(ItemMeta meta, String name) {
