@@ -45,6 +45,8 @@ public class Gui implements GuiHolder {
 
     private Gui previusGui = null;
 
+    public static String BACK_BUTTON_NAME = "§cBack";
+
     public Gui(String name, int rows) {
         this.rows = rows;
         this.inventory = AdventureUtils.createInventory(this, rows, name);
@@ -54,7 +56,7 @@ public class Gui implements GuiHolder {
         this.previusGui = gui;
         //Add a back button to the bottom left corner
         ItemStack back = new ItemStack(Material.ARROW);
-        AdventureUtils.formatItemName(back, "§cVissza");
+        AdventureUtils.formatItemName(back, BACK_BUTTON_NAME);
         addItem(new GuiItem(back, (event, gui1, guiItem) -> {
             if (previusGui != null) {
                 //Check if any of the items needs to be re-drawn
