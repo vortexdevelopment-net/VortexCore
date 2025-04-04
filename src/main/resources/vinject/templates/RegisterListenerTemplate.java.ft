@@ -1,5 +1,6 @@
 package ${PACKAGE_NAME};
 
+import org.bukkit.event.Listener;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 
 @RegisterListener

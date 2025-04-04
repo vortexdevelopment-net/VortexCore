@@ -23,7 +23,7 @@ public class CommandUtils {
             SimpleCommandMap commandMap = (SimpleCommandMap) craftServer.getClass()
                     .getDeclaredMethod("getCommandMap").invoke(craftServer);
 
-            // Construct a new Command object
+            // Construct a new BaseCommand object
             Constructor<PluginCommand> constructorPluginCommand = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
             constructorPluginCommand.setAccessible(true);
             PluginCommand commandObject = constructorPluginCommand.newInstance(command, VortexPlugin.getInstance());

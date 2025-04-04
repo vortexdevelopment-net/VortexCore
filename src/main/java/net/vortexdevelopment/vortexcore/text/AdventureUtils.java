@@ -458,11 +458,6 @@ public class AdventureUtils {
     }
 
     public static String getColor(char c) {
-        ChatColor color = ChatColor.getByChar(c);
-        if (color == null) {
-            return null;
-        }
-
         switch (c) {
             case '0':
                 return "<black>";
@@ -514,10 +509,7 @@ public class AdventureUtils {
     }
 
     public static String clear(String msg) {
-        msg = msg.replaceAll("&[0-9abcdefklmnor]", "");
-        msg = msg.replaceAll("§[0-9abcdefklmnor]", "");
-        msg = msg.replaceAll("&#[0-9a-fA-F]{6}", "");
-        return PlainTextComponentSerializer.plainText().serialize(MiniMessage.miniMessage().deserialize(msg));
+        return PlainTextComponentSerializer.plainText().serialize(MiniMessage.miniMessage().deserialize(replaceLegacy(msg)));
     }
 
     public static String clear(Component component) {

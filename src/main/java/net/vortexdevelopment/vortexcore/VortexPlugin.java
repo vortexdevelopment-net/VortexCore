@@ -1,6 +1,9 @@
 package net.vortexdevelopment.vortexcore;
 
+import lombok.Getter;
+import net.vortexdevelopment.vinject.annotation.Inject;
 import net.vortexdevelopment.vortexcore.chat.PromptManager;
+import net.vortexdevelopment.vortexcore.command.CommandManager;
 import net.vortexdevelopment.vortexcore.config.Config;
 import net.vortexdevelopment.vortexcore.database.DataManager;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
@@ -18,10 +21,12 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.checkerframework.checker.units.qual.C;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 public abstract class VortexPlugin extends JavaPlugin {
@@ -39,13 +44,27 @@ public abstract class VortexPlugin extends JavaPlugin {
     private DependencyContainer dependencyContainer;
     private RepositoryContainer repositoryContainer;
     private Database database;
-
     private PromptManager promptManager;
+    @Getter
+    private CommandManager commandManager = new CommandManager();
 
     private Set<ReloadHook> reloadHooks = new HashSet<>();
 
     @Override
     public final void onLoad() {
+        instance = this;
+
+        //Read the database config in case it needs to be used in the plugin load
+        Config databaseConfig = new Config("database.yml");
+        database = new Database(
+                databaseConfig.getString("Connection Settings.Hostname"),
+                databaseConfig.getString("Connection Settings.Port"),
+                databaseConfig.getString("Connection Settings.Database"),
+                databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH),
+                databaseConfig.getString("Connection Settings.Username"),
+                databaseConfig.getString("Connection Settings.Password"),
+                databaseConfig.getInt("Connection Settings.Pool Size")
+        );
         onPluginLoad();
         Database.setTablePrefix(this.getName().toLowerCase() + "_");
     }
@@ -55,30 +74,21 @@ public abstract class VortexPlugin extends JavaPlugin {
         try {
             getLogger().info(ChatColor.GREEN + "===================");
             getLogger().info("Enabling " + getDescription().getName() + " v" + getDescription().getVersion());
-            instance = this;
             VortexCore.setPlugin(this);
             GuiManager.register(this); //TODO add lang support
             this.dataManager = new DataManager(this);
-            onPreComponentLoad();
 
             String pluginRoot = getClass().getAnnotation(Root.class).packageName();
             if (pluginRoot == null) {
                 throw new RuntimeException("Plugin root not found");
             }
 
-            Config databaseConfig = new Config("database.yml");
 
             //Scan the packages for
-            database = new Database(
-                    databaseConfig.getString("Connection Settings.Hostname"),
-                    databaseConfig.getString("Connection Settings.Port"),
-                    databaseConfig.getString("Connection Settings.Database"),
-                    databaseConfig.getString("Connection Settings.Username"),
-                    databaseConfig.getString("Connection Settings.Password"),
-                    databaseConfig.getInt("Connection Settings.Pool Size")
-            );
             repositoryContainer = new RepositoryContainer(database);
-            dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer);
+            dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this, database, repositoryContainer, unused -> {
+                onPreComponentLoad();
+            });
             dependencyContainer.injectStatic(this.getClass());
             dependencyContainer.inject(this); //inject root class after all components are loaded
 
@@ -103,12 +113,16 @@ public abstract class VortexPlugin extends JavaPlugin {
         getLogger().info("Disabling " + getDescription().getName() + " v" + getDescription().getVersion());
         Bukkit.getScheduler().cancelTasks(this); //Make sure all tasks are cancelled
         onPluginDisable();
-        dataManager.shutdown();
+        if (dataManager != null) {
+            dataManager.shutdown();
+        }
         database.shutdown();
         getLogger().info("§cDisabled successfully!");
         getLogger().info(ChatColor.RED + "===================");
         HandlerList.unregisterAll(this);
-        dependencyContainer.release();
+        if (dependencyContainer != null) {
+            dependencyContainer.release();
+        }
     }
 
     public abstract void onPreComponentLoad();
@@ -128,8 +142,17 @@ public abstract class VortexPlugin extends JavaPlugin {
     }
 
     protected void initDatabase(DataMigration... migrations) {
-        dataManager.init(migrations);
-        database.init();
+        try {
+            dataManager.init(migrations);
+            database.init();
+        } catch (Exception e) {
+            getLogger().severe("Could not connect to the database: " + e.getMessage());
+            getLogger().severe("Please correctly set up your database connection in the database.yml file.");
+            getLogger().severe("Disabling plugin...");
+            Bukkit.getScheduler().cancelTasks(this);
+            HandlerList.unregisterAll(this);
+            Bukkit.getPluginManager().disablePlugin(this);
+        }
     }
 
     protected void replaceBean(Class<?> holder, Object bean) {

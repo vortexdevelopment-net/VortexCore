@@ -9,7 +9,7 @@ public class MiniMessagePlaceholder {
 
     public MiniMessagePlaceholder(String placeholder, String value) {
         this.placeholder = placeholder;
-        this.value = value;
+        this.value = AdventureUtils.replaceLegacy(value);
     }
 
     public MiniMessagePlaceholder(String placeholder, Number value) {

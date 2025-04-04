@@ -20,6 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -57,8 +58,10 @@ public class DataManager implements DatabaseConnector {
             throw new IllegalArgumentException("Invalid database configuration. Please set up the database.yml file correctly.");
         }
 
+        String type = databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH);
+
         hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl("jdbc:mariadb://" + host + ":" + port + "/" + database);
+        hikariConfig.setJdbcUrl("jdbc:" + type + "://" + host + ":" + port + "/" + database);
         hikariConfig.setUsername(username);
         hikariConfig.setPassword(password);
         hikariConfig.setMaximumPoolSize(maxConnections);
