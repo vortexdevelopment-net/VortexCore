@@ -46,13 +46,14 @@ public abstract class VortexPlugin extends JavaPlugin {
     private Database database;
     private PromptManager promptManager;
     @Getter
-    private CommandManager commandManager = new CommandManager();
+    private CommandManager commandManager;
 
     private Set<ReloadHook> reloadHooks = new HashSet<>();
 
     @Override
     public final void onLoad() {
         instance = this;
+        commandManager = new CommandManager(this);
 
         //Read the database config in case it needs to be used in the plugin load
         Config databaseConfig = new Config("database.yml");

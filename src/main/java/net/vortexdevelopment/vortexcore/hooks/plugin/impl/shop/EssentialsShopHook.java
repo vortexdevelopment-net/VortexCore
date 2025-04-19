@@ -11,6 +11,11 @@ public class EssentialsShopHook extends ShopHook {
     private IEssentials essentials;
 
     @Override
+    public double getPrice(ItemStack itemStack) {
+        return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
+    }
+
+    @Override
     public double getPrice(ItemStack itemStack, Player player) {
         return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
     }

@@ -35,8 +35,8 @@ public class CommandManager {
     private final CommandExecutor sharedExecutor; // Singleton executor
     private final TabCompleter sharedTabCompleter; // Add singleton tab completer
 
-    public CommandManager() {
-        this.plugin = VortexPlugin.getInstance();
+    public CommandManager(VortexPlugin plugin) {
+        this.plugin = plugin;
         this.resolvers = new HashMap<>();
         this.commandInstances = new HashMap<>();
         this.sharedExecutor = createSharedExecutor();
@@ -298,6 +298,10 @@ public class CommandManager {
                 
                 if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
                     String paramName = patternPart.substring(1, patternPart.length() - 1);
+                    //make sure we send the real parameter name for tab completion
+                    if (paramName.contains("=")) {
+                        paramName = paramName.split("=")[0];
+                    }
                     
                     // Check if we have a tab completer for this parameter
                     Method tabMethod = paramTabCompleteMethods.get(paramName);
@@ -376,51 +380,29 @@ public class CommandManager {
      */
     private Object[] createMatchingParameters(CommandSender sender, Method method, String[] args, int argIndex) {
         Parameter[] parameters = method.getParameters();
-        Object[] methodParams = new Object[parameters.length];
-        
+        Object[] values = new Object[parameters.length];
+        int stringArgIndex = 0; // tracks progression through args array for normal parameters
+
         for (int i = 0; i < parameters.length; i++) {
             Parameter param = parameters[i];
-            
-            if (param.isAnnotationPresent(Sender.class)) {
-                // Handle sender parameter
-                if (param.getType().isAssignableFrom(sender.getClass())) {
-                    methodParams[i] = sender;
-                } else if (param.getType() == Player.class && sender instanceof Player) {
-                    methodParams[i] = sender;
-                } else {
-                    methodParams[i] = null;
-                }
-            } else if (param.isAnnotationPresent(TabArgs.class)) {
-                // Handle args parameter
-                if (param.getType() == String[].class) {
-                    methodParams[i] = args;
-                } else {
-                    methodParams[i] = null;
-                }
-            } else if (param.isAnnotationPresent(TabIndex.class)) {
-                // Handle index parameter
-                if (param.getType() == int.class || param.getType() == Integer.class) {
-                    methodParams[i] = argIndex;
-                } else {
-                    methodParams[i] = param.getType() == int.class ? 0 : null;
-                }
+            if (param.getType().equals(CommandSender.class)) {
+                values[i] = sender;
+            } else if (param.isAnnotationPresent(net.vortexdevelopment.vortexcore.command.annotation.Current.class)) {
+                // Inject the "current tab argument" as a string.
+                String current = (argIndex >= 0 && argIndex < args.length) ? args[argIndex] : "";
+                values[i] = current;
             } else {
-                // For backward compatibility, try to infer the parameter type
-                if (i == 0 && (param.getType().isAssignableFrom(sender.getClass()) || 
-                             (param.getType() == Player.class && sender instanceof Player))) {
-                    methodParams[i] = sender;
-                } else if (i == 1 && param.getType() == String[].class) {
-                    methodParams[i] = args;
-                } else if (i == 2 && (param.getType() == int.class || param.getType() == Integer.class)) {
-                    methodParams[i] = argIndex;
+                // Handle other parameters, typically those resolved from args
+                if (stringArgIndex < args.length) {
+                    values[i] = resolveParameter(param.getType(), args[stringArgIndex++]);
                 } else {
-                    methodParams[i] = null;
+                    values[i] = null; // or provide default/fallback logic as appropriate
                 }
             }
         }
-        
-        return methodParams;
+        return values;
     }
+
 
     /**
      * Checks if a command pattern matches the current args for tab completion
@@ -496,44 +478,63 @@ public class CommandManager {
      */
     private boolean matchesSubCommand(String pattern, String[] args) {
         String[] patternParts = pattern.split(" ");
-        
-        // Handle wildcard pattern at the end (e.g., {**})
+
+        // Count required parts (non-parameter or parameters without default values)
+        int requiredParts = 0;
+        for (String part : patternParts) {
+            if (!part.startsWith("{") || !part.endsWith("}") ||
+                    (part.startsWith("{") && part.endsWith("}") && !part.contains("="))) {
+                requiredParts++;
+            }
+        }
+
+        // Handle wildcard pattern at the end
         boolean hasWildcard = patternParts.length > 0 && patternParts[patternParts.length - 1].equals("{**}");
-        
-        // If we have a wildcard, we need at least the number of non-wildcard parts
         if (hasWildcard) {
-            if (args.length < patternParts.length - 1) return false;
-        } 
-        // Without wildcard, we need exact match in length
-        else if (patternParts.length != args.length) {
+            requiredParts--;
+        }
+
+        // Make sure we have at least the required number of args
+        if (args.length < requiredParts) {
             return false;
         }
-    
+
         // Check each part of the pattern against the args
         int argIndex = 0;
         for (int i = 0; i < patternParts.length; i++) {
-            // Skip wildcard at the end, we've already handled the length check
+            // Skip wildcard at the end
             if (i == patternParts.length - 1 && hasWildcard) {
                 break;
             }
-            
+
             String patternPart = patternParts[i];
-            
-            // If it's a parameter placeholder, just increment the arg index
+
+            // If it's a parameter placeholder
             if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
-                argIndex++;
+                boolean hasDefault = patternPart.contains("=");
+
+                // If we've used all args and this parameter has a default, it's optional
+                if (argIndex >= args.length && hasDefault) {
+                    continue;
+                }
+
+                // If we still have args, use this one and increment arg index
+                if (argIndex < args.length) {
+                    argIndex++;
+                }
                 continue;
             }
-            
+
             // For static text, it must match exactly
-            if (!patternPart.equalsIgnoreCase(args[argIndex])) {
+            if (argIndex >= args.length || !patternPart.equalsIgnoreCase(args[argIndex])) {
                 return false;
             }
-            
+
             argIndex++;
         }
-        
-        return true;
+
+        // Make sure we've consumed all args unless there's a wildcard
+        return hasWildcard || argIndex >= args.length;
     }
 
     /**
@@ -622,6 +623,9 @@ public class CommandManager {
     private Object[] resolveParameters(CommandSender sender, Method method, String[] args) {
         Parameter[] parameters = method.getParameters();
         Object[] resolvedParams = new Object[parameters.length];
+
+        // Create a map to store default values from the pattern
+        Map<String, String> defaultValues = extractDefaultValuesFromPattern(method);
         
         // Track which args have been used
         boolean[] usedArgs = new boolean[args.length];
@@ -673,7 +677,12 @@ public class CommandManager {
                     usedArgs[paramIndex] = true;
                 } else {
                     // Parameter not found or already used
-                    return null;
+                    String defaultValue = defaultValues.get(paramName);
+                    if (defaultValue != null) {
+                        resolvedParams[i] = resolveParameter(parameter.getType(), defaultValue);
+                    } else {
+                        return null; // Parameter not found and no default value
+                    }
                 }
             } else if (resolvedParams[i] == null) {
                 // For parameters without annotations, try to resolve by position
@@ -704,6 +713,44 @@ public class CommandManager {
         
         return resolvedParams;
     }
+
+    // Add this new method to extract default values from pattern
+    private Map<String, String> extractDefaultValuesFromPattern(Method method) {
+        Map<String, String> defaultValues = new HashMap<>();
+
+        if (method.isAnnotationPresent(SubCommand.class)) {
+            SubCommand subCommand = method.getAnnotation(SubCommand.class);
+            String pattern = subCommand.command();
+
+            // Process main command pattern
+            extractDefaultsFromPattern(pattern, defaultValues);
+
+            // Process aliases
+            for (String alias : subCommand.aliases()) {
+                extractDefaultsFromPattern(alias, defaultValues);
+            }
+        }
+
+        return defaultValues;
+    }
+
+    // Helper method to extract defaults from a single pattern
+    private void extractDefaultsFromPattern(String pattern, Map<String, String> defaultValues) {
+        String[] patternParts = pattern.split(" ");
+
+        for (String part : patternParts) {
+            if (part.startsWith("{") && part.endsWith("}")) {
+                String paramContent = part.substring(1, part.length() - 1);
+
+                if (paramContent.contains("=")) {
+                    String[] parts = paramContent.split("=", 2);
+                    String paramName = parts[0];
+                    String defaultValue = parts[1];
+                    defaultValues.put(paramName, defaultValue);
+                }
+            }
+        }
+    }
     
     /**
      * Finds the index of a parameter in the command args
@@ -714,11 +761,17 @@ public class CommandManager {
             SubCommand subCommand = method.getAnnotation(SubCommand.class);
             String pattern = subCommand.command();
             String[] patternParts = pattern.split(" ");
-            
+
             for (int i = 0; i < patternParts.length; i++) {
                 String part = patternParts[i];
                 if (part.startsWith("{") && part.endsWith("}")) {
                     String name = part.substring(1, part.length() - 1);
+
+                    // Extract just the parameter name if it has a default value
+                    if (name.contains("=")) {
+                        name = name.split("=", 2)[0];
+                    }
+
                     if (name.equals(paramName) && i < args.length) {
                         return i;
                     }

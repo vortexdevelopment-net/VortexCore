@@ -337,5 +337,21 @@
             <version>3.0.0</version>
             <scope>provided</scope>
         </dependency>
+        <!-- Testing Dependencies -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Recommended for testing Bukkit plugins -->
+        <!-- Uncomment to use MockBukkit for testing -->
+        <dependency>
+            <groupId>org.mockbukkit.mockbukkit</groupId>
+            <artifactId>mockbukkit-v1.21</artifactId>
+            <version>4.45.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

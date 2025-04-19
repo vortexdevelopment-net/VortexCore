@@ -18,6 +18,8 @@ import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
 import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -596,5 +598,27 @@ public class AdventureUtils {
         } catch (Exception e) {
             throw new RuntimeException("Could not create inventory. Old server version?", e);
         }
+    }
+
+    public static void setCustomEntityName(Entity entity, String name, MiniMessagePlaceholder... placeholders) {
+        if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_18)) {
+            //set via component
+            Object component = convertToOriginalComponent(formatComponent(name, placeholders));
+            try {
+                Method customNameMethod = entity.getClass().getMethod("customName", componentClass);
+                customNameMethod.invoke(entity, component);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        } else {
+            //set via string
+            try {
+                Component component = formatComponent(name, placeholders);
+                entity.setCustomName(toLegacy(component));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        entity.setCustomNameVisible(true);
     }
 }
