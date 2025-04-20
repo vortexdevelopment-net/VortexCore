@@ -32,9 +32,11 @@ public class HookManager {
             if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
                 shopHook.onEnable();
                 shopHook.setEnabled(true);
+                System.err.println("Enabled " + pluginName + " as price provider.");
             } else if (shopHook.isEnabled()) {
                 shopHook.onDisable();
                 shopHook.setEnabled(false);
+                System.err.println("Disabled " + shopHook.getRequiredPlugin());
             }
         }
     }

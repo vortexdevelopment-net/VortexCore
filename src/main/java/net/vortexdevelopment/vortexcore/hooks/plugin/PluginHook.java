@@ -30,9 +30,11 @@ public abstract class PluginHook {
     protected @Nullable <T extends Plugin> T getPlugin(Class<T> pluginClass) {
         Plugin plugin = Bukkit.getPluginManager().getPlugin(getRequiredPlugin());
         if (plugin == null) {
+            System.err.println(getRequiredPlugin() + " is not enabled, cannot get plugin instance.");
             return null;
         }
-        if (!(plugin.getClass().isAssignableFrom(pluginClass))) {
+        if (!pluginClass.isAssignableFrom(plugin.getClass())) {
+            System.err.println(getRequiredPlugin() + " is not of type " + pluginClass.getName() + ", cannot cast. Required: " + plugin.getClass().getName());
             return null;
         }
         return pluginClass.cast(plugin);

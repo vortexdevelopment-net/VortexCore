@@ -6,23 +6,38 @@ import net.vortexdevelopment.vortexcore.hooks.plugin.types.ShopHook;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.math.BigDecimal;
+
 public class EssentialsShopHook extends ShopHook {
 
     private IEssentials essentials;
 
     @Override
     public double getPrice(ItemStack itemStack) {
+        if (!canSell(itemStack)) {
+            return 0;
+        }
         return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
     }
 
     @Override
     public double getPrice(ItemStack itemStack, Player player) {
+        if (!canSell(itemStack)) {
+            return 0;
+        }
         return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
     }
 
     @Override
     public boolean canSell(ItemStack itemStack) {
-        return essentials.getWorth().getPrice(essentials, itemStack).doubleValue() > 0;
+        if (!canEnable() && !isEnabled() && essentials == null) {
+            return false;
+        }
+        BigDecimal price = essentials.getWorth().getPrice(essentials, itemStack);
+        if (price == null) {
+            return false;
+        }
+        return price.doubleValue() > 0;
     }
 
     @Override

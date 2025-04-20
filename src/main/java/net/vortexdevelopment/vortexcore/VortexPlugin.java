@@ -9,6 +9,7 @@ import net.vortexdevelopment.vortexcore.database.DataManager;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
+import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import net.vortexdevelopment.vinject.annotation.Bean;
 import net.vortexdevelopment.vinject.annotation.Component;
@@ -110,6 +111,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Override
     public final void onDisable() {
         GuiManager.disable();
+        HologramManager.clear();
         getLogger().info(ChatColor.RED + "===================");
         getLogger().info("Disabling " + getDescription().getName() + " v" + getDescription().getVersion());
         Bukkit.getScheduler().cancelTasks(this); //Make sure all tasks are cancelled

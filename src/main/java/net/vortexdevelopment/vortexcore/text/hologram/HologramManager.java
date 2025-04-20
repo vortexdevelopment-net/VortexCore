@@ -45,6 +45,11 @@ public class HologramManager {
         //We need one armor stand for each line, use a gap of 0.25 blocks for each line
         for (int i = 0; i < hologram.getLines().size(); i++) {
             ArmorStand armorStand = location.getWorld().createEntity(location.clone().add(0, i * 0.25, 0), ArmorStand.class);
+            armorStand.setGravity(false);
+            armorStand.setVisible(false);
+            armorStand.setMarker(true);
+            armorStand.setCollidable(false);
+
             AdventureUtils.setCustomEntityName(armorStand, hologram.getLines().get(i)); //Makes custom name visible too
 
             if (hologram.useViewers()) {
@@ -60,12 +65,13 @@ public class HologramManager {
                 PersistentDataContainer data = armorStand.getPersistentDataContainer();
                 data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
                 data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
+            } else {
+                //Show it to all players
+                armorStand.setVisibleByDefault(true);
             }
 
-            armorStand.setGravity(false);
-            armorStand.setVisible(false);
-            armorStand.setMarker(true);
-            armorStand.setCollidable(false);
+            //Show the hologram to the world
+            armorStand.getWorld().addEntity(armorStand);
             hologram.getArmorStands().add(armorStand);
         }
     }
@@ -78,9 +84,9 @@ public class HologramManager {
         }
     }
 
-    public void clear() {
+    public static void clear() {
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::clear);
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), HologramManager::clear);
             return;
         }
         Plugin plugin = VortexPlugin.getInstance();
