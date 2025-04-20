@@ -91,6 +91,9 @@
                                 <exclude>com/sun/**</exclude>
                                 <exclude>waffle/**</exclude>
                             </excludes>
+                            <includes>
+                                <include>**</include>
+                            </includes>
                         </filter>
                     </filters>
                 </configuration>
