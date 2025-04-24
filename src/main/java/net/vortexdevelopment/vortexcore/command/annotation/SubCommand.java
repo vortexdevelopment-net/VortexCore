@@ -12,7 +12,7 @@ public @interface SubCommand {
      * The command pattern to match
      * Use {param} for parameters and static text for exact matches
      */
-    String command();
+    String value();
     
     /**
      * Aliases for the command pattern

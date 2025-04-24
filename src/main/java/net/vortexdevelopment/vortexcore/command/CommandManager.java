@@ -155,7 +155,7 @@ public class CommandManager {
                 } else if (method.isAnnotationPresent(SubCommand.class)) {
                     SubCommand subCommand = method.getAnnotation(SubCommand.class);
                     List<String> patterns = new ArrayList<>();
-                    patterns.add(subCommand.command());
+                    patterns.add(subCommand.value());
                     
                     // Add aliases if they exist
                     if (subCommand.aliases() != null && subCommand.aliases().length > 0) {
@@ -240,7 +240,7 @@ public class CommandManager {
             for (Method method : instance.getClass().getDeclaredMethods()) {
                 if (method.isAnnotationPresent(SubCommand.class)) {
                     SubCommand subCommand = method.getAnnotation(SubCommand.class);
-                    subCommands.put(subCommand.command(), method);
+                    subCommands.put(subCommand.value(), method);
                     
                     // Also register aliases if they exist
                     if (subCommand.aliases() != null && subCommand.aliases().length > 0) {
@@ -720,7 +720,7 @@ public class CommandManager {
 
         if (method.isAnnotationPresent(SubCommand.class)) {
             SubCommand subCommand = method.getAnnotation(SubCommand.class);
-            String pattern = subCommand.command();
+            String pattern = subCommand.value();
 
             // Process main command pattern
             extractDefaultsFromPattern(pattern, defaultValues);
@@ -759,7 +759,7 @@ public class CommandManager {
         // If the method has a SubCommand annotation, use its pattern to find the parameter
         if (method.isAnnotationPresent(SubCommand.class)) {
             SubCommand subCommand = method.getAnnotation(SubCommand.class);
-            String pattern = subCommand.command();
+            String pattern = subCommand.value();
             String[] patternParts = pattern.split(" ");
 
             for (int i = 0; i < patternParts.length; i++) {
