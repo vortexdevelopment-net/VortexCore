@@ -1,10 +1,15 @@
 package net.vortexdevelopment.vortexcore.text;
 
+import net.kyori.adventure.pointer.Pointered;
+import net.kyori.adventure.text.minimessage.ParsingException;
+import net.kyori.adventure.text.minimessage.tag.Tag;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
+import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
 import net.vortexdevelopment.vortexcore.VortexCore;
+import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.kyori.adventure.bossbar.BossBar;
-import net.kyori.adventure.platform.bukkit.BukkitAudiences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -13,6 +18,7 @@ import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.boss.BarColor;
@@ -20,6 +26,8 @@ import org.bukkit.boss.BarStyle;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -36,6 +44,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class AdventureUtils {
+
+    //UNUSED/DEPRECATED
     private static Method displayNameMethod = null;
     private static Method setLoreMethod = null;
     private static Method getLoreMethod = null;
@@ -64,6 +74,48 @@ public class AdventureUtils {
     public static Class<?> getComponentClass() {
         return componentClass;
     }
+    //UNUSED/DEPRECATED End
+
+    private static final TagResolver languageResolver = TagResolver.resolver(
+            "language", (args, context) -> {
+                String yamlPath = args.popOr("missing-key").value();
+                Component component = MiniMessage.miniMessage().deserialize(replaceLegacy(Lang.getString(yamlPath, yamlPath)));
+                return Tag.selfClosingInserting(component);
+            }
+    );
+
+    private static final TagResolver playerCommandResolver = TagResolver.resolver(
+            "playercommand", (args, context) -> {
+                try {
+                    String command = args.pop().value();
+                    Pointered pointered = context.target();
+                    if (pointered instanceof Player player) {
+                        //Run command on player
+                        player.performCommand(command);
+                    }
+                } catch (ParsingException ignored) {}
+                return Tag.selfClosingInserting(Component.empty());
+            }
+    );
+
+    private static final TagResolver consoleCommandResolver = TagResolver.resolver(
+            "consolecommand", (args, context) -> {
+                try {
+                    String command = args.pop().value();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
+                } catch (ParsingException ignored) {}
+                return Tag.selfClosingInserting(Component.empty());
+            }
+    );
+
+    private static final MiniMessage miniMessage = MiniMessage.builder().tags(
+            TagResolver.builder()
+                    .resolver(StandardTags.defaults())
+                    .resolver(languageResolver)
+                    .resolver(playerCommandResolver)
+                    .resolver(consoleCommandResolver)
+                    .build()
+    ).build();
 
     //Convert from non-shaded to shaded component
     public static Component convertToShadedComponent(Object original) {
@@ -164,10 +216,8 @@ public class AdventureUtils {
     }
 
     public static void sendMessage(Component message, CommandSender... target) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
-            for (CommandSender sender : target) {
-                bukkitAudiences.sender(sender).sendMessage(message);
-            }
+        for (CommandSender sender : target) {
+            sender.sendMessage(message);
         }
     }
 
@@ -331,9 +381,16 @@ public class AdventureUtils {
     }
 
     // Formatting stuff
+    public static Component formatComponentWithPrefix(String text) {
+        return VortexPlugin.getInstance().getPrefix().append(formatComponent(text));
+    }
+
+    public static Component formatComponentWithPrefixWithDash(String text) {
+        return VortexPlugin.getInstance().getPrefixWithDash().append(formatComponent(text));
+    }
+
     public static Component formatComponent(String text) {
-        MiniMessage miniMessage = MiniMessage.builder().build();
-        Component component = MiniMessage.miniMessage().deserialize(replaceLegacy(text));
+        Component component = miniMessage.deserialize(replaceLegacy(text));
         if (!component.hasDecoration(TextDecoration.ITALIC)) {
             component = component.decoration(TextDecoration.ITALIC, false);
         }
@@ -345,6 +402,9 @@ public class AdventureUtils {
             Arrays.stream(placeholders).forEach(placeholder ->
                     builder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), placeholder.getValue()))
             );
+            builder.resolver(languageResolver);
+            builder.resolver(playerCommandResolver);
+            builder.resolver(consoleCommandResolver);
         }).build();
         Component component = miniMessage.deserialize(replaceLegacy(text));
         if (!component.hasDecoration(TextDecoration.ITALIC)) {
@@ -387,7 +447,7 @@ public class AdventureUtils {
 
     public static String formatLegacy(String text) {
         return ChatColor.translateAlternateColorCodes('&',
-                LegacyComponentSerializer.legacyAmpersand().serialize(MiniMessage.miniMessage().deserialize(replaceLegacy(text))));
+                LegacyComponentSerializer.legacyAmpersand().serialize(miniMessage.deserialize(replaceLegacy(text))));
     }
 
     public static List<String> formatLegacy(List<String> list) {
@@ -511,7 +571,7 @@ public class AdventureUtils {
     }
 
     public static String clear(String msg) {
-        return PlainTextComponentSerializer.plainText().serialize(MiniMessage.miniMessage().deserialize(replaceLegacy(msg)));
+        return PlainTextComponentSerializer.plainText().serialize(miniMessage.deserialize(replaceLegacy(msg)));
     }
 
     public static String clear(Component component) {
@@ -562,63 +622,17 @@ public class AdventureUtils {
         return Title.title(title, subtitle, times);
     }
 
-    public static void sendTitle(JavaPlugin hijackedPlugin, Title title, CommandSender sender) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(hijackedPlugin)) {
-            bukkitAudiences.sender(sender).showTitle(title);
-        }
-    }
-
-    public static void sendActionBar(JavaPlugin hijackedPlugin, Component message, CommandSender sender) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(hijackedPlugin)) {
-            bukkitAudiences.sender(sender).sendActionBar(message);
-        }
-    }
-
     public static BossBar createBossBar(String title, BarColor color, BarStyle style, float progress, MiniMessagePlaceholder... placeholders) {
         return BossBar.bossBar(formatComponent(title, placeholders), progress, BossBar.Color.valueOf(color.name()), BossBar.Overlay.valueOf(style.name().replace("SOLID", "PROGRESS")));
     }
 
-    public static void showBossBar(BossBar bossBar, CommandSender sender) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
-            bukkitAudiences.sender(sender).showBossBar(bossBar);
-        }
-    }
-
-    public static void hideBossBar(BossBar bossBar, CommandSender sender) {
-        try (BukkitAudiences bukkitAudiences = BukkitAudiences.create(VortexCore.getPlugin())) {
-            bukkitAudiences.sender(sender).hideBossBar(bossBar);
-        }
-    }
-
     public static Inventory createInventory(InventoryHolder owner, int rows, String title) {
-        //return (Inventory) Bukkit.createInventory(owner, rows * 9, convertToOriginalComponent(formatComponent(title)));
-        try {
-            Method createInventoryMethod = Bukkit.class.getDeclaredMethod("createInventory", InventoryHolder.class, int.class, componentClass);
-            return (Inventory) createInventoryMethod.invoke(null, owner, rows * 9, convertToOriginalComponent(formatComponent(title)));
-        } catch (Exception e) {
-            throw new RuntimeException("Could not create inventory. Old server version?", e);
-        }
-    }
-
-    public static void setCustomEntityName(Entity entity, String name, MiniMessagePlaceholder... placeholders) {
-        if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_18)) {
-            //set via component
-            Object component = convertToOriginalComponent(formatComponent(name, placeholders));
-            try {
-                Method customNameMethod = entity.getClass().getMethod("customName", componentClass);
-                customNameMethod.invoke(entity, component);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        } else {
-            //set via string
-            try {
-                Component component = formatComponent(name, placeholders);
-                entity.setCustomName(toLegacy(component));
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        entity.setCustomNameVisible(true);
+        return (Inventory) Bukkit.createInventory(owner, rows * 9, formatComponent(title));
+//        try {
+//            Method createInventoryMethod = Bukkit.class.getDeclaredMethod("createInventory", InventoryHolder.class, int.class, componentClass);
+//            return (Inventory) createInventoryMethod.invoke(null, owner, rows * 9, convertToOriginalComponent(formatComponent(title)));
+//        } catch (Exception e) {
+//            throw new RuntimeException("Could not create inventory. Old server version?", e);
+//        }
     }
 }
