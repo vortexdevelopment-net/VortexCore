@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore;
 
 import lombok.Getter;
+import net.kyori.adventure.Adventure;
 import net.vortexdevelopment.vinject.annotation.Inject;
 import net.vortexdevelopment.vortexcore.chat.PromptManager;
 import net.vortexdevelopment.vortexcore.command.CommandManager;
@@ -9,6 +10,8 @@ import net.vortexdevelopment.vortexcore.database.DataManager;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
+import net.vortexdevelopment.vortexcore.hooks.plugin.vault.EconomyHook;
+import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import net.vortexdevelopment.vinject.annotation.Bean;
@@ -127,6 +130,26 @@ public abstract class VortexPlugin extends JavaPlugin {
         if (dependencyContainer != null) {
             dependencyContainer.release();
         }
+    }
+
+    public String getPrimaryColor() {
+        return "<color:#137FFF>";
+    }
+
+    public String getSecondaryColor() {
+        return "<color:#FFAA00>";
+    }
+
+    public net.kyori.adventure.text.Component getPrefix() {
+        return AdventureUtils.formatComponent("<bold><gradient:#9200B7:#137FFF>" + getName() + "</gradient></bold>");
+    }
+
+    public String getPrefixString() {
+        return "<bold><gradient:#9200B7:#137FFF>" + getName() + "</gradient></bold>";
+    }
+
+    public net.kyori.adventure.text.Component getPrefixWithDash() {
+        return AdventureUtils.formatComponent("<bold><gradient:#9200B7:#137FFF>" + getName() + " - </gradient></bold>");
     }
 
     public abstract void onPreComponentLoad();
