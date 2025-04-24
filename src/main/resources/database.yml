@@ -1,15 +1,16 @@
 Connection Settings:
-  # Supported: MARIADB, MYSQL
+  # Supported: MARIADB, MYSQL, H2
   # Default: H2
-  Type: MARIADB
+  # Recommended: MARIADB
+  Type: H2
   # Hostname for remote databases
   Hostname: localhost
   # Port for remote databases
   Port: 3306
   # Username for remote databases
-  Username: username
+  Username: sa # H2 default username
   # Password for remote databases
-  Password: password
+  Password: "" # H2 default password empty
   # Database name for remote databases
   Database: database
   # Maximum number of connections to the database
