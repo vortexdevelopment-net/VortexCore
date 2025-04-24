@@ -5,6 +5,7 @@ import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
+import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -16,7 +17,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 public class HologramManager {
 
@@ -24,6 +27,17 @@ public class HologramManager {
     private static final NamespacedKey VIEWERS_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_viewers");
 
     private static Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
+
+    public static void init() {
+        //Create a bukkit scheduler task to tick all holograms
+        Bukkit.getScheduler().runTaskTimerAsynchronously(VortexPlugin.getInstance(), () -> {
+            for (Set<Hologram> hologramsSet : holograms.values()) {
+                for (Hologram hologram : hologramsSet) {
+                    hologram.tickAsync();
+                }
+            }
+        }, 0, 10);
+    }
 
     public static @Nullable Hologram getHologram(String id) {
         Set<Hologram> hologramsSet = holograms.get(VortexPlugin.getInstance());
@@ -38,6 +52,12 @@ public class HologramManager {
     }
 
     public static void createHologram(Hologram hologram) {
+        //Check if we at the main thread
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> createHologram(hologram));
+            return;
+        }
+
         holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet()).add(hologram);
         //Summon the hologram to the world
         Location location = hologram.getLocation();
@@ -50,8 +70,12 @@ public class HologramManager {
             armorStand.setMarker(true);
             armorStand.setCollidable(false);
 
-            AdventureUtils.setCustomEntityName(armorStand, hologram.getLines().get(i)); //Makes custom name visible too
+            //AdventureUtils.setCustomEntityName(armorStand, hologram.getLines().get(i)); //Makes custom name visible too
+            armorStand.customName(AdventureUtils.formatComponent(hologram.getLines().get(i)));
+            armorStand.setCustomNameVisible(true);
 
+            PersistentDataContainer data = armorStand.getPersistentDataContainer();
+            data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
             if (hologram.useViewers()) {
                 //Make only the players in the viewers list see the hologram
                 armorStand.setVisibleByDefault(false);
@@ -62,8 +86,6 @@ public class HologramManager {
                     }
                 }
                 //Set viewers to the armor stand persistent data
-                PersistentDataContainer data = armorStand.getPersistentDataContainer();
-                data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
                 data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
             } else {
                 //Show it to all players
@@ -76,6 +98,45 @@ public class HologramManager {
         }
     }
 
+    public static ArmorStand createArmorStand(Hologram hologram) {
+        //Check if we at the main thread
+        if (!Bukkit.isPrimaryThread()) {
+            Callable<ArmorStand> callable = () -> createArmorStand(hologram);
+            try {
+                return Bukkit.getScheduler().callSyncMethod(VortexPlugin.getInstance(), callable).get();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        ArmorStand armorStand = hologram.getLocation().getWorld().createEntity(hologram.getLocation(), ArmorStand.class);
+        armorStand.setGravity(false);
+        armorStand.setVisible(false);
+        armorStand.setMarker(true);
+        armorStand.setCollidable(false);
+
+        //Set viewers to the armor stand persistent data
+        PersistentDataContainer data = armorStand.getPersistentDataContainer();
+        data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
+        if (hologram.useViewers()) {
+            //Make only the players in the viewers list see the hologram
+            armorStand.setVisibleByDefault(false);
+            for (UUID uuid : hologram.getViewers()) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    player.showEntity(VortexPlugin.getInstance(), armorStand);
+                }
+            }
+            //Set viewers to the armor stand persistent data
+            data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
+        } else {
+            //Show it to all players
+            armorStand.setVisibleByDefault(true);
+        }
+
+        return armorStand;
+    }
+
     public static void removeHologram(Hologram hologram) {
         Set<Hologram> hologramsSet = holograms.get(VortexPlugin.getInstance());
         if (hologramsSet != null) {
@@ -85,17 +146,19 @@ public class HologramManager {
     }
 
     public static void clear() {
-        if (!Bukkit.isPrimaryThread()) {
+        if (!Bukkit.isPrimaryThread() && !Bukkit.isStopping()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), HologramManager::clear);
             return;
         }
-        Plugin plugin = VortexPlugin.getInstance();
-        Set<Hologram> hologramsSet = holograms.get(plugin);
-        if (hologramsSet != null) {
-            for (Hologram hologram : hologramsSet) {
-                hologram.remove();
+        holograms.clear();
+        //get all entities with the hologram key from all worlds
+        for (World world : Bukkit.getWorlds()) {
+            for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
+                PersistentDataContainer data = armorStand.getPersistentDataContainer();
+                if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING)) {
+                    armorStand.remove();
+                }
             }
-            hologramsSet.clear();
         }
     }
 

@@ -74,6 +74,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Override
     public final void onEnable() {
         try {
+            HologramManager.init();
             getLogger().info(ChatColor.GREEN + "===================");
             getLogger().info("Enabling " + getDescription().getName() + " v" + getDescription().getVersion());
             VortexCore.setPlugin(this);
