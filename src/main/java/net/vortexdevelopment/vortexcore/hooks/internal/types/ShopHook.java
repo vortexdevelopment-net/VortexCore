@@ -1,4 +1,4 @@
-package net.vortexdevelopment.vortexcore.hooks.plugin.types;
+package net.vortexdevelopment.vortexcore.hooks.internal.types;
 
 import net.vortexdevelopment.vortexcore.hooks.plugin.PluginHook;
 import org.bukkit.Bukkit;

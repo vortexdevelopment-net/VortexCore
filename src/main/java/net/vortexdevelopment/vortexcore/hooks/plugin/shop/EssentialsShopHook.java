@@ -1,8 +1,7 @@
-package net.vortexdevelopment.vortexcore.hooks.plugin.impl.shop;
+package net.vortexdevelopment.vortexcore.hooks.plugin.shop;
 
-import com.earth2me.essentials.Essentials;
 import net.ess3.api.IEssentials;
-import net.vortexdevelopment.vortexcore.hooks.plugin.types.ShopHook;
+import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 

@@ -1,9 +1,9 @@
 package net.vortexdevelopment.vortexcore.hooks.plugin;
 
 
-import net.vortexdevelopment.vortexcore.hooks.plugin.impl.shop.EssentialsShopHook;
-import net.vortexdevelopment.vortexcore.hooks.plugin.impl.shop.ShopGUIPlusHook;
-import net.vortexdevelopment.vortexcore.hooks.plugin.types.ShopHook;
+import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
+import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
+import net.vortexdevelopment.vortexcore.hooks.plugin.shop.ShopGUIPlusHook;
 
 import java.util.HashSet;
 import java.util.Set;
