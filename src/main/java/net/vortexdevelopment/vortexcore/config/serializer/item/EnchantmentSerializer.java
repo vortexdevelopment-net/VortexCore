@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.StringListSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.NamespacedKey;
@@ -18,9 +19,9 @@ import java.util.Map;
  * Serializer for item enchantments.
  * Format: "ENCHANTMENT:LEVEL" (e.g., "SHARPNESS:5")
  */
-public class EnchantmentSerializerAbstract extends StringListSerializerAbstract {
+public class EnchantmentSerializer extends StringListSerializerAbstract {
 
-    public EnchantmentSerializerAbstract() {
+    public EnchantmentSerializer() {
         super("Enchantments");
     }
 
@@ -55,7 +56,7 @@ public class EnchantmentSerializerAbstract extends StringListSerializerAbstract 
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, list -> {
             if (list.isEmpty()) {
                 return;

@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.StringListSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemFlag;
@@ -15,9 +16,9 @@ import java.util.Set;
 /**
  * Serializer for item flags.
  */
-public class AbstractItemFlagsSerializer extends StringListSerializerAbstract {
+public class ItemFlagsSerializer extends StringListSerializerAbstract {
 
-    public AbstractItemFlagsSerializer() {
+    public ItemFlagsSerializer() {
         super("Item Flags");
     }
 
@@ -43,7 +44,7 @@ public class AbstractItemFlagsSerializer extends StringListSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, list -> {
             if (list.isEmpty()) {
                 return;

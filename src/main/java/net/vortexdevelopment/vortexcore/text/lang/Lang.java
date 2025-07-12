@@ -7,19 +7,23 @@ import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
+import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-@net.vortexdevelopment.vinject.annotation.Component
+@net.vortexdevelopment.vinject.annotation.Component(priority = 9) //Ensure we load it before anything else
 @RegisterReloadHook
 public class Lang implements ReloadHook {
 
@@ -140,6 +144,49 @@ public class Lang implements ReloadHook {
         return getComponent("General.Plugin Prefix");
     }
 
+    public static void runConsoleCommands(@Nullable Player player, List<String> commands) {
+        if (commands == null || commands.isEmpty()) {
+            return;
+        }
+        //Check if we on main thread
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> runConsoleCommands(player, commands));
+            return;
+        }
+
+        for (String command : commands) {
+            //Check if command stats with [MESSAGE], if so send the message to the player
+            if (command.startsWith("[MESSAGE]")) {
+                command = command.substring(9).trim();
+                AdventureUtils.sendMessage(AdventureUtils.formatComponent(command, createOptionalPlaceholder(player != null, "player", player.getName())), player);
+                continue;
+            }
+
+            //Check if command stats with [MESSAGE:<key>], if so send the message to the player from the lang file
+            if (command.startsWith("[MESSAGE:")) {
+                String key = command.substring(9, command.indexOf("]"));
+                command = command.substring(command.indexOf("]") + 1).trim();
+                AdventureUtils.sendMessage(getComponent(key, createOptionalPlaceholder(player != null, "player", player.getName())), player);
+                continue;
+            }
+
+            if (command.startsWith("/")) {
+                command = command.substring(1);
+            }
+            if (player != null) {
+                command = command.replace("<player>", player.getName());
+            }
+            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.trim());
+        }
+    }
+
+    public static MiniMessagePlaceholder[] createOptionalPlaceholder(boolean condition, String placeholder, String value) {
+        if (condition) {
+            return new MiniMessagePlaceholder[]{new MiniMessagePlaceholder(placeholder, value)};
+        }
+        return new MiniMessagePlaceholder[0];
+    }
+
     @Override
     public void onReload() {
         try {
@@ -149,15 +196,17 @@ public class Lang implements ReloadHook {
                 VortexPlugin.getInstance().saveResource("lang.yml", false);
             }
             lang = YamlConfiguration.loadConfiguration(langFile);
-            Gui.BACK_BUTTON_NAME = getString("GUI.Back Button Name", "§cBack");
 
             staticPlaceholders.add(new MiniMessagePlaceholder("prefix", lang.getString("General.Plugin Prefix", VortexPlugin.getInstance().getPrefixString())));
             if (lang.getConfigurationSection("Colors") != null) {
-                for (String placeholder : lang.createSection("Colors").getKeys(false)) {
+                for (String placeholder : lang.getConfigurationSection("Colors").getKeys(false)) {
                     staticPlaceholders.add(new MiniMessagePlaceholder(placeholder, "<color:" + lang.getString("Colors." + placeholder) + ">"));
                 }
             }
             initialized = true;
-        } catch (Exception ignored) {}
+            Gui.BACK_BUTTON_NAME = getString("GUI.Back Button Name", "§cBack");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 }

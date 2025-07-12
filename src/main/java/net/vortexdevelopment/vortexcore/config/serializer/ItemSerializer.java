@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.config.serializer;
 
 import net.vortexdevelopment.vortexcore.config.serializer.item.*;
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -28,15 +29,15 @@ public class ItemSerializer {
         }
 
         // Register default serializers
-        register(new MaterialSerializerAbstract());
-        register(new NameSerializerAbstract());
-        register(new LoreSerializerAbstract());
-        register(new DurabilitySerializerAbstract());
-        register(new EnchantmentSerializerAbstract());
-        register(new AbstractItemFlagsSerializer());
-        register(new CustomModelDataSerializerAbstract());
-        register(new UnbreakableSerializerAbstract());
-        register(new AmountSerializerAbstract());
+        register(new MaterialSerializer());
+        register(new NameSerializer());
+        register(new LoreSerializer());
+        register(new DurabilitySerializer());
+        register(new EnchantmentSerializer());
+        register(new ItemFlagsSerializer());
+        register(new CustomModelDataSerializer());
+        register(new UnbreakableSerializer());
+        register(new AmountSerializer());
 
         initialized = true;
     }
@@ -85,6 +86,10 @@ public class ItemSerializer {
      * @return The deserialized ItemStack, or null if the section is null
      */
     public static ItemStack deserialize(ConfigurationSection section) {
+        return deserialize(section, PlaceholderProcessor.defaultProcessor());
+    }
+
+    public static ItemStack deserialize(ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         if (section == null) {
             return null;
         }
@@ -95,11 +100,11 @@ public class ItemSerializer {
         }
 
         // Create a default ItemStack with AIR material
-        Pointer<ItemStack> itemStack = new Pointer<>(new ItemStack(Material.AIR));
+        Pointer<ItemStack> itemStack = new Pointer<>(new ItemStack(Material.BARRIER, 1));
 
         // Apply each serializer to deserialize the item
         for (AbstractItemSerializer<?> serializer : serializers) {
-            serializer.deserialize(itemStack, section);
+            serializer.deserialize(itemStack, section, placeholderProcessor);
         }
 
         return itemStack.get();

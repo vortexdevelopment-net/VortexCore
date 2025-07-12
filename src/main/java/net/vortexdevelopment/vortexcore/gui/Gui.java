@@ -5,7 +5,6 @@ import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
@@ -13,6 +12,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.simpleyaml.configuration.ConfigurationSection;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -278,6 +278,27 @@ public class Gui implements GuiHolder {
         return this;
     }
 
+    public Gui fetchFills(org.bukkit.configuration.ConfigurationSection config) {
+        String fillEmpty = config.getString("Fill Empty");
+        if (fillEmpty != null) {
+            ItemStack fillEmptyItem = new ItemStack(Material.valueOf(fillEmpty));
+            fillEmpty(fillEmptyItem);
+        }
+
+        String fillBorder = config.getString("Fill Border");
+        if (fillBorder != null) {
+            ItemStack fillBorderItem = new ItemStack(Material.valueOf(fillBorder));
+            fillBorder(fillBorderItem);
+        }
+
+        String fillBottom = config.getString("Fill Bottom");
+        if (fillBottom != null) {
+            ItemStack fillBottomItem = new ItemStack(Material.valueOf(fillBottom));
+            fillBottom(fillBottomItem);
+        }
+        return this;
+    }
+
     public Gui fetchFills(ConfigurationSection config) {
         String fillEmpty = config.getString("Fill Empty");
         if (fillEmpty != null) {
@@ -319,18 +340,21 @@ public class Gui implements GuiHolder {
 
         //Fill first row
         for (int i = 0; i < 9; i++) {
+            if (inventory.getItem(i) != null) continue;
             inventory.setItem(i, item);
             addItem(new GuiItem(item, i, 0));
         }
 
         //Fill first column and last column
         for (int i = 1; i < inventory.getSize() / 9 - 1; i++) {
+            if (inventory.getItem(i * 9) != null) continue;
             addItem(new GuiItem(item, 0, i));
             addItem(new GuiItem(item, 8, i));
         }
 
         //Fill last row
         for (int i = inventory.getSize() - 9; i < inventory.getSize(); i++) {
+            if (inventory.getItem(i) != null) continue;
             addItem(new GuiItem(item, i % 9, i / 9));
         }
         return this;
@@ -344,7 +368,7 @@ public class Gui implements GuiHolder {
         AdventureUtils.formatItemName(item, " ");
 
         for (int i = inventory.getSize() - 9; i < inventory.getSize(); i++) {
-//            inventory.setItem(i, item);
+            if (inventory.getItem(i) != null) continue;
             addItem(new GuiItem(item, i % 9, i / 9));
         }
         return this;

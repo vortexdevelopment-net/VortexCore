@@ -11,6 +11,7 @@ import org.jooq.Query;
 import org.jooq.Record;
 import org.jooq.impl.DSL;
 
+import java.io.File;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -61,7 +62,13 @@ public class DataManager implements DatabaseConnector {
         String type = databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH);
 
         hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl("jdbc:" + type + "://" + host + ":" + port + "/" + database);
+        if (type.equals("h2")) {
+            File h2File = new File(plugin.getDataFolder(), plugin.getName().toLowerCase());
+            hikariConfig.setDriverClassName("org.h2.Driver");
+            hikariConfig.setJdbcUrl("jdbc:h2:file:./" + h2File.getPath().replaceAll("\\\\", "/") + ";AUTO_RECONNECT=TRUE;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE");
+        } else {
+            hikariConfig.setJdbcUrl("jdbc:" + type + "://" + host + ":" + port + "/" + database);
+        }
         hikariConfig.setUsername(username);
         hikariConfig.setPassword(password);
         hikariConfig.setMaximumPoolSize(maxConnections);

@@ -29,6 +29,7 @@ public class HologramManager {
     private static Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
 
     public static void init() {
+        clear();
         //Create a bukkit scheduler task to tick all holograms
         Bukkit.getScheduler().runTaskTimerAsynchronously(VortexPlugin.getInstance(), () -> {
             for (Set<Hologram> hologramsSet : holograms.values()) {
@@ -157,6 +158,7 @@ public class HologramManager {
                 PersistentDataContainer data = armorStand.getPersistentDataContainer();
                 if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING)) {
                     armorStand.remove();
+                    System.err.println("Removed hologram armor stand: " + armorStand.getUniqueId() + " in world: " + world.getName());
                 }
             }
         }

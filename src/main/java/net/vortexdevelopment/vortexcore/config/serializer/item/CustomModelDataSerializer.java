@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.IntegerSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
@@ -9,9 +10,9 @@ import org.simpleyaml.configuration.ConfigurationSection;
 /**
  * Serializer for custom model data.
  */
-public class CustomModelDataSerializerAbstract extends IntegerSerializerAbstract {
+public class CustomModelDataSerializer extends IntegerSerializerAbstract {
 
-    public CustomModelDataSerializerAbstract() {
+    public CustomModelDataSerializer() {
         super("CustomModelData");
     }
 
@@ -30,7 +31,7 @@ public class CustomModelDataSerializerAbstract extends IntegerSerializerAbstract
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, modelData -> {
             if (modelData == null) {
                 return;

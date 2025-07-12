@@ -1,10 +1,15 @@
 package net.vortexdevelopment.vortexcore.text;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.List;
 
 public class MiniMessagePlaceholder {
 
+    @Getter
     private final String placeholder;
+    @Getter
     private final String value;
 
     public MiniMessagePlaceholder(String placeholder, String value) {
@@ -15,14 +20,6 @@ public class MiniMessagePlaceholder {
     public MiniMessagePlaceholder(String placeholder, Number value) {
         this.placeholder = placeholder;
         this.value = String.valueOf(value);
-    }
-
-    public String getPlaceholder() {
-        return this.placeholder;
-    }
-
-    public String getValue() {
-        return this.value;
     }
 
     public String replace(String string) {

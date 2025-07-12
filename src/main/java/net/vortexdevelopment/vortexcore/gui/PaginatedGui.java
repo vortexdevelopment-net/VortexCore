@@ -2,6 +2,7 @@ package net.vortexdevelopment.vortexcore.gui;
 
 import lombok.Getter;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.config.serializer.ItemSerializer;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -159,6 +160,27 @@ public class PaginatedGui implements GuiHolder {
 
     public PaginatedGui addStaticItem(Consumer<ItemStackBuilder> itemStackBuilder, ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> event, int x, int y) {
         return addStaticItem(new GuiItem(itemStackBuilder, event, x, y));
+    }
+
+    public PaginatedGui fetchFills(org.simpleyaml.configuration.ConfigurationSection config) {
+        String fillEmpty = config.getString("Fill Empty");
+        if (fillEmpty != null) {
+            ItemStack fillEmptyItem = ItemSerializer.deserialize(config.getConfigurationSection(fillEmpty));
+            fillEmpty(fillEmptyItem);
+        }
+
+        String fillBorder = config.getString("Fill Border");
+        if (fillBorder != null) {
+            ItemStack fillBorderItem = ItemSerializer.deserialize(config.getConfigurationSection(fillBorder));
+            fillBorder(fillBorderItem);
+        }
+
+        String fillBottom = config.getString("Fill Bottom");
+        if (fillBottom != null) {
+            ItemStack fillBottomItem = ItemSerializer.deserialize(config.getConfigurationSection(fillBottom));
+            fillBottom(fillBottomItem);
+        }
+        return this;
     }
 
     public PaginatedGui fetchFills(ConfigurationSection config) {

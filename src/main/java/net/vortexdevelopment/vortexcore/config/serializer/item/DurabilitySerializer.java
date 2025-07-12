@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.IntegerSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
@@ -7,9 +8,9 @@ import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.simpleyaml.configuration.ConfigurationSection;
 
-public class DurabilitySerializerAbstract extends IntegerSerializerAbstract {
+public class DurabilitySerializer extends IntegerSerializerAbstract {
 
-    public DurabilitySerializerAbstract() {
+    public DurabilitySerializer() {
         super("Durability");
     }
 
@@ -26,7 +27,7 @@ public class DurabilitySerializerAbstract extends IntegerSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, integer -> {
             if (integer == null) {
                 return;

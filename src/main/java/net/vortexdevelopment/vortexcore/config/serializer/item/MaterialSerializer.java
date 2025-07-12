@@ -1,15 +1,16 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.StringSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.simpleyaml.configuration.ConfigurationSection;
 
-public class MaterialSerializerAbstract extends StringSerializerAbstract {
+public class MaterialSerializer extends StringSerializerAbstract {
 
-    public MaterialSerializerAbstract() {
+    public MaterialSerializer() {
         super("Material", 1);
     }
 
@@ -19,7 +20,8 @@ public class MaterialSerializerAbstract extends StringSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
+        //TODO add nexo support with serialization chain
         read(section, string -> {
             if (string.isEmpty()) {
                 return;

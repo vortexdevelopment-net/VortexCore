@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.config.serializer;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
 import org.simpleyaml.configuration.ConfigurationSection;
@@ -30,5 +31,5 @@ public abstract class AbstractItemSerializer<T> {
 
     public abstract T serialize(ItemStack itemStack);
 
-    public abstract void deserialize(Pointer<ItemStack> current, ConfigurationSection section);
+    public abstract void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor);
 }

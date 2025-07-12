@@ -27,6 +27,7 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.checkerframework.checker.units.qual.C;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -68,7 +69,8 @@ public abstract class VortexPlugin extends JavaPlugin {
                 databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH),
                 databaseConfig.getString("Connection Settings.Username"),
                 databaseConfig.getString("Connection Settings.Password"),
-                databaseConfig.getInt("Connection Settings.Pool Size")
+                databaseConfig.getInt("Connection Settings.Pool Size"),
+                new File(getDataFolder(), getName().toLowerCase())
         );
         onPluginLoad();
         Database.setTablePrefix(this.getName().toLowerCase() + "_");

@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.BooleanSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
@@ -9,9 +10,9 @@ import org.simpleyaml.configuration.ConfigurationSection;
 /**
  * Serializer for the unbreakable flag.
  */
-public class UnbreakableSerializerAbstract extends BooleanSerializerAbstract {
+public class UnbreakableSerializer extends BooleanSerializerAbstract {
 
-    public UnbreakableSerializerAbstract() {
+    public UnbreakableSerializer() {
         super("Unbreakable");
     }
 
@@ -30,7 +31,7 @@ public class UnbreakableSerializerAbstract extends BooleanSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, unbreakable -> {
             if (unbreakable == null) {
                 return;

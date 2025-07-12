@@ -1,14 +1,15 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.StringSerializerAbstract;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
 import org.simpleyaml.configuration.ConfigurationSection;
 
-public class NameSerializerAbstract extends StringSerializerAbstract {
+public class NameSerializer extends StringSerializerAbstract {
 
-    public NameSerializerAbstract() {
+    public NameSerializer() {
         super("Name");
     }
 
@@ -24,13 +25,13 @@ public class NameSerializerAbstract extends StringSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, string -> {
             if (string.isEmpty()) {
                 return;
             }
 
-            AdventureUtils.formatItemName(current.get(), string);
+            AdventureUtils.formatItemName(current.get(), placeholderProcessor.process(string));
         });
     }
 }

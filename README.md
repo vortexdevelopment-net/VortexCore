@@ -1,5 +1,8 @@
 # VortexCore
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/vortexdevelopment-net/VortexCore/ci.yml?branch=main)](https://github.com/VortexDevelopment/VortexCore/actions)
+[![License](https://img.shields.io/github/license/vortexdevelopment-net/VortexCore)](./LICENSE)
+
 A modern Minecraft development framework built on the Paper API, designed to simplify plugin development and provide powerful tools for server administrators.
 
 ## Features
@@ -250,3 +253,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Support
 
 For support, please open an issue in the GitHub repository or contact the development team on [discord](https://dc.vortexdevelopment.net) 
+`

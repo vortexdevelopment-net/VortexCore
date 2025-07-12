@@ -20,7 +20,7 @@ public class Hologram {
 
     @Getter private String id;
     @Getter private Location location;
-    @Setter private List<String> lines = new ArrayList<>();
+    private List<String> lines = new ArrayList<>();
     @Getter private List<UUID> viewers = new LinkedList<>(); // List of players who can see the hologram
     @Setter private boolean useViewers = false; // If true, only players in the viewers list can see the hologram
     @Getter @Setter private boolean visible = true;
@@ -70,6 +70,7 @@ public class Hologram {
             if (!armorStand.isInWorld()) {
                 //Set the new location before spawning
                 armorStand.teleportAsync(location.clone().add(0, i * 0.25, 0));
+                //TODO figure it out
 //                if (Bukkit.isPrimaryThread()) {
 //                    armorStand.getWorld().addEntity(armorStand);
 //                } else {
@@ -134,6 +135,11 @@ public class Hologram {
 
     public void setLine(int index, String line) {
         lines.set(index, line);
+        this.shouldUpdate = true;
+    }
+
+    public void setLines(List<String> lines) {
+        this.lines = lines;
         this.shouldUpdate = true;
     }
 

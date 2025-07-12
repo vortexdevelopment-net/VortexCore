@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.config.serializer.item;
 
+import net.vortexdevelopment.vortexcore.config.serializer.placeholder.PlaceholderProcessor;
 import net.vortexdevelopment.vortexcore.config.serializer.type.IntegerSerializerAbstract;
 import net.vortexdevelopment.vortexcore.utils.Pointer;
 import org.bukkit.inventory.ItemStack;
@@ -8,9 +9,9 @@ import org.simpleyaml.configuration.ConfigurationSection;
 /**
  * Serializer for item amount (stack size).
  */
-public class AmountSerializerAbstract extends IntegerSerializerAbstract {
+public class AmountSerializer extends IntegerSerializerAbstract {
 
-    public AmountSerializerAbstract() {
+    public AmountSerializer() {
         super("Amount");
     }
 
@@ -22,7 +23,7 @@ public class AmountSerializerAbstract extends IntegerSerializerAbstract {
     }
 
     @Override
-    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section) {
+    public void deserialize(Pointer<ItemStack> current, ConfigurationSection section, PlaceholderProcessor placeholderProcessor) {
         read(section, amount -> {
             if (amount == null || amount <= 0) {
                 // Set the default amount to 1 if the value is null or less than or equal to 0
