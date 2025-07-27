@@ -449,28 +449,26 @@ public class PaginatedGui implements GuiHolder {
         item.setX(-1);
         item.setY(-1);
 
-        // Make sure we start with page 0
+        // Ensure page 0 exists
         if (!pages.containsKey(0)) {
             pages.put(0, new ArrayList<>());
         }
 
-        // Get the current page or page 0 if none exists
-        int targetPage = currentPage;
+        // Find the target page
+        int targetPage = pages.size() - 1; // Start with the last page
         List<GuiItem> currentPageItems = pages.get(targetPage);
 
-        // If the current page is full, find or create the next available page
+        // If the last page is full, create a new page
         if (currentPageItems.size() >= itemsPerPage) {
             targetPage++;
-            if (!pages.containsKey(targetPage)) {
-                pages.put(targetPage, new ArrayList<>());
-            }
+            pages.put(targetPage, new ArrayList<>());
             currentPageItems = pages.get(targetPage);
         }
 
         // Add the item to the target page
         currentPageItems.add(item);
 
-        // Ensure we stay on page 0 when initially adding items
+        // Refresh the GUI if on the first page
         if (currentPage == 0) {
             renderPage();
         }
