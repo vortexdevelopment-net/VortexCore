@@ -467,11 +467,6 @@ public class PaginatedGui implements GuiHolder {
 
         // Add the item to the target page
         currentPageItems.add(item);
-
-        // Refresh the GUI if on the first page
-        if (currentPage == 0) {
-            renderPage();
-        }
     }
 
     public void addItem(ItemStack item, ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> event) {
