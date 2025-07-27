@@ -1,8 +1,10 @@
 package net.vortexdevelopment.vortexcore.chat;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.kyori.adventure.text.Component;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,6 +13,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -37,7 +40,10 @@ public class PromptManager implements Listener {
             if (consumer != null) {
                 Object response = originalMessageMethod.invoke(event);
                 Component shaded = AdventureUtils.convertToShadedComponent(response);
-                consumer.accept(AdventureUtils.toLegacy(shaded));
+                Bukkit.getServer().getScheduler().callSyncMethod(VortexPlugin.getInstance(), () -> {
+                    consumer.accept(AdventureUtils.toLegacy(shaded));
+                    return CompletableFuture.runAsync(() -> {}); //Return empty future, can't return null
+                });
             }
         }
     }
