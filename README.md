@@ -33,27 +33,25 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 mvn clean install
 ```
 
-### Using JitPack
+### Using VortexCore as a Dependency
 
-Add the JitPack repository to your `pom.xml`:
+Add the Vortexdevelopment repository to your `pom.xml`:
 
 ```xml
-<repositories>
-    <repository>
-        <id>jitpack.io</id>
-        <url>https://jitpack.io</url>
-    </repository>
-</repositories>
+<repository>
+    <id>vortex-repo</id>
+    <url>https://repo.vortexdevelopment.net/repository/maven-public/</url>
+</repository>
 ```
 
 Then add the dependency:
 
 ```xml
 <dependency>
-    <groupId>com.github.VortexDevelopment</groupId>
+    <groupId>net.vortexdevelopment</groupId>
     <artifactId>VortexCore</artifactId>
-    <version>main-SNAPSHOT</version>
-    <scope>provided</scope>
+    <version>1.0.0-SNAPSHOT</version>
+    <scope>compile</scope>
 </dependency>
 ```
 
