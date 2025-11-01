@@ -167,6 +167,14 @@
         </repository>
     </repositories>
 
+    <distributionManagement>
+        <repository>
+            <id>vortex-repo</id>
+            <name>vortex-repo</name>
+            <url>https://repo.vortexdevelopment.net/repository</url>
+        </repository>
+    </distributionManagement>
+
     <dependencies>
         <dependency>
             <groupId>net.vortexdevelopment</groupId>
