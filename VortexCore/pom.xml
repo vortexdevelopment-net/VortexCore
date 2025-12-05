@@ -52,6 +52,9 @@
                 </executions>
                 <configuration>
                     <minimizeJar>true</minimizeJar>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <keepDependenciesWithProvidedScope>false</keepDependenciesWithProvidedScope>
+                    <promoteTransitiveDependencies>false</promoteTransitiveDependencies>
 
                     <relocations>
 <!--                        <relocation>-->
@@ -103,9 +106,6 @@
                         </filter>
                         <filter>
                             <artifact>net.vortexdevelopment:VortexCore</artifact>
-                            <excludes>
-                                <exclude>docs/**</exclude>
-                            </excludes>
                             <includes>
                                 <include>**</include>
                             </includes>
@@ -171,7 +171,7 @@
                             </excludes>
                         </filter>
                         <filter>
-                            <artifact>net.vortexdevelopment:VInject-Framework</artifact>
+                            <artifact>net.vortexdevelopment:VInject</artifact>
                             <excludes>
                                 <exclude>vinject/templates/**</exclude>
                                 <exclude>com/zaxxer/**</exclude>
@@ -223,8 +223,10 @@
         </plugins>
         <resources>
             <resource>
-                <directory>VortexCore/src/main/resources</directory>
-                <filtering>true</filtering>
+                <directory>src/main/resources</directory>
+                <includes>
+                    <include>**/*</include>
+                </includes>
             </resource>
         </resources>
     </build>
