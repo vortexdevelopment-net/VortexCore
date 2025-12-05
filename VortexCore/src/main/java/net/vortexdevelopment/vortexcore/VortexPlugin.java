@@ -2,6 +2,7 @@ package net.vortexdevelopment.vortexcore;
 
 import lombok.Getter;
 import net.vortexdevelopment.vinject.annotation.Injectable;
+import net.vortexdevelopment.vinject.di.ConfigurationContainer;
 import net.vortexdevelopment.vinject.di.DependencyRepository;
 import net.vortexdevelopment.vortexcore.chat.PromptManager;
 import net.vortexdevelopment.vortexcore.command.CommandManager;
@@ -67,6 +68,8 @@ public abstract class VortexPlugin extends JavaPlugin {
         if (!getDataFolder().exists()) {
             getDataFolder().mkdirs();
         }
+        // Set the root directory for configuration files
+        ConfigurationContainer.setRootDirectory(this.getDataFolder().toPath());
 
         try {
             verifyLicense();
