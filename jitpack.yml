@@ -1,8 +1,0 @@
-jdk:
-  - openjdk17
-
-install:
-  - mvn clean install -DskipTests
-
-build:
-  - mvn clean package -DskipTests 
