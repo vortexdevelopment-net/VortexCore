@@ -112,7 +112,7 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
                 @TemplateDependency(groupId = "net.vortexdevelopment", artifactId = "VortexCore", version = "1.0.0-SNAPSHOT")
         }
 )
-public final class VortexRPG extends VortexPlugin {
+public final class MyPlugin extends VortexPlugin {
 
     @Override
     public void onPreComponentLoad() {
