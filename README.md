@@ -50,7 +50,7 @@ Then add the dependency:
 <dependency>
     <groupId>net.vortexdevelopment</groupId>
     <artifactId>VortexCore</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.1</version>
     <scope>compile</scope>
 </dependency>
 ```
