@@ -2,7 +2,9 @@ package net.vortexdevelopment.vortexcore.text.hologram;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import net.vortexdevelopment.vortexcore.utils.WorldUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
@@ -23,10 +25,13 @@ import java.util.concurrent.ExecutionException;
 
 public class HologramManager {
 
+    private static final UUID sessionId = UUID.randomUUID();
+
+    private static final NamespacedKey SESSION_ID_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_session_id");
     private static final NamespacedKey HOLOGRAM_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram");
     private static final NamespacedKey VIEWERS_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_viewers");
 
-    private static Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
+    private static final Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
 
     public static void init() {
         clear();
@@ -37,7 +42,7 @@ public class HologramManager {
                     hologram.tickAsync();
                 }
             }
-        }, 0, 10);
+        }, 0, 20);
     }
 
     public static @Nullable Hologram getHologram(String id) {
@@ -53,17 +58,20 @@ public class HologramManager {
     }
 
     public static void createHologram(Hologram hologram) {
+        Location location = hologram.getLocation();
+        holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet()).add(hologram);
+
+        // Do not create hologram if the chunk is not loaded
+        if (!WorldUtils.isChunkLoadedAtLocation(location)) return;
+
         //Check if we at the main thread
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> createHologram(hologram));
             return;
         }
 
-        holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet()).add(hologram);
         //Summon the hologram to the world
-        Location location = hologram.getLocation();
-
-        //We need one armor stand for each line, use a gap of 0.25 blocks for each line
+        // We need one armor stand for each line, use a gap of 0.25 blocks for each line
         // First line (index 0) should be at the top, so we reverse the Y offset
         int lineCount = hologram.getLines().size();
         for (int i = 0; i < lineCount; i++) {
@@ -73,6 +81,7 @@ public class HologramManager {
             armorStand.setVisible(false);
             armorStand.setMarker(true);
             armorStand.setCollidable(false);
+            armorStand.setPersistent(false);
 
             //AdventureUtils.setCustomEntityName(armorStand, hologram.getLines().get(i)); //Makes custom name visible too
             armorStand.customName(AdventureUtils.formatComponent(hologram.getLines().get(i)));
@@ -80,6 +89,7 @@ public class HologramManager {
 
             PersistentDataContainer data = armorStand.getPersistentDataContainer();
             data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
+            data.set(SESSION_ID_KEY, PersistentDataType.STRING, sessionId.toString());
             if (hologram.useViewers()) {
                 //Make only the players in the viewers list see the hologram
                 armorStand.setVisibleByDefault(false);
@@ -164,14 +174,33 @@ public class HologramManager {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), HologramManager::clear);
             return;
         }
-        holograms.clear();
         //get all entities with the hologram key from all worlds
         for (World world : Bukkit.getWorlds()) {
             for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
                 PersistentDataContainer data = armorStand.getPersistentDataContainer();
-                if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING)) {
+                if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING) || data.has(getSessionIdKey(), PersistentDataType.STRING)) {
                     armorStand.remove();
+                    System.err.println("[VortexCore] Removed leftover hologram armor stand in world " + world.getName() + " with id " + data.get(HOLOGRAM_KEY, PersistentDataType.STRING));
                 }
+            }
+        }
+        holograms.clear();
+    }
+
+    public static void loadHologramsInChunk(Chunk chunk) {
+        for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
+            Location location = hologram.getLocation();
+            if (WorldUtils.isLocationAtChunk(location, chunk)) {
+                createHologram(hologram);
+            }
+        }
+    }
+
+    public static void unloadHologramsInChunk(Chunk chunk) {
+        for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
+            Location location = hologram.getLocation();
+            if (WorldUtils.isLocationAtChunk(location, chunk)) {
+                hologram.remove();
             }
         }
     }
@@ -199,5 +228,17 @@ public class HologramManager {
                 }
             }
         }
+    }
+
+    public static NamespacedKey getHologramKey() {
+        return HOLOGRAM_KEY;
+    }
+
+    public static NamespacedKey getSessionIdKey() {
+        return SESSION_ID_KEY;
+    }
+
+    public static String getSessionId() {
+        return sessionId.toString();
     }
 }

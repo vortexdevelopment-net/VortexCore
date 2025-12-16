@@ -52,7 +52,7 @@ public class Hologram {
     }
 
     public synchronized void update() {
-        if (!shouldUpdate) return;
+        if (!shouldUpdate || !getLocation().isChunkLoaded()) return;
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::update);
             return;
@@ -137,7 +137,7 @@ public class Hologram {
 
     public synchronized void updatePlaceholders() {
         //Check if we need to update any placeholder or do we have any at all
-        if (placeholders.isEmpty()) return;
+        if (placeholders.isEmpty() || !getLocation().isChunkLoaded()) return;
         if (placeholders.values().stream().noneMatch(HologramPlaceholder::shouldUpdate)) return;
 
         // Only update lines that contain placeholders that need updating
