@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
@@ -51,10 +53,23 @@ public class Hologram {
         placeholders.put("<" + placeholder.getPlaceholder().getPlaceholder() + ">", new HologramPlaceholder(placeholder, updateIntervalTicks));
     }
 
+    public List<MiniMessagePlaceholder> getPlaceholders() {
+        return placeholders.values().stream().map(HologramPlaceholder::getPlaceholder).toList();
+    }
+
     public synchronized void update() {
-        if (!shouldUpdate || !getLocation().isChunkLoaded()) return;
+        update(false);
+    }
+
+     /**
+     * Updates the hologram's armor stands to match the current lines.
+     * This method ensures that each armor stand corresponds to the correct line,
+     * adjusting positions and names as necessary.
+     */
+    public synchronized void update(boolean force) {
+        if ((!shouldUpdate && !force) || !getLocation().isChunkLoaded()) return;
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::update);
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> update(force));
             return;
         }
         shouldUpdate = false;
@@ -119,7 +134,7 @@ public class Hologram {
     private void updateArmorStandName(ArmorStand armorStand, String line) {
         if (placeholders.isEmpty()) {
             // No placeholders, just format the line
-            armorStand.customName(AdventureUtils.formatComponent(line));
+            armorStand.customName(AdventureUtils.formatComponent(line, Lang.staticPlaceholders));
             return;
         }
 
@@ -132,13 +147,21 @@ public class Hologram {
             }
         }
         
-        armorStand.customName(AdventureUtils.formatComponent(updatedLine));
+        armorStand.customName(AdventureUtils.formatComponent(updatedLine, Lang.staticPlaceholders));
     }
 
     public synchronized void updatePlaceholders() {
+        updatePlaceholders(false);
+    }
+
+     /**
+     * Updates only the armor stands that have placeholders needing updates.
+     * This method checks each line for placeholders and updates only those lines.
+     */
+    public synchronized void updatePlaceholders(boolean force) {
         //Check if we need to update any placeholder or do we have any at all
         if (placeholders.isEmpty() || !getLocation().isChunkLoaded()) return;
-        if (placeholders.values().stream().noneMatch(HologramPlaceholder::shouldUpdate)) return;
+        if (placeholders.values().stream().noneMatch(HologramPlaceholder::shouldUpdate) && !force) return;
 
         // Only update lines that contain placeholders that need updating
         for (int i = 0; i < lines.size() && i < armorStands.size(); i++) {
@@ -150,7 +173,7 @@ public class Hologram {
                 String placeholderKey = entry.getKey();
                 HologramPlaceholder hologramPlaceholder = entry.getValue();
                 
-                if (line.contains(placeholderKey) && hologramPlaceholder.shouldUpdate()) {
+                if (line.contains(placeholderKey)) {
                     needsUpdate = true;
                     break;
                 }

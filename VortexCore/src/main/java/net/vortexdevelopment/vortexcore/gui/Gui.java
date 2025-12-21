@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.simpleyaml.configuration.ConfigurationSection;
 
+import java.rmi.server.UID;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -23,7 +24,8 @@ import java.util.function.Consumer;
 
 public class Gui implements GuiHolder {
 
-    private static final UUID UID = UUID.randomUUID();
+    @Getter
+    private final UUID uuid = java.util.UUID.randomUUID();
     private final int rows;
 
     private final Inventory inventory;
@@ -193,6 +195,10 @@ public class Gui implements GuiHolder {
         }
         GuiManager.markAsOpen(this);
         return this;
+    }
+
+    public void open(Player player) {
+        show(player);
     }
 
     public Gui close(Player player) {
@@ -425,10 +431,6 @@ public class Gui implements GuiHolder {
         }
     }
 
-    public UUID getUID() {
-        return UID;
-    }
-
     @NotNull
     @Override
     public Inventory getInventory() {
@@ -444,11 +446,11 @@ public class Gui implements GuiHolder {
             return false;
         }
         Gui gui = (Gui) obj;
-        return UID.equals(gui.getUID());
+        return this.uuid.equals(gui.uuid);
     }
 
     @Override
     public int hashCode() {
-        return UID.hashCode();
+        return this.uuid.hashCode();
     }
 }

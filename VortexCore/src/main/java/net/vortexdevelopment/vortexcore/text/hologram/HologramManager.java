@@ -2,6 +2,8 @@ package net.vortexdevelopment.vortexcore.text.hologram;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import net.vortexdevelopment.vortexcore.utils.WorldUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
@@ -15,6 +17,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -70,6 +73,9 @@ public class HologramManager {
             return;
         }
 
+        List<MiniMessagePlaceholder> placeholders = new ArrayList<>(hologram.getPlaceholders());
+        placeholders.addAll(Lang.staticPlaceholders);
+
         //Summon the hologram to the world
         // We need one armor stand for each line, use a gap of 0.25 blocks for each line
         // First line (index 0) should be at the top, so we reverse the Y offset
@@ -83,8 +89,7 @@ public class HologramManager {
             armorStand.setCollidable(false);
             armorStand.setPersistent(false);
 
-            //AdventureUtils.setCustomEntityName(armorStand, hologram.getLines().get(i)); //Makes custom name visible too
-            armorStand.customName(AdventureUtils.formatComponent(hologram.getLines().get(i)));
+            armorStand.customName(AdventureUtils.formatComponent(hologram.getLines().get(i), placeholders));
             armorStand.setCustomNameVisible(true);
 
             PersistentDataContainer data = armorStand.getPersistentDataContainer();

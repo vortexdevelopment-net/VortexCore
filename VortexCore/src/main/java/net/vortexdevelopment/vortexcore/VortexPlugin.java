@@ -125,7 +125,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             dependencyContainer.inject(this); // inject root class after all components are loaded
 
             // Register Database bean
-            dependencyContainer.replaceBean(Database.class, database);
+            dependencyContainer.addBean(Database.class, database);
 
             MigrationRepository migrationRepository = dependencyContainer.getDependency(MigrationRepository.class);
             DataMigrationManager dataMigrationManager = new DataMigrationManager(migrationRepository);
@@ -227,14 +227,14 @@ public abstract class VortexPlugin extends JavaPlugin {
         Bean beanAnnotation = holder.getAnnotation(Bean.class);
         if (component != null) {
             for (Class<?> clazz : component.registerSubclasses()) {
-                dependencyContainer.replaceBean(clazz, bean);
+                dependencyContainer.addBean(clazz, bean);
             }
         } else if (beanAnnotation != null) {
             for (Class<?> clazz : beanAnnotation.registerSubclasses()) {
-                dependencyContainer.replaceBean(clazz, bean);
+                dependencyContainer.addBean(clazz, bean);
             }
         }
-        dependencyContainer.replaceBean(holder, bean);
+        dependencyContainer.addBean(holder, bean);
     }
 
     public void registerReloadHook(ReloadHook hook) {
