@@ -20,6 +20,6 @@ public class ApiHandler extends AnnotationHandler {
         if (instance == null) {
             dependencyContainer.newInstance(aClass);
         }
-        DependencyRepository.getInstance().emitEvent("vortexcore.api.load");
+        DependencyRepository.getInstance().getEventManager().emitEvent("vortexcore.api.load");
     }
 }

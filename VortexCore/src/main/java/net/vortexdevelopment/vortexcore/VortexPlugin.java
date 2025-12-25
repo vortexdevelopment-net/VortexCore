@@ -122,8 +122,8 @@ public abstract class VortexPlugin extends JavaPlugin {
                         onPreComponentLoad();
                     });
 
-            dependencyContainer.injectStatic(this.getClass());
-            dependencyContainer.inject(this); // inject root class after all components are loaded
+            dependencyContainer.getInjectionEngine().injectStatic(this.getClass());
+            dependencyContainer.getInjectionEngine().inject(this); // inject root class after all components are loaded
 
             // Register Database bean
             dependencyContainer.addBean(Database.class, database);
