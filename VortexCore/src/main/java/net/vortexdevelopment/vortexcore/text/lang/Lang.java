@@ -1,5 +1,7 @@
 package net.vortexdevelopment.vortexcore.text.lang;
 
+import io.papermc.paper.registry.RegistryAccess;
+import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.gui.Gui;
@@ -9,6 +11,8 @@ import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,7 +24,11 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 @net.vortexdevelopment.vinject.annotation.Component(priority = 9) //Ensure we load it before anything else
@@ -155,6 +163,7 @@ public class Lang implements ReloadHook {
         }
 
         for (String command : commands) {
+            command = processRandomPlaceholders(command);
             //Check if command stats with [MESSAGE], if so send the message to the player
             if (command.startsWith("[MESSAGE]")) {
                 command = command.substring(9).trim();
@@ -170,6 +179,31 @@ public class Lang implements ReloadHook {
                 continue;
             }
 
+            // Check for sound - [SOUND] SOUND_NAME [VOLUME] [PITCH]
+            if (command.startsWith("[SOUND]")) {
+                command = command.substring(7).trim();
+                if (player != null) {
+                    try {
+                        String[] parts = command.split(" ");
+                        String soundName = parts[0];
+                        String namespace = soundName.split(":").length > 1 ? soundName.split(":")[0] : "minecraft";
+                        String key = soundName.split(":").length > 1 ? soundName.split(":")[1] : soundName;
+                        Sound sound = (Sound) Sound.class.getDeclaredField(key).get(null);
+                        if (sound == null) {
+                            VortexPlugin.getInstance().getLogger().warning("Sound not found: " + soundName);
+                            continue;
+                        }
+                        float volume = parts.length > 1 ? Float.parseFloat(parts[1]) : 1.0f;
+                        float pitch = parts.length > 2 ? Float.parseFloat(parts[2]) : 1.0f;
+                        player.playSound(player.getLocation(), sound, volume, pitch);
+                    } catch (Exception e) {
+                        VortexPlugin.getInstance().getLogger().warning("Failed to play sound: " + command);
+                        e.printStackTrace();
+                    }
+                }
+                continue;
+            }
+
             if (command.startsWith("/")) {
                 command = command.substring(1);
             }
@@ -178,6 +212,43 @@ public class Lang implements ReloadHook {
             }
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command.trim());
         }
+    }
+
+    private static String processRandomPlaceholders(String command) {
+        // [RANDOM_NUMBER:from:to]
+        Pattern randomNumberPattern = Pattern.compile("\\[RANDOM_NUMBER:(-?\\d+):(-?\\d+)\\]");
+        Matcher randomNumberMatcher = randomNumberPattern.matcher(command);
+        StringBuilder sb = new StringBuilder();
+        while (randomNumberMatcher.find()) {
+            try {
+                long from = Long.parseLong(randomNumberMatcher.group(1));
+                long to = Long.parseLong(randomNumberMatcher.group(2));
+                long min = Math.min(from, to);
+                long max = Math.max(from, to);
+                long randomValue = ThreadLocalRandom.current().nextLong(min, max + 1);
+                randomNumberMatcher.appendReplacement(sb, String.valueOf(randomValue));
+            } catch (Exception e) {
+                randomNumberMatcher.appendReplacement(sb, randomNumberMatcher.group(0));
+            }
+        }
+        randomNumberMatcher.appendTail(sb);
+        command = sb.toString();
+
+        // [RANDOM:element1:element2:...]
+        Pattern randomPattern = Pattern.compile("\\[RANDOM:([^\\]]+)\\]");
+        Matcher randomMatcher = randomPattern.matcher(command);
+        sb = new StringBuilder();
+        while (randomMatcher.find()) {
+            String[] elements = randomMatcher.group(1).split(":");
+            if (elements.length > 0) {
+                String randomElement = elements[ThreadLocalRandom.current().nextInt(elements.length)];
+                randomMatcher.appendReplacement(sb, Matcher.quoteReplacement(randomElement));
+            } else {
+                randomMatcher.appendReplacement(sb, "");
+            }
+        }
+        randomMatcher.appendTail(sb);
+        return sb.toString();
     }
 
     public static MiniMessagePlaceholder[] createOptionalPlaceholder(boolean condition, String placeholder, String value) {
