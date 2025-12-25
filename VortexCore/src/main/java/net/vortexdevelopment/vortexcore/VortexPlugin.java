@@ -53,6 +53,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     private List<DataMigration> migrations = new ArrayList<>();
     private PluginInitState initState = PluginInitState.NOT_INITIALIZED;
 
+    private boolean initDatabaseCalled = false;
 
     /**
      * Verify the plugin license. This method is called during onLoad().
@@ -127,11 +128,13 @@ public abstract class VortexPlugin extends JavaPlugin {
             // Register Database bean
             dependencyContainer.addBean(Database.class, database);
 
-            MigrationRepository migrationRepository = dependencyContainer.getDependency(MigrationRepository.class);
-            DataMigrationManager dataMigrationManager = new DataMigrationManager(migrationRepository);
-            dataMigrationManager.registerMigrations(migrations);
-            try (Connection connection = database.getConnection()) {
-                dataMigrationManager.runMigrations(connection, this.getName().toLowerCase() + "_");
+            if (initDatabaseCalled) {
+                MigrationRepository migrationRepository = dependencyContainer.getDependency(MigrationRepository.class);
+                DataMigrationManager dataMigrationManager = new DataMigrationManager(migrationRepository);
+                dataMigrationManager.registerMigrations(migrations);
+                try (Connection connection = database.getConnection()) {
+                    dataMigrationManager.runMigrations(connection, this.getName().toLowerCase() + "_");
+                }
             }
 
             onPluginEnable();
@@ -205,6 +208,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             if (this.initState != PluginInitState.ON_LOAD) {
                 throw new IllegalStateException("Database must be initialized during onLoad()");
             }
+            initDatabaseCalled = true;
             this.database.init();
             if (migrations != null) {
                 this.migrations = Arrays.asList(migrations);
