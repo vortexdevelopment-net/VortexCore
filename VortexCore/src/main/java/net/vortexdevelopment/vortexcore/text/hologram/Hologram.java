@@ -138,16 +138,12 @@ public class Hologram {
             return;
         }
 
-        // Replace all placeholders in one pass
-        String updatedLine = line;
-        for (Map.Entry<String, HologramPlaceholder> entry : placeholders.entrySet()) {
-            String placeholderKey = entry.getKey(); // e.g., "<player>"
-            if (updatedLine.contains(placeholderKey)) {
-                updatedLine = updatedLine.replace(placeholderKey, entry.getValue().getValue());
-            }
+        List<MiniMessagePlaceholder> placeholderList = new ArrayList<>(Lang.staticPlaceholders);
+        for (HologramPlaceholder hologramPlaceholder : placeholders.values()) {
+            placeholderList.add(hologramPlaceholder.getPlaceholder());
         }
-        
-        armorStand.customName(AdventureUtils.formatComponent(updatedLine, Lang.staticPlaceholders));
+
+        armorStand.customName(AdventureUtils.formatComponent(line, placeholderList));
     }
 
     public synchronized void updatePlaceholders() {
