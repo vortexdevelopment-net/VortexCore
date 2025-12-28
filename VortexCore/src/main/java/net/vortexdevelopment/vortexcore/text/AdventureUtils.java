@@ -8,7 +8,6 @@ import net.kyori.adventure.text.minimessage.tag.standard.StandardTags;
 import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
-import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
@@ -55,7 +54,7 @@ public class AdventureUtils {
     private static Class<?> componentClass;
 
     static {
-        if (ServerProject.isServer(ServerProject.PAPER) && ServerVersion.isServerVersionAtLeast(ServerVersion.V1_18)) {
+        if (ServerProject.isServer(ServerProject.PAPER)) {
             try {
                 componentClass = Class.forName("net;kyori;adventure;text;Component".replace(";", "."));
                 displayNameMethod = ItemMeta.class.getDeclaredMethod("displayName", componentClass);
@@ -310,7 +309,7 @@ public class AdventureUtils {
     }
 
     public static boolean isMiniMessageEnabled() {
-        return ServerProject.isServer(ServerProject.PAPER) && ServerVersion.isServerVersionAtLeast(ServerVersion.V1_16) && displayNameMethod != null && setLoreMethod != null;
+        return ServerProject.isServer(ServerProject.PAPER) && displayNameMethod != null && setLoreMethod != null;
     }
 
     private static void setItemName(ItemStack item, Component name) {
@@ -404,15 +403,12 @@ public class AdventureUtils {
     }
 
     public static Component formatComponent(String text, MiniMessagePlaceholder... placeholders) {
-        MiniMessage miniMessage = MiniMessage.builder().editTags(builder -> {
-            Arrays.stream(placeholders).forEach(placeholder ->
-                    builder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), placeholder.getValue()))
-            );
-            builder.resolver(languageResolver);
-            builder.resolver(playerCommandResolver);
-            builder.resolver(consoleCommandResolver);
-        }).build();
-        Component component = miniMessage.deserialize(replaceLegacy(text));
+        List<TagResolver> resolvers = new ArrayList<>();
+        for (MiniMessagePlaceholder placeholder : placeholders) {
+            resolvers.add(Placeholder.parsed(placeholder.getPlaceholder(), placeholder.getValue()));
+        }
+        resolvers.add(StandardTags.defaults());
+        Component component = miniMessage.deserialize(replaceLegacy(text), TagResolver.resolver(resolvers));
         if (!component.hasDecoration(TextDecoration.ITALIC)) {
             component = component.decoration(TextDecoration.ITALIC, false);
         }
