@@ -101,6 +101,8 @@
                                 <exclude>**/META-INF/INFO_SRC</exclude>
                                 <exclude>INFO_BIN</exclude>
                                 <exclude>INFO_SRC</exclude>
+
+                                <exclude>vinject/templates/**</exclude>
                             </excludes>
                         </filter>
                         <filter>
@@ -172,7 +174,6 @@
                         <filter>
                             <artifact>net.vortexdevelopment:VInject</artifact>
                             <excludes>
-                                <exclude>vinject/templates/**</exclude>
                                 <exclude>com/zaxxer/**</exclude>
                                 <exclude>com/mysql/**</exclude>
                                 <exclude>org/mariadb/**</exclude>
