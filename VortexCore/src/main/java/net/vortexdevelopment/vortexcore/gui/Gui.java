@@ -26,20 +26,20 @@ public class Gui implements GuiHolder {
 
     @Getter
     private final UUID uuid = java.util.UUID.randomUUID();
-    private final int rows;
+    @Getter private final int rows;
 
     private final Inventory inventory;
     private final List<GuiItem> items = new ArrayList<>();
 
-    private @Getter Consumer<InventoryClickEvent> onGlobalClick;
-    private @Getter Consumer<InventoryClickEvent> onTopClick;
-    private @Getter Consumer<InventoryClickEvent> onBottomClick;
+    @Getter private Consumer<InventoryClickEvent> onGlobalClick;
+    @Getter private Consumer<InventoryClickEvent> onTopClick;
+    @Getter private Consumer<InventoryClickEvent> onBottomClick;
 
-    private @Getter Consumer<InventoryClickEvent> onGlobalDrag;
-    private @Getter Consumer<InventoryClickEvent> onTopDrag;
-    private @Getter Consumer<InventoryClickEvent> onBottomDrag;
+    @Getter private Consumer<InventoryClickEvent> onGlobalDrag;
+    @Getter private Consumer<InventoryClickEvent> onTopDrag;
+    @Getter private Consumer<InventoryClickEvent> onBottomDrag;
 
-    private @Getter Consumer<InventoryCloseEvent> onClose;
+    @Getter private Consumer<InventoryCloseEvent> onClose;
 
     private final List<Player> openers = new ArrayList<>();
 
