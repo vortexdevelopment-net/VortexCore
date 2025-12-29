@@ -6,7 +6,6 @@ import net.vortexdevelopment.vinject.di.ConfigurationContainer;
 import net.vortexdevelopment.vinject.di.DependencyRepository;
 import net.vortexdevelopment.vortexcore.chat.PromptManager;
 import net.vortexdevelopment.vortexcore.command.CommandManager;
-import net.vortexdevelopment.vortexcore.config.Config;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.database.DataMigrationManager;
 import net.vortexdevelopment.vortexcore.database.MigrationRepository;
@@ -25,6 +24,7 @@ import net.vortexdevelopment.vinject.database.Database;
 import net.vortexdevelopment.vinject.database.repository.RepositoryContainer;
 import net.vortexdevelopment.vinject.di.DependencyContainer;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -81,7 +81,11 @@ public abstract class VortexPlugin extends JavaPlugin {
         commandManager.init(this);
 
         // Read the database config in case it needs to be used in the plugin load
-        Config databaseConfig = new Config("database.yml");
+        File databaseConfigFile = new File(getDataFolder(), "database.yml");
+        if (!databaseConfigFile.exists()) {
+            saveResource("database.yml", false);
+        }
+        YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
         database = new Database(
                 databaseConfig.getString("Connection Settings.Hostname"),
                 databaseConfig.getString("Connection Settings.Port"),

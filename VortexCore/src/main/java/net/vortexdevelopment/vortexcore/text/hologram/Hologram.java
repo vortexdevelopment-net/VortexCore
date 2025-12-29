@@ -35,6 +35,7 @@ public class Hologram {
     public Hologram(String id, Location location) {
         this.id = id;
         this.location = location;
+        // new Throwable("DEBUG: Hologram created with id " + id).printStackTrace();
     }
 
     public Hologram(String id, Location location, String... lines) {
@@ -134,16 +135,11 @@ public class Hologram {
     private void updateArmorStandName(ArmorStand armorStand, String line) {
         if (placeholders.isEmpty()) {
             // No placeholders, just format the line
-            armorStand.customName(AdventureUtils.formatComponent(line, Lang.staticPlaceholders));
+            armorStand.customName(AdventureUtils.formatComponent(line));
             return;
         }
 
-        List<MiniMessagePlaceholder> placeholderList = new ArrayList<>(Lang.staticPlaceholders);
-        for (HologramPlaceholder hologramPlaceholder : placeholders.values()) {
-            placeholderList.add(hologramPlaceholder.getPlaceholder());
-        }
-
-        armorStand.customName(AdventureUtils.formatComponent(line, placeholderList));
+        armorStand.customName(AdventureUtils.formatComponent(line, placeholders.values().stream().map(HologramPlaceholder::getPlaceholder).toArray(MiniMessagePlaceholder[]::new)));
     }
 
     public synchronized void updatePlaceholders() {

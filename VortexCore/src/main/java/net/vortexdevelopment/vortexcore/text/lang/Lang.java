@@ -35,7 +35,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-@net.vortexdevelopment.vinject.annotation.Component(priority = 9) //Ensure we load it before anything else
+@net.vortexdevelopment.vinject.annotation.Component(priority = 1) //Ensure we load it before anything else
 @RegisterReloadHook
 public class Lang implements ReloadHook {
 

@@ -39,8 +39,10 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 public class AdventureUtils {
 
@@ -59,7 +61,7 @@ public class AdventureUtils {
                 componentClass = Class.forName("net;kyori;adventure;text;Component".replace(";", "."));
                 displayNameMethod = ItemMeta.class.getDeclaredMethod("displayName", componentClass);
                 setLoreMethod = ItemMeta.class.getDeclaredMethod("lore", List.class);
-                setLoreMethod = ItemMeta.class.getDeclaredMethod("lore");
+                getLoreMethod = ItemMeta.class.getDeclaredMethod("lore");
                 gsonComponentSerializer = Class.forName("net;kyori;adventure;text;serializer;gson;GsonComponentSerializer".replace(";", ".")).getDeclaredMethod("gson").invoke(null);
                 gsonDeserializeMethod = gsonComponentSerializer.getClass().getDeclaredMethod("deserialize", String.class);
                 gsonDeserializeMethod.setAccessible(true);
@@ -107,14 +109,29 @@ public class AdventureUtils {
             }
     );
 
-    private static final MiniMessage miniMessage = MiniMessage.builder().tags(
-            TagResolver.builder()
-                    .resolver(StandardTags.defaults())
-                    .resolver(languageResolver)
-                    .resolver(playerCommandResolver)
-                    .resolver(consoleCommandResolver)
-                    .build()
-    ).build();
+    private static MiniMessage miniMessage;
+
+    public static void reloadMiniMessage() {
+        TagResolver.Builder builder = TagResolver.builder()
+                .resolver(StandardTags.defaults())
+                .resolver(languageResolver)
+                .resolver(playerCommandResolver)
+                .resolver(consoleCommandResolver);
+
+        for (MiniMessagePlaceholder placeholder : Lang.staticPlaceholders) {
+            builder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue())));
+        }
+
+        TagResolver baseResolver = builder.build();
+        miniMessage = MiniMessage.builder().tags(baseResolver).build();
+    }
+
+    public static MiniMessage getMiniMessage() {
+        if (miniMessage == null) {
+            reloadMiniMessage();
+        }
+        return miniMessage;
+    }
 
     //Convert from non-shaded to shaded component
     public static Component convertToShadedComponent(Object original) {
@@ -395,7 +412,7 @@ public class AdventureUtils {
     }
 
     public static Component formatComponent(String text) {
-        Component component = miniMessage.deserialize(replaceLegacy(text));
+        Component component = getMiniMessage().deserialize(replaceLegacy(text));
         if (!component.hasDecoration(TextDecoration.ITALIC)) {
             component = component.decoration(TextDecoration.ITALIC, false);
         }
@@ -403,12 +420,17 @@ public class AdventureUtils {
     }
 
     public static Component formatComponent(String text, MiniMessagePlaceholder... placeholders) {
-        List<TagResolver> resolvers = new ArrayList<>();
-        for (MiniMessagePlaceholder placeholder : placeholders) {
-            resolvers.add(Placeholder.parsed(placeholder.getPlaceholder(), placeholder.getValue()));
+        if (placeholders == null || placeholders.length == 0) {
+            return formatComponent(text);
         }
-        resolvers.add(StandardTags.defaults());
-        Component component = miniMessage.deserialize(replaceLegacy(text), TagResolver.resolver(resolvers));
+
+        TagResolver.Builder localBuilder = TagResolver.builder();
+        for (MiniMessagePlaceholder placeholder : placeholders) {
+            localBuilder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue())));
+        }
+
+        // Explicitly combine baseResolver and localResolvers
+        Component component = getMiniMessage().deserialize(replaceLegacy(text), localBuilder.build());
         if (!component.hasDecoration(TextDecoration.ITALIC)) {
             component = component.decoration(TextDecoration.ITALIC, false);
         }
@@ -449,7 +471,7 @@ public class AdventureUtils {
 
     public static String formatLegacy(String text) {
         return ChatColor.translateAlternateColorCodes('&',
-                LegacyComponentSerializer.legacyAmpersand().serialize(miniMessage.deserialize(replaceLegacy(text))));
+                LegacyComponentSerializer.legacyAmpersand().serialize(getMiniMessage().deserialize(replaceLegacy(text))));
     }
 
     public static List<String> formatLegacy(List<String> list) {
@@ -466,6 +488,18 @@ public class AdventureUtils {
             result.add(formatLegacy(line));
         }
         return result;
+    }
+
+    public static String toMiniMessage(Component component) {
+        return getMiniMessage().serialize(component);
+    }
+
+    public static List<String> toMiniMessage(List<Component> components) {
+        List<String> list = new ArrayList<>();
+        for (Component component : components) {
+            list.add(getMiniMessage().serialize(component));
+        }
+        return list;
     }
 
     public static String toLegacy(Component component) {
@@ -558,13 +592,13 @@ public class AdventureUtils {
             case 'k':
                 return "<obfuscated>";
             case 'l':
-                return "<b>";
+                return "<bold>";
             case 'm':
-                return "<st>";
+                return "<strikethrough>";
             case 'n':
-                return "<u>";
+                return "<underlined>";
             case 'o':
-                return "<i>";
+                return "<italic>";
             case 'r':
                 return "<reset>";
             default:
@@ -573,7 +607,7 @@ public class AdventureUtils {
     }
 
     public static String clear(String msg) {
-        return PlainTextComponentSerializer.plainText().serialize(miniMessage.deserialize(replaceLegacy(msg)));
+        return PlainTextComponentSerializer.plainText().serialize(getMiniMessage().deserialize(replaceLegacy(msg)));
     }
 
     public static String clear(Component component) {

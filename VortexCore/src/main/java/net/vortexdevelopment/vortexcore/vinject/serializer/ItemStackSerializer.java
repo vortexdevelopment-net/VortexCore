@@ -142,7 +142,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         if (map.containsKey("Name")) {
-            meta.displayName(AdventureUtils.getMiniMessage().deserialize((String) map.get("Name")));
+            meta.displayName(AdventureUtils.formatComponent((String) map.get("Name")));
         }
 
         if (map.containsKey("Lore")) {
@@ -150,7 +150,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (loreObj instanceof List<?>) {
                 List<Component> lore = new ArrayList<>();
                 for (Object o : (List<?>) loreObj) {
-                    lore.add(AdventureUtils.getMiniMessage().deserialize(o.toString()));
+                    lore.add(AdventureUtils.formatComponent(o.toString()));
                 }
                 meta.lore(lore);
             }
