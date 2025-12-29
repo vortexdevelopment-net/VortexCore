@@ -33,4 +33,12 @@ public class MiniMessagePlaceholder {
         }
         return newList;
     }
+
+    @Override
+    public String toString() {
+        return "MiniMessagePlaceholder{" +
+                "placeholder='" + placeholder + '\'' +
+                ", value='" + value + '\'' +
+                '}';
+    }
 }
