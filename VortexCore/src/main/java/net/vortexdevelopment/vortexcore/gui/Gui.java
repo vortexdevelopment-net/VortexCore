@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.gui;
 
 import lombok.Getter;
+import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
@@ -12,9 +13,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.simpleyaml.configuration.ConfigurationSection;
 
-import java.rmi.server.UID;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -306,27 +305,6 @@ public class Gui implements GuiHolder {
 
     public Gui setOnClose(Consumer<InventoryCloseEvent> onClose) {
         this.onClose = onClose;
-        return this;
-    }
-
-    public Gui fetchFills(org.bukkit.configuration.ConfigurationSection config) {
-        String fillEmpty = config.getString("Fill Empty");
-        if (fillEmpty != null) {
-            ItemStack fillEmptyItem = new ItemStack(Material.valueOf(fillEmpty));
-            fillEmpty(fillEmptyItem);
-        }
-
-        String fillBorder = config.getString("Fill Border");
-        if (fillBorder != null) {
-            ItemStack fillBorderItem = new ItemStack(Material.valueOf(fillBorder));
-            fillBorder(fillBorderItem);
-        }
-
-        String fillBottom = config.getString("Fill Bottom");
-        if (fillBottom != null) {
-            ItemStack fillBottomItem = new ItemStack(Material.valueOf(fillBottom));
-            fillBottom(fillBottomItem);
-        }
         return this;
     }
 

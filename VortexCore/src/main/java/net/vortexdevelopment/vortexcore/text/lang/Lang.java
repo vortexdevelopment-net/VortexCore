@@ -3,6 +3,7 @@ package net.vortexdevelopment.vortexcore.text.lang;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
+import net.vortexdevelopment.vinject.config.yaml.YamlConfig;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.gui.Gui;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
@@ -22,6 +23,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +40,7 @@ import java.util.stream.Stream;
 public class Lang implements ReloadHook {
 
     private static boolean initialized = false;
-    private static FileConfiguration lang;
+    private static YamlConfig lang;
     public static List<MiniMessagePlaceholder> staticPlaceholders = new ArrayList<>();
 
     private Lang() {
@@ -49,7 +53,7 @@ public class Lang implements ReloadHook {
      * @return A list of placeholders including the static ones.
      */
     public static List<MiniMessagePlaceholder> createPlaceholders(MiniMessagePlaceholder... placeholders) {
-        List<MiniMessagePlaceholder> placeholderList = new java.util.ArrayList<>(Stream.of(placeholders).toList());
+        List<MiniMessagePlaceholder> placeholderList = new ArrayList<>(Stream.of(placeholders).toList());
         placeholderList.addAll(staticPlaceholders);
         return placeholderList;
     }
@@ -270,7 +274,23 @@ public class Lang implements ReloadHook {
                 }
                 VortexPlugin.getInstance().saveResource("lang.yml", false);
             }
-            lang = YamlConfiguration.loadConfiguration(langFile);
+            lang = YamlConfig.load(langFile);
+
+            // Add missing keys from bundled resource
+            InputStream defConfigStream = VortexPlugin.getInstance().getResource("lang.yml");
+            if (defConfigStream != null) {
+                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defConfigStream, StandardCharsets.UTF_8));
+                boolean changed = false;
+                for (String key : defConfig.getKeys(true)) {
+                    if (!lang.contains(key) || (lang.get(key) == null) || lang.getString(key).isEmpty()) {
+                        lang.set(key, defConfig.get(key));
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    lang.save();
+                }
+            }
 
             staticPlaceholders.add(new MiniMessagePlaceholder("prefix", lang.getString("General.Plugin Prefix", VortexPlugin.getInstance().getPrefixString())));
             if (lang.getConfigurationSection("Colors") != null) {
@@ -278,8 +298,16 @@ public class Lang implements ReloadHook {
                     staticPlaceholders.add(new MiniMessagePlaceholder(placeholder, "<color:" + lang.getString("Colors." + placeholder) + ">"));
                 }
             }
+
+            // Custom Placeholders
+            if (lang.getConfigurationSection("Custom Placeholders") != null) {
+                for (String placeholder : lang.getConfigurationSection("Custom Placeholders").getKeys(false)) {
+                    staticPlaceholders.add(new MiniMessagePlaceholder(placeholder, lang.getString("Custom Placeholders." + placeholder)));
+                }
+            }
             initialized = true;
             Gui.BACK_BUTTON_NAME = getString("GUI.Back Button Name", "§cBack");
+            AdventureUtils.reloadMiniMessage();
         } catch (Exception ex) {
             ex.printStackTrace();
         }
