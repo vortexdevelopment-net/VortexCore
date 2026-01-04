@@ -45,7 +45,7 @@ public class HologramManager {
                     hologram.tickAsync();
                 }
             }
-        }, 0, 20);
+        }, 0, 10L);
     }
 
     public static @Nullable Hologram getHologram(String id) {
@@ -185,7 +185,6 @@ public class HologramManager {
                 PersistentDataContainer data = armorStand.getPersistentDataContainer();
                 if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING) || data.has(getSessionIdKey(), PersistentDataType.STRING)) {
                     armorStand.remove();
-                    System.err.println("[VortexCore] Removed leftover hologram armor stand in world " + world.getName() + " with id " + data.get(HOLOGRAM_KEY, PersistentDataType.STRING));
                 }
             }
         }

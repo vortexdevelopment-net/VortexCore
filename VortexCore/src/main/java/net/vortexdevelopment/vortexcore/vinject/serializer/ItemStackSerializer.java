@@ -15,9 +15,12 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionType;
 
 import java.util.*;
 
+@net.vortexdevelopment.vinject.annotation.Component
 @YamlSerializer
 public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
@@ -108,6 +111,16 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                 });
                 if (!attributes.isEmpty()) {
                     map.put("Attributes", attributes);
+                }
+            }
+
+            // Tipped arrow and potion types serialization
+            if (meta instanceof PotionMeta potionMeta) {
+                // Serialize to "Potion" key if it is a tripped arrow or potion
+                if (item.getType() == Material.TIPPED_ARROW || item.getType() == Material.POTION) {
+                    if (potionMeta.getBasePotionType() != null) {
+                        map.put("Potion", potionMeta.getBasePotionType().name());
+                    }
                 }
             }
         }
@@ -215,6 +228,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     String[] parts = o.toString().split(":");
                     if (parts.length >= 3) {
                         try {
+                            // Format: ATTRIBUTE:VALUE:OPERATION[:SLOT]
                             Attribute attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(parts[0].toUpperCase(Locale.ENGLISH))); //Attribute.valueOf(parts[0].toUpperCase());
                             double value = Double.parseDouble(parts[1]);
                             AttributeModifier.Operation op = AttributeModifier.Operation.valueOf(parts[2].toUpperCase());
@@ -234,6 +248,15 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     }
                 }
             }
+        }
+
+        // Potion type deserialization
+        if (map.containsKey("Potion") && meta instanceof PotionMeta potionMeta) {
+            String potionTypeName = (String) map.get("Potion");
+            try {
+                PotionType potionType = PotionType.valueOf(potionTypeName.toUpperCase());
+                potionMeta.setBasePotionType(potionType);
+            } catch (Exception ignored) {}
         }
 
         item.setItemMeta(meta);

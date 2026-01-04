@@ -119,7 +119,8 @@ public class AdventureUtils {
                 .resolver(consoleCommandResolver);
 
         for (MiniMessagePlaceholder placeholder : Lang.staticPlaceholders) {
-            builder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue())));
+            // No need to check if the value is a component, these are all strings for static placeholders
+            builder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue().toString())));
         }
 
         TagResolver baseResolver = builder.build();
@@ -426,7 +427,11 @@ public class AdventureUtils {
 
         TagResolver.Builder localBuilder = TagResolver.builder();
         for (MiniMessagePlaceholder placeholder : placeholders) {
-            localBuilder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue())));
+            if (placeholder.isComponent()) {
+                localBuilder.resolver(Placeholder.component(placeholder.getPlaceholder(), (Component) placeholder.getValue()));
+            } else {
+                localBuilder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue().toString())));
+            }
         }
 
         // Explicitly combine baseResolver and localResolvers
@@ -491,13 +496,13 @@ public class AdventureUtils {
     }
 
     public static String toMiniMessage(Component component) {
-        return getMiniMessage().serialize(component);
+        return getMiniMessage().serialize(component).replaceAll("<!(italic|i|underlined|u|strikethrough|st|bold|b|obfuscated|obf)>", "");
     }
 
     public static List<String> toMiniMessage(List<Component> components) {
         List<String> list = new ArrayList<>();
         for (Component component : components) {
-            list.add(getMiniMessage().serialize(component));
+            list.add(toMiniMessage(component));
         }
         return list;
     }
@@ -632,7 +637,11 @@ public class AdventureUtils {
     public static Component formatPlaceholder(Component message, MiniMessagePlaceholder... placeholder) {
         return message.replaceText(builder -> {
             for (MiniMessagePlaceholder place : placeholder) {
-                builder.matchLiteral(place.getPlaceholder()).replacement(formatComponent(place.getValue()));
+                if (place.isComponent()) {
+                    builder.matchLiteral("{" + place.getPlaceholder() + "}").replacement((Component) place.getValue());
+                } else {
+                    builder.matchLiteral(place.getPlaceholder()).replacement(formatComponent(place.getValue().toString()));
+                }
             }
         });
     }

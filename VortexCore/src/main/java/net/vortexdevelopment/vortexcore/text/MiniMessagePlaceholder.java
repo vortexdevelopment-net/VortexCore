@@ -2,7 +2,9 @@ package net.vortexdevelopment.vortexcore.text;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.text.Component;
 
+import java.awt.*;
 import java.util.List;
 
 public class MiniMessagePlaceholder {
@@ -10,7 +12,7 @@ public class MiniMessagePlaceholder {
     @Getter
     private final String placeholder;
     @Getter
-    private final String value;
+    private final Object value;
 
     public MiniMessagePlaceholder(String placeholder, String value) {
         this.placeholder = placeholder;
@@ -22,8 +24,13 @@ public class MiniMessagePlaceholder {
         this.value = String.valueOf(value);
     }
 
+    public MiniMessagePlaceholder(String placeholder, Component value) {
+        this.placeholder = placeholder;
+        this.value = value;
+    }
+
     public String replace(String string) {
-        return string.replaceAll("<" + this.placeholder + ">", this.value);
+        return string.replaceAll("<" + this.placeholder + ">", this.value.toString());
     }
 
     public List<String> replace(List<String> list) {
@@ -32,6 +39,10 @@ public class MiniMessagePlaceholder {
             newList.add(replace(line));
         }
         return newList;
+    }
+
+    public boolean isComponent() {
+        return value instanceof Component;
     }
 
     @Override

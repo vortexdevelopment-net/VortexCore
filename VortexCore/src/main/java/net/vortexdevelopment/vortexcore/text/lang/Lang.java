@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.text.lang;
 
+import com.earth2me.essentials.textreader.SimpleTextInput;
 import io.papermc.paper.registry.RegistryAccess;
 import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
@@ -12,12 +13,14 @@ import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -60,7 +63,8 @@ public class Lang implements ReloadHook {
 
     public static String replaceStaticPlaceholders(String message) {
         for (MiniMessagePlaceholder placeholder : staticPlaceholders) {
-            message = message.replace("<" + placeholder.getPlaceholder() + ">", placeholder.getValue());
+            if (placeholder.isComponent()) continue; // Should not happen in string replacement
+            message = message.replace("<" + placeholder.getPlaceholder() + ">", placeholder.getValue().toString());
         }
         return message;
     }
@@ -69,7 +73,8 @@ public class Lang implements ReloadHook {
         List<String> result = new ArrayList<>();
         for (String line : list) {
             for (MiniMessagePlaceholder placeholder : staticPlaceholders) {
-                line = line.replace("<" + placeholder.getPlaceholder() + ">", placeholder.getValue());
+                if (placeholder.isComponent()) continue; // Should not happen in string replacement
+                line = line.replace("<" + placeholder.getPlaceholder() + ">", placeholder.getValue().toString());
             }
             result.add(line);
         }
@@ -311,5 +316,86 @@ public class Lang implements ReloadHook {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Translates a client key (e.g., item.minecraft.diamond_sword) to a Component for the client's language.
+     * @param key The client key to translate.
+     * @return The translated Component.
+     */
+    public static Component translateClientKey(String key) {
+        return Component.translatable(key);
+    }
+
+    /**
+     * Translates a client key (e.g., item.minecraft.diamond_sword) to a MiniMessage formatted string for the client's language.
+     * @param key The client key to translate.
+     * @return The translated MiniMessage string.
+     */
+    public static String translateClientKeyTo(String key) {
+        return AdventureUtils.toMiniMessage(translateClientKey(key));
+    }
+
+    /**
+     * Translates a Material to its item name in the client's language.
+     * @param material The Material to translate.
+     * @return The translated item name.
+     */
+    public static String translateItemName(Material material) {
+        if (material == null) {
+            return "Unknown";
+        }
+        String key = "item.minecraft." + material.name().toLowerCase(Locale.ROOT);
+        return translateClientKeyTo(key);
+    }
+
+    public static Component translateItemNameComponent(Material material) {
+        if (material == null) {
+            return Component.text("Unknown");
+        }
+        String key = "item.minecraft." + material.name().toLowerCase(Locale.ROOT);
+        return translateClientKey(key);
+    }
+
+    /**
+     * Translates an EntityType to its mob name in the client's language.
+     * @param entityType The EntityType to translate.
+     * @return The translated mob name.
+     */
+    public static String translateMobName(EntityType entityType) {
+        if (entityType == null) {
+            return "Unknown";
+        }
+        String key = "entity.minecraft." + entityType.name().toLowerCase(Locale.ROOT);
+        return translateClientKeyTo(key);
+    }
+
+    public static Component translateMobNameComponent(EntityType entityType) {
+        if (entityType == null) {
+            return Component.text("Unknown");
+        }
+        String key = "entity.minecraft." + entityType.name().toLowerCase(Locale.ROOT);
+        return translateClientKey(key);
+    }
+
+    /**
+     * Translates a Material to its block name in the client's language.
+     * @param material The Material to translate.
+     * @return The translated block name.
+     */
+    public static String translateBlockName(Material material) {
+        if (material == null) {
+            return "Unknown";
+        }
+        String key = "block.minecraft." + material.name().toLowerCase(Locale.ROOT);
+        return translateClientKeyTo(key);
+    }
+
+    public static Component translateBlockNameComponent(Material material) {
+        if (material == null) {
+            return Component.text("Unknown");
+        }
+        String key = "block.minecraft." + material.name().toLowerCase(Locale.ROOT);
+        return translateClientKey(key);
     }
 }

@@ -17,7 +17,7 @@ class HologramPlaceholder {
         return provider.getPlaceholder();
     }
 
-    String getValue() {
+    Object getValue() {
         return provider.getPlaceholder().getValue();
     }
 
