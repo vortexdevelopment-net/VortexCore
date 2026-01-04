@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.vortexdevelopment</groupId>
         <artifactId>VortexCore-Parent</artifactId>
-        <version>1.0.2</version>
+        <version>1.0.3</version>
     </parent>
 
     <artifactId>VortexCore</artifactId>
@@ -61,10 +61,6 @@
 <!--                            <shadedPattern>net.vortexdevelopment.vortexcore.libs</shadedPattern>-->
 <!--                        </relocation>-->
 
-                        <relocation>
-                            <pattern>org.simpleyaml</pattern>
-                            <shadedPattern>net.vortexdevelopment.vortexcore.libs.org.simpleyaml</shadedPattern>
-                        </relocation>
                     </relocations>
 
                     <filters>
@@ -163,12 +159,6 @@
                             <artifact>org.slf4j:*</artifact>
                             <excludes>
                                 <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>com.github.Carleslc.Simple-YAML:Simple-Yaml</artifact>
-                            <excludes>
-                                <exclude>org/yaml/snakeyaml/**</exclude>
                             </excludes>
                         </filter>
                         <filter>
@@ -328,10 +318,13 @@
             <scope>provided</scope>
         </dependency>
 
+
+        <!-- Plugin Hooks -->
         <dependency>
-            <groupId>com.github.Carleslc.Simple-YAML</groupId>
-            <artifactId>Simple-Yaml</artifactId>
-            <version>1.8.4</version>
+            <groupId>net.vortexdevelopment</groupId>
+            <artifactId>VortexStacker-API</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
@@ -375,6 +368,9 @@
             <version>3.0.0</version>
             <scope>provided</scope>
         </dependency>
+
+
+
         <!-- Testing Dependencies -->
         <dependency>
             <groupId>junit</groupId>
