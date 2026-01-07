@@ -1,12 +1,10 @@
 package net.vortexdevelopment.vortexcore.text.hologram;
 
-import it.unimi.dsi.fastutil.Hash;
 import lombok.Getter;
 import lombok.Setter;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
-import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
@@ -17,7 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.Future;
 
 public class Hologram {
 

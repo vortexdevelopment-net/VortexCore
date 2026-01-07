@@ -1,11 +1,11 @@
 package net.vortexdevelopment.vortexcore.vinject.handler;
 
+import net.vortexdevelopment.vinject.annotation.component.Registry;
+import net.vortexdevelopment.vinject.di.DependencyContainer;
+import net.vortexdevelopment.vinject.di.registry.AnnotationHandler;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
-import net.vortexdevelopment.vinject.annotation.Registry;
-import net.vortexdevelopment.vinject.di.DependencyContainer;
-import net.vortexdevelopment.vinject.di.registry.AnnotationHandler;
 
 @Registry(annotation = RegisterReloadHook.class)
 public class ReloadRegisterHookHandler extends AnnotationHandler {
@@ -21,4 +21,3 @@ public class ReloadRegisterHookHandler extends AnnotationHandler {
         }
     }
 }
-

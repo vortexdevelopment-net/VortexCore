@@ -1,7 +1,6 @@
 package net.vortexdevelopment.vortexcore.vinject.serializer;
 
 import net.vortexdevelopment.vinject.annotation.database.Column;
-import net.vortexdevelopment.vinject.annotation.database.FieldValue;
 import net.vortexdevelopment.vinject.annotation.database.MethodValue;
 import net.vortexdevelopment.vinject.annotation.database.RegisterDatabaseSerializer;
 import net.vortexdevelopment.vinject.database.serializer.DatabaseSerializer;

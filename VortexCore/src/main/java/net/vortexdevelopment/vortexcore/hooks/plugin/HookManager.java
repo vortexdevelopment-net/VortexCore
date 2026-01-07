@@ -7,7 +7,6 @@ import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.ShopGUIPlusHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.stacker.VortexStackerHook;
 
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 

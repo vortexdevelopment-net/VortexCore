@@ -1,10 +1,10 @@
 package net.vortexdevelopment.vortexcore.vinject.handler;
 
-import net.vortexdevelopment.vortexcore.utils.CommandUtils;
-import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterCommand;
-import net.vortexdevelopment.vinject.annotation.Registry;
+import net.vortexdevelopment.vinject.annotation.component.Registry;
 import net.vortexdevelopment.vinject.di.DependencyContainer;
 import net.vortexdevelopment.vinject.di.registry.AnnotationHandler;
+import net.vortexdevelopment.vortexcore.utils.CommandUtils;
+import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterCommand;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.TabCompleter;
 

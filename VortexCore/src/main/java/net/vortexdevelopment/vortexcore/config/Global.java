@@ -1,15 +1,13 @@
 package net.vortexdevelopment.vortexcore.config;
 
-import net.vortexdevelopment.vinject.annotation.Component;
+import net.vortexdevelopment.vinject.annotation.component.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.io.IOException;
 
-@Component
 @RegisterReloadHook
 public class Global implements ReloadHook {
 

@@ -1,10 +1,14 @@
 package net.vortexdevelopment.vortexcore;
 
 import lombok.Getter;
-import net.vortexdevelopment.vinject.annotation.Injectable;
+import net.vortexdevelopment.vinject.annotation.Bean;
+import net.vortexdevelopment.vinject.annotation.component.Component;
+import net.vortexdevelopment.vinject.annotation.component.Root;
+import net.vortexdevelopment.vinject.annotation.util.Injectable;
+import net.vortexdevelopment.vinject.database.Database;
+import net.vortexdevelopment.vinject.database.repository.RepositoryContainer;
 import net.vortexdevelopment.vinject.di.ConfigurationContainer;
-import net.vortexdevelopment.vinject.di.DependencyRepository;
-import net.vortexdevelopment.vortexcore.chat.PromptManager;
+import net.vortexdevelopment.vinject.di.DependencyContainer;
 import net.vortexdevelopment.vortexcore.command.CommandManager;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.database.DataMigrationManager;
@@ -15,14 +19,6 @@ import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
 import net.vortexdevelopment.vortexcore.utils.PluginInitState;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
-import net.vortexdevelopment.vinject.annotation.Inject;
-import net.vortexdevelopment.vinject.annotation.Bean;
-import net.vortexdevelopment.vinject.annotation.Component;
-import net.vortexdevelopment.vinject.annotation.Root;
-
-import net.vortexdevelopment.vinject.database.Database;
-import net.vortexdevelopment.vinject.database.repository.RepositoryContainer;
-import net.vortexdevelopment.vinject.di.DependencyContainer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.HandlerList;
@@ -166,7 +162,9 @@ public abstract class VortexPlugin extends JavaPlugin {
         if (!emergencyStop) {
             onPluginDisable();
         }
-        database.shutdown();
+        if (database != null) {
+            database.shutdown();
+        }
         HandlerList.unregisterAll(this);
         if (dependencyContainer != null) {
             dependencyContainer.release();

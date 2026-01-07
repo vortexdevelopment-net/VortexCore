@@ -1,7 +1,5 @@
 package net.vortexdevelopment.vortexcore.command;
 
-import net.vortexdevelopment.vinject.annotation.Component;
-import net.vortexdevelopment.vinject.di.DependencyContainer;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.command.annotation.BaseCommand;
 import net.vortexdevelopment.vortexcore.command.annotation.Command;
@@ -9,9 +7,7 @@ import net.vortexdevelopment.vortexcore.command.annotation.Param;
 import net.vortexdevelopment.vortexcore.command.annotation.Permission;
 import net.vortexdevelopment.vortexcore.command.annotation.Sender;
 import net.vortexdevelopment.vortexcore.command.annotation.SubCommand;
-import net.vortexdevelopment.vortexcore.command.annotation.TabArgs;
 import net.vortexdevelopment.vortexcore.command.annotation.TabComplete;
-import net.vortexdevelopment.vortexcore.command.annotation.TabIndex;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.ConsoleCommandSender;
@@ -19,13 +15,18 @@ import org.bukkit.command.PluginCommand;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
-import org.reflections.Reflections;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class CommandManager {
@@ -88,17 +89,19 @@ public class CommandManager {
 
         String commandName = commandAnnotation.value();
         PluginCommand command = plugin.getServer().getPluginCommand(commandName);
+        boolean dynamic = false;
+
         if (command == null) {
             // Create a new command dynamically
             try {
                 Constructor<PluginCommand> constructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
                 constructor.setAccessible(true);
                 command = constructor.newInstance(commandName, plugin);
+                dynamic = true;
             } catch (Exception e) {
                 plugin.getLogger().severe("Failed to create plugin command: " + commandName);
                 return;
             }
-            plugin.getServer().getCommandMap().register(plugin.getName(), command);
         }
 
         // Set command aliases
@@ -107,6 +110,10 @@ public class CommandManager {
             command.setAliases(Arrays.asList(aliases));
             plugin.getLogger().info("Registered aliases for command " + commandName + ": " + 
                                    String.join(", ", aliases));
+        }
+
+        if (dynamic) {
+            plugin.getServer().getCommandMap().register(plugin.getName(), command);
         }
 
         // Store the command instance instead of creating a new executor

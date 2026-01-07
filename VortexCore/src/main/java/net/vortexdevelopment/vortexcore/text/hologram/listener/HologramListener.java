@@ -1,21 +1,15 @@
 package net.vortexdevelopment.vortexcore.text.hologram.listener;
 
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
-import net.vortexdevelopment.vortexcore.utils.PerformanceLogger;
+import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 import org.bukkit.Chunk;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.persistence.PersistentDataType;
-
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 @RegisterListener
 public class HologramListener implements Listener {

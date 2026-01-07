@@ -3,7 +3,6 @@ package net.vortexdevelopment.vortexcore.gui;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.Plugin;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 

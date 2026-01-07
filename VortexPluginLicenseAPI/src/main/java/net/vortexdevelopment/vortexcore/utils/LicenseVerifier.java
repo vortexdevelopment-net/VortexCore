@@ -117,17 +117,13 @@ public class LicenseVerifier {
     }
 
     private static boolean isDevLicense() {
-        //Get file from server root "DEV" and reade JWT token
-        File file = new File("VORTEX_DEV_LICENSE");
-        if (!file.exists() || !file.isFile()) {
-            return false;
-        }
+        try {
+            String token = getEffectiveDevLicense();
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String token = reader.readLine();
             if (token == null || token.isEmpty()) {
                 return false;
             }
+
             // Decode the content with the public key
             DecodedJWT decodedJWT = JWT.require(getAlgorithm())
                     .acceptLeeway(CLOCK_SKEW_LEEWAY_SECONDS)
@@ -138,6 +134,30 @@ public class LicenseVerifier {
         } catch (Exception e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    private static String getEffectiveDevLicense() {
+        // Frist try the env variable for VORTEX_DEV_LICENSE than the file from server root
+        String envVar = System.getenv("VORTEX_DEV_LICENSE");
+        if (envVar != null && !envVar.isEmpty()) {
+            return envVar;
+        }
+
+        File file = new File("VORTEX_DEV_LICENSE");;
+        if (!file.exists() || !file.isFile()) {
+            return null;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String token = reader.readLine();
+            if (token == null || token.isEmpty()) {
+                return null;
+            }
+            return token;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
         }
     }
 

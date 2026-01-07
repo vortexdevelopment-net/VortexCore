@@ -10,7 +10,6 @@ import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.math.BigInteger;
-import java.util.function.Consumer;
 
 public class VortexStackerHook extends StackerHook {
 

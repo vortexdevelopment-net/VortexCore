@@ -16,12 +16,15 @@
     </modules>
 
     <properties>
-        <revision>1.0.1</revision>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
     <repositories>
+        <repository>
+            <id>vortex-repo</id>
+            <url>https://repo.vortexdevelopment.net/repository</url>
+        </repository>
         <repository>
             <id>PaperMC</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>

@@ -1,7 +1,7 @@
 package net.vortexdevelopment.vortexcore.services;
 
 import net.vortexdevelopment.vinject.annotation.Bean;
-import net.vortexdevelopment.vinject.annotation.Service;
+import net.vortexdevelopment.vinject.annotation.component.Service;
 import net.vortexdevelopment.vortexcore.VortexCore;
 import org.bukkit.plugin.Plugin;
 

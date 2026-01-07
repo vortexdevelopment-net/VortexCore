@@ -1,10 +1,8 @@
 package net.vortexdevelopment.vortexcore.text;
 
 import lombok.Getter;
-import lombok.Setter;
 import net.kyori.adventure.text.Component;
 
-import java.awt.*;
 import java.util.List;
 
 public class MiniMessagePlaceholder {

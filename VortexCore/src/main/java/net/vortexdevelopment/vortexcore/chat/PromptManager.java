@@ -1,10 +1,9 @@
 package net.vortexdevelopment.vortexcore.chat;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
-import net.vortexdevelopment.vinject.annotation.Injectable;
+import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
-import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;

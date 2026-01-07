@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.vinject.templates;
 
-import net.vortexdevelopment.vinject.annotation.RegisterTemplate;
+
+import net.vortexdevelopment.vinject.annotation.template.RegisterTemplate;
 
 @RegisterTemplate(
         annotationFqcn = "me.ceze88.vortexcore.vinject.annotation.RegisterListener",

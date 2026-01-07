@@ -1,8 +1,6 @@
 package net.vortexdevelopment.vortexcore.command.builtin;
 
 import net.vortexdevelopment.vortexcore.command.annotation.BaseCommand;
-import net.vortexdevelopment.vortexcore.command.annotation.Command;
-import net.vortexdevelopment.vortexcore.command.annotation.Permission;
 import net.vortexdevelopment.vortexcore.command.annotation.Sender;
 import net.vortexdevelopment.vortexcore.command.annotation.SubCommand;
 import org.bukkit.command.CommandSender;

@@ -1,8 +1,5 @@
 package net.vortexdevelopment.vortexcore.text.lang;
 
-import com.earth2me.essentials.textreader.SimpleTextInput;
-import io.papermc.paper.registry.RegistryAccess;
-import io.papermc.paper.registry.RegistryKey;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.yaml.YamlConfig;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
@@ -12,13 +9,9 @@ import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bukkit.Bukkit;
-import org.bukkit.Chunk;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
-import org.bukkit.World;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -33,12 +26,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-@net.vortexdevelopment.vinject.annotation.Component(priority = 1) //Ensure we load it before anything else
+@net.vortexdevelopment.vinject.annotation.component.Component(priority = 1) //Ensure we load it before anything else
 @RegisterReloadHook
 public class Lang implements ReloadHook {
 

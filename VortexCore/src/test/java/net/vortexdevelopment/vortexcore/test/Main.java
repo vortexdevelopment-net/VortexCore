@@ -1,8 +1,5 @@
 package net.vortexdevelopment.vortexcore.test;
 
-import net.vortexdevelopment.vinject.annotation.Root;
-import org.bukkit.ChatColor;
-
 public class Main {
 
     public static String replaceLegacy(String legacy) {

@@ -1,8 +1,5 @@
 package net.vortexdevelopment.vortexcore.database;
 
-import net.vortexdevelopment.vinject.annotation.Component;
-import net.vortexdevelopment.vinject.annotation.Inject;
-import net.vortexdevelopment.vinject.database.Database;
 import org.jetbrains.annotations.NotNull;
 
 import java.sql.Connection;
