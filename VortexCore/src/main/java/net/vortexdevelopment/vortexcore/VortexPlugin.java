@@ -21,6 +21,7 @@ import net.vortexdevelopment.vortexcore.utils.PluginInitState;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -70,8 +71,41 @@ public abstract class VortexPlugin extends JavaPlugin {
 
         try {
             verifyLicense();
+        } catch (IllegalStateException e) {
+            // Check immidiately for trial mode
+            if (Bukkit.getOnlinePlayers() .size() > 3) {
+                this.emergencyStop = true;
+                AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getOnlinePlayers().toArray(new Player[0]));
+                AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getConsoleSender());
+                AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
+                Bukkit.getScheduler().cancelTasks(this);
+                HandlerList.unregisterAll(this);
+                Bukkit.getPluginManager().disablePlugin(this);
+                return;
+            }
+
+            // Enable trial mode
+            Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+                // Check if player count is above 3, if not disable plugin and display trial version message
+                if (Bukkit.getOnlinePlayers().size() > 3) {
+                    this.emergencyStop = true;
+                    AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getOnlinePlayers().toArray(new Player[0]));
+                    AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getConsoleSender());
+                    AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
+                    Bukkit.getScheduler().cancelTasks(this);
+                    HandlerList.unregisterAll(this);
+                    Bukkit.getPluginManager().disablePlugin(this);
+                }
+            }, 0L, 100L);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            this.emergencyStop = true;
+            AdventureUtils.sendMessage("§cAn error occurred during license verification: " + e.getMessage(), Bukkit.getConsoleSender());
+            e.printStackTrace();
+            AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
+            Bukkit.getScheduler().cancelTasks(this);
+            HandlerList.unregisterAll(this);
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
         }
 
         commandManager.init(this);
