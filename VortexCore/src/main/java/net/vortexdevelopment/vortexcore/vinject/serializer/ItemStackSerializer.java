@@ -2,9 +2,11 @@ package net.vortexdevelopment.vortexcore.vinject.serializer;
 
 import com.destroystokyo.paper.profile.PlayerProfile;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextDecoration;
 import net.vortexdevelopment.vinject.annotation.yaml.YamlSerializer;
 import net.vortexdevelopment.vinject.config.serializer.YamlSerializerBase;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import net.vortexdevelopment.vortexcore.utils.HeadUtils;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -84,6 +86,10 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
+            if (meta.hasItemName()) {
+                Component name = meta.itemName();
+                map.put("Name", AdventureUtils.toMiniMessage(name));
+            }
             if (meta.hasDisplayName()) {
                 Component name = meta.displayName();
                 if (name != null) {
@@ -339,7 +345,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         if (map.containsKey("Name")) {
-            meta.displayName(AdventureUtils.formatComponent((String) map.get("Name")));
+            meta.itemName(AdventureUtils.formatComponent((String) map.get("Name")));
         }
 
         if (map.containsKey("Lore")) {
@@ -347,7 +353,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (loreObj instanceof List<?>) {
                 List<Component> lore = new ArrayList<>();
                 for (Object o : (List<?>) loreObj) {
-                    lore.add(AdventureUtils.formatComponent(o.toString()));
+                    lore.add(AdventureUtils.formatComponent(o.toString()).decorate(TextDecoration.ITALIC.withState(TextDecoration.State.FALSE).decoration()));
                 }
                 meta.lore(lore);
             }
@@ -476,43 +482,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         if (meta instanceof SkullMeta skullMeta) {
             if (map.containsKey("Texture")) {
                 String texture = (String) map.get("Texture");
-                PlayerProfile profile = Bukkit.createProfile(UUID.randomUUID());
-                PlayerTextures textures = profile.getTextures();
-                try {
-                    URL url;
-                    if (texture.startsWith("http")) {
-                        url = new URL(texture);
-                    } else {
-                        try {
-                            // Try decoding as Base64 first
-                            String decoded = new String(Base64.getDecoder().decode(texture), StandardCharsets.UTF_8);
-                            if (decoded.contains("textures")) {
-                                Matcher urlMatcher = java.util.regex.Pattern.compile("\"url\"\\s*:\\s*\"([^\"]+)\"").matcher(decoded);
-                                if (urlMatcher.find()) {
-                                    url = new URL(urlMatcher.group(1));
-                                } else {
-                                    // Fallback to null to trigger exception catch or next logic
-                                    url = null;
-                                }
-                            } else {
-                                // If base64 decoded but doesn't have textures, maybe it was just a random string?
-                                // Treat as hash?
-                                url = new URL("http://textures.minecraft.net/texture/" + texture);
-                            }
-                        } catch (IllegalArgumentException e) {
-                            // Not base64, assume it's a raw hash
-                            url = new URL("http://textures.minecraft.net/texture/" + texture);
-                        }
-                    }
-
-                    if (url != null) {
-                        textures.setSkin(url);
-                        profile.setTextures(textures);
-                        skullMeta.setPlayerProfile(profile);
-                    }
-                } catch (MalformedURLException ignored) {
-                } catch (Exception ignored) {
-                }
+                HeadUtils.applyTexture(meta, texture);
             } else if (map.containsKey("Owner")) {
                 String owner = (String) map.get("Owner");
                 PlayerProfile profile = Bukkit.createProfile(owner);

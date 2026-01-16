@@ -33,6 +33,7 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -236,19 +237,20 @@ public class AdventureUtils {
         }
     }
 
-    //Items
-    public static void addGlow(ItemStack itemStack) {
-//        NBT.modify(itemStack, readWriteItemNBT -> {
-//            if (ServerVersion.isServerVersionAtLeast(ServerVersion.V1_20_5)) {
-//                readWriteItemNBT.mergeCompound(NBT.parseNBT("{minecraft:enchantments:[]}"));
-//            } else {
-//                readWriteItemNBT.mergeCompound(NBT.parseNBT("{ench:[]}"));
-//            }
-//        });
-    }
+    //
+    // Item name formatting
+    //
 
     public static void formatItemName(ItemMeta meta, String name) {
         setItemName(meta, formatComponent(name));
+    }
+
+    public static void formatItemName(ItemMeta meta, String name, MiniMessagePlaceholder... placeholders) {
+        setItemName(meta, formatComponent(name, placeholders));
+    }
+
+    public static void formatItemName(ItemMeta meta, String name, List<MiniMessagePlaceholder> placeholders) {
+        setItemName(meta, formatComponent(name, placeholders));
     }
 
     public static void formatItemName(ItemStack item, String name) {
@@ -259,11 +261,23 @@ public class AdventureUtils {
         formatItemName(item, formatComponent(name, placeholders));
     }
 
+    public static void formatItemName(ItemStack item, String name, List<MiniMessagePlaceholder>placeholders) {
+        formatItemName(item, formatComponent(name,placeholders));
+    }
+
+    //
+    // Item lore formatting
+    //
+
     public static void formatItemLore(ItemMeta meta, List<String> lore) {
         setItemLore(meta, formatComponent(lore).toArray(new Component[0]));
     }
 
     public static void formatItemLore(ItemMeta meta, List<String> lore, MiniMessagePlaceholder... placeholders) {
+        setItemLore(meta, formatComponent(lore, placeholders).toArray(new Component[0]));
+    }
+
+    public static void formatItemLore(ItemMeta meta, List<String> lore, List<MiniMessagePlaceholder> placeholders) {
         setItemLore(meta, formatComponent(lore, placeholders).toArray(new Component[0]));
     }
 
@@ -273,6 +287,10 @@ public class AdventureUtils {
 
     public static void formatItemLore(ItemStack item, List<String> lore, MiniMessagePlaceholder... placeholders) {
         formatItemLore(item, lore.toArray(new String[0]), placeholders);
+    }
+
+    public static void formatItemLore(ItemStack item, List<String> lore, List<MiniMessagePlaceholder>placeholders) {
+        formatItemLore(item, lore.toArray(new String[0]), placeholders.toArray(new MiniMessagePlaceholder[0]));
     }
 
     public static void formatItemLore(ItemStack item, String... lore) {
@@ -286,7 +304,7 @@ public class AdventureUtils {
     public static void formatItemLore(ItemStack item, String[] lore, MiniMessagePlaceholder... placeholders) {
         LinkedList<Component> components = new LinkedList<>();
         for (String line : lore) {
-            components.add(formatComponent(line, placeholders));
+            components.add(formatComponent(line, placeholders).decorate(TextDecoration.ITALIC.withState(TextDecoration.State.FALSE).decoration()));
         }
         formatItemLore(item, components.toArray(new Component[0]));
     }
@@ -300,42 +318,21 @@ public class AdventureUtils {
     }
 
     public static void appendItemLore(ItemStack item, List<Component> lore) {
-        List<Component> currentLore = new ArrayList<>();
         ItemMeta meta = item.getItemMeta();
-        if (meta != null && meta.hasLore()) {
-            if (isMiniMessageEnabled()) {
-                try {
-                    currentLore = (List<Component>) getLoreMethod.invoke(meta);
-                } catch (IllegalAccessException | InvocationTargetException e) {
-                    e.printStackTrace();
-                }
-            } else {
-                currentLore = formatComponent(meta.getLore());
-            }
+        if (meta == null || !meta.hasLore()) {
+            return;
         }
+        List<Component> currentLore = new ArrayList<>(meta.lore());
 
         currentLore.addAll(lore);
         setItemLore(item, currentLore.toArray(new Component[0]));
-    }
-
-    public static boolean isMiniMessageEnabled() {
-        return ServerProject.isServer(ServerProject.PAPER) && displayNameMethod != null && setLoreMethod != null;
     }
 
     private static void setItemName(ItemStack item, Component name) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
 
-        if (isMiniMessageEnabled()) {
-            //Set name as a component
-            try {
-                displayNameMethod.invoke(meta, convertToOriginalComponent(name));
-                item.setItemMeta(meta);
-                return;
-            } catch (Exception ignored) {
-            }
-        }
-        meta.setDisplayName(toLegacy(name));
+        meta.itemName(name);
         item.setItemMeta(meta);
     }
 
@@ -348,15 +345,7 @@ public class AdventureUtils {
             return;
         }
 
-        if (isMiniMessageEnabled()) {
-            //Set name as a component
-            try {
-                displayNameMethod.invoke(meta, convertToOriginalComponent(name));
-                return;
-            } catch (Exception ignored) {
-            }
-        }
-        meta.setDisplayName(toLegacy(name));
+        meta.itemName(name);
     }
 
     private static void setItemLore(ItemMeta meta, Component... lore) {
@@ -364,15 +353,13 @@ public class AdventureUtils {
             return;
         }
 
-        if (isMiniMessageEnabled()) {
-            //Set lore as component
-            try {
-                setLoreMethod.invoke(meta, convertToOriginalComponent(lore));
-                return;
-            } catch (Exception ignored) {
-            }
+        // Make sure to set italic false for each line if they don't explicitly have it
+        List<Component> formatted = new ArrayList<>();
+        for (Component line : lore) {
+            formatted.add(line.style(builder -> builder.decoration(TextDecoration.ITALIC, false)));
         }
-        meta.setLore(toLegacy(lore));
+
+        meta.lore(formatted);
     }
 
     private static void setItemLore(ItemStack item, Component... lore) {
@@ -382,16 +369,12 @@ public class AdventureUtils {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
 
-        if (isMiniMessageEnabled()) {
-            //Set lore as component
-            try {
-                setLoreMethod.invoke(meta, convertToOriginalComponent(lore));
-                item.setItemMeta(meta);
-                return;
-            } catch (Exception ignored) {
-            }
+        List<Component> formatted = new ArrayList<>();
+        for (Component line : lore) {
+            formatted.add(line.style(builder -> builder.decoration(TextDecoration.ITALIC, false)));
         }
-        meta.setLore(toLegacy(lore));
+
+        meta.lore(formatted);
         item.setItemMeta(meta);
     }
 
@@ -405,11 +388,7 @@ public class AdventureUtils {
     }
 
     public static Component formatComponent(String text) {
-        Component component = getMiniMessage().deserialize(replaceLegacy(text));
-        if (!component.hasDecoration(TextDecoration.ITALIC)) {
-            component = component.decoration(TextDecoration.ITALIC, false);
-        }
-        return component;
+        return getMiniMessage().deserialize(replaceLegacy(text));
     }
 
     public static Component formatComponent(String text, MiniMessagePlaceholder... placeholders) {
@@ -427,11 +406,7 @@ public class AdventureUtils {
         }
 
         // Explicitly combine baseResolver and localResolvers
-        Component component = getMiniMessage().deserialize(replaceLegacy(text), localBuilder.build());
-        if (!component.hasDecoration(TextDecoration.ITALIC)) {
-            component = component.decoration(TextDecoration.ITALIC, false);
-        }
-        return component;
+        return getMiniMessage().deserialize(replaceLegacy(text), localBuilder.build());
     }
 
     public static Component formatComponent(String text, List<MiniMessagePlaceholder> placeholders) {
