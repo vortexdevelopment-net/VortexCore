@@ -281,6 +281,10 @@ public class AdventureUtils {
         setItemLore(meta, formatComponent(lore, placeholders).toArray(new Component[0]));
     }
 
+    public static void formatItemLore(ItemMeta meta, List<Component> lore, String... unused) {
+        setItemLore(meta, lore.toArray(new Component[0]));
+    }
+
     public static void formatItemLore(ItemStack item, List<String> lore) {
         formatItemLore(item, lore.toArray(new String[0]));
     }

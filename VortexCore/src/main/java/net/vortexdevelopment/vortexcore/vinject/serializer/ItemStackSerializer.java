@@ -350,12 +350,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
         if (map.containsKey("Lore")) {
             Object loreObj = map.get("Lore");
-            if (loreObj instanceof List<?>) {
-                List<Component> lore = new ArrayList<>();
-                for (Object o : (List<?>) loreObj) {
-                    lore.add(AdventureUtils.formatComponent(o.toString()).decorate(TextDecoration.ITALIC.withState(TextDecoration.State.FALSE).decoration()));
-                }
-                meta.lore(lore);
+            if (loreObj instanceof List<?> list) {
+                AdventureUtils.formatItemLore(meta, (List<String>) list);
             }
         }
 
