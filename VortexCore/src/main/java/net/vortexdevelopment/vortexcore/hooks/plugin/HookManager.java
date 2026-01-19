@@ -1,6 +1,8 @@
 package net.vortexdevelopment.vortexcore.hooks.plugin;
 
 
+import net.vortexdevelopment.vinject.annotation.component.Component;
+import net.vortexdevelopment.vinject.annotation.lifecycle.OnEvent;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
@@ -10,6 +12,7 @@ import net.vortexdevelopment.vortexcore.hooks.plugin.stacker.VortexStackerHook;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+@Component
 public class HookManager {
 
     private final static Set<ShopHook> shopHooks = new LinkedHashSet<>();
@@ -88,5 +91,20 @@ public class HookManager {
             }
         }
         return null;
+    }
+
+    @OnEvent("vortexstacker.load")
+    public void onVortexStackerReload() {
+        for (StackerHook stackerHook : stackerHooks) {
+            if (stackerHook.getRequiredPlugin().equalsIgnoreCase("VortexStacker")) {
+                if (stackerHook.canEnable() && !stackerHook.isEnabled()) {
+                    stackerHook.onEnable();
+                    stackerHook.setEnabled(true);
+                } else if (!stackerHook.canEnable() && stackerHook.isEnabled()) {
+                    stackerHook.onDisable();
+                    stackerHook.setEnabled(false);
+                }
+            }
+        }
     }
 }
