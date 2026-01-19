@@ -31,8 +31,8 @@ public class PlayerCacheResolver implements Listener {
         String playerName = player.getName();
         UUID playerUUID = player.getUniqueId();
 
-        cacheCoordinator.provide(DefaultCacheKeys.PLAYER_UUID, playerUUID);
-        cacheCoordinator.provide(DefaultCacheKeys.PLAYER_NAME, playerName);
+        cacheCoordinator.load(DefaultCacheKeys.PLAYER_UUID, playerUUID);
+        cacheCoordinator.load(DefaultCacheKeys.PLAYER_NAME, playerName);
     }
 
     @EventHandler
@@ -41,7 +41,7 @@ public class PlayerCacheResolver implements Listener {
         String playerName = player.getName();
         UUID playerUUID = player.getUniqueId();
 
-        cacheCoordinator.invalidate(DefaultCacheKeys.PLAYER_UUID, playerUUID);
-        cacheCoordinator.invalidate(DefaultCacheKeys.PLAYER_NAME, playerName);
+        cacheCoordinator.unload(DefaultCacheKeys.PLAYER_UUID, playerUUID);
+        cacheCoordinator.unload(DefaultCacheKeys.PLAYER_NAME, playerName);
     }
 }
