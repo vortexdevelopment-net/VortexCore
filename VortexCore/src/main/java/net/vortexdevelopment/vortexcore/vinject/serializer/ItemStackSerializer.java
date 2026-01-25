@@ -188,6 +188,9 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (meta instanceof SkullMeta skullMeta) {
                 PlayerProfile profile = skullMeta.getPlayerProfile();
                 if (profile != null) {
+                    if (profile.getId() != null) {
+                        map.put("UUID", profile.getId().toString());
+                    }
                     PlayerTextures textures = profile.getTextures();
                     if (textures != null && textures.getSkin() != null) {
                         map.put("Texture", textures.getSkin().toString());
@@ -476,12 +479,23 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         if (meta instanceof SkullMeta skullMeta) {
+            UUID uuid = null;
+            if (map.containsKey("UUID")) {
+                try {
+                    uuid = UUID.fromString((String) map.get("UUID"));
+                } catch (Exception ignored) {}
+            }
+
             if (map.containsKey("Texture")) {
                 String texture = (String) map.get("Texture");
-                HeadUtils.applyTexture(meta, texture);
+                if (uuid != null) {
+                    HeadUtils.applyTexture(meta, texture, uuid);
+                } else {
+                    HeadUtils.applyTexture(meta, texture);
+                }
             } else if (map.containsKey("Owner")) {
                 String owner = (String) map.get("Owner");
-                PlayerProfile profile = Bukkit.createProfile(owner);
+                PlayerProfile profile = uuid != null ? Bukkit.createProfile(uuid, owner) : Bukkit.createProfile(owner);
                 skullMeta.setPlayerProfile(profile);
             }
         }

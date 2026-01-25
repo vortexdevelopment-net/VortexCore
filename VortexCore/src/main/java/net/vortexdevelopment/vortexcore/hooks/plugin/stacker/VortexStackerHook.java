@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.hooks.plugin.stacker;
 
+import net.vortexdevelopment.vinject.annotation.component.Element;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
 import net.vortexdevelopment.vortexstacker.api.VortexStackerApi;
 import net.vortexdevelopment.vortexstacker.api.modules.stack.item.StackedItem;
@@ -11,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.math.BigInteger;
 
+@Element
 public class VortexStackerHook extends StackerHook {
 
     private StackedItemManager stackedItemManager;

@@ -2,47 +2,85 @@ package net.vortexdevelopment.vortexcore.hooks.plugin;
 
 
 import net.vortexdevelopment.vinject.annotation.component.Component;
+import net.vortexdevelopment.vinject.annotation.component.Element;
 import net.vortexdevelopment.vinject.annotation.lifecycle.OnEvent;
+import net.vortexdevelopment.vinject.di.DependencyRepository;
+import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.ShopGUIPlusHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.stacker.VortexStackerHook;
+import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.server.PluginDisableEvent;
+import org.bukkit.event.server.PluginEnableEvent;
 
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
-@Component
-public class HookManager {
+@RegisterListener
+public class HookManager implements Listener {
 
-    private final static Set<ShopHook> shopHooks = new LinkedHashSet<>();
-    private final static Set<StackerHook> stackerHooks = new LinkedHashSet<>();
+    private final static Set<PluginHook> pluginHooks = new LinkedHashSet<>();
 
     static {
-        shopHooks.add(new ShopGUIPlusHook());
-        shopHooks.add(new EssentialsShopHook());
+        pluginHooks.addAll(DependencyRepository.getInstance().collectElements(PluginHook.class));
+        reloadHooks();
+    }
 
-        stackerHooks.add(new VortexStackerHook());
+    public static int getHookPriority(Class<? extends PluginHook> hookClass) {
+        return pluginHooks.stream()
+                .filter(hookClass::isInstance)
+                .findFirst()
+                .map(HookManager::getPriority)
+                .orElse(0);
+    }
 
+    private static <T extends PluginHook> List<T> getHookByType(Class<T> hookClass) {
+        return pluginHooks.stream()
+                .filter(hookClass::isInstance)
+                .map(hookClass::cast)
+                .toList();
+    }
 
-        // Enable hooks if their required plugin is present
-        for (ShopHook shopHook : shopHooks) {
-            if (shopHook.canEnable()) {
-                shopHook.onEnable();
-                shopHook.setEnabled(true);
-            }
-        }
+    private static void reloadHooks() {
+        reloadHooks(ShopHook.class);
+        reloadHooks(StackerHook.class);
+    }
 
-        for (StackerHook stackerHook : stackerHooks) {
-            if (stackerHook.canEnable()) {
-                stackerHook.onEnable();
-                stackerHook.setEnabled(true);
+    private static <T extends PluginHook> void reloadHooks(Class<T> type) {
+        List<T> hooks = getHookByType(type);
+        T bestHook = hooks.stream()
+                .filter(PluginHook::canEnable)
+                .findFirst()
+                .orElse(null);
+
+        for (T hook : hooks) {
+            if (hook == bestHook) {
+                if (!hook.isEnabled()) {
+                    hook.onEnable();
+                    hook.setEnabled(true);
+                    VortexPlugin.getInstance().getLogger().info("[HookManager] [Priority] Enabled " + type.getSimpleName() + " hook: " + hook.getClass().getSimpleName() + " (Priority: " + getPriority(hook) + ")");
+                }
+            } else {
+                if (hook.isEnabled()) {
+                    hook.onDisable();
+                    hook.setEnabled(false);
+                    VortexPlugin.getInstance().getLogger().info("[HookManager] [Priority] Disabled " + type.getSimpleName() + " hook: " + hook.getClass().getSimpleName() + " (as a better hook exists or it's unavailable)");
+                }
             }
         }
     }
 
+    private static int getPriority(PluginHook hook) {
+        return hook.getClass().isAnnotationPresent(Element.class) ? hook.getClass().getAnnotation(Element.class).priority() : 0;
+    }
+
     public static ShopHook getEnabledShopHook() {
-        for (ShopHook shopHook : shopHooks) {
+        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
             if (shopHook.isEnabled()) {
                 return shopHook;
             }
@@ -51,7 +89,7 @@ public class HookManager {
     }
 
     public static StackerHook getEnabledStackerHook() {
-        for (StackerHook stackerHook : stackerHooks) {
+        for (StackerHook stackerHook : getHookByType(StackerHook.class)) {
             if (stackerHook.isEnabled()) {
                 return stackerHook;
             }
@@ -61,7 +99,7 @@ public class HookManager {
 
     public static void setEnabledShopHook(String pluginName) {
         //Disable all hooks
-        for (ShopHook shopHook : shopHooks) {
+        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
             if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
                 shopHook.onEnable();
                 shopHook.setEnabled(true);
@@ -76,7 +114,7 @@ public class HookManager {
         if (pluginName == null || pluginName.isEmpty()) {
             return false;
         }
-        for (ShopHook shopHook : shopHooks) {
+        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
             if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
                 return true;
             }
@@ -85,7 +123,7 @@ public class HookManager {
     }
 
     public static ShopHook getShopHook(String pluginName) {
-        for (ShopHook shopHook : shopHooks) {
+        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
             if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
                 return shopHook;
             }
@@ -93,18 +131,13 @@ public class HookManager {
         return null;
     }
 
-    @OnEvent("vortexstacker.load")
-    public void onVortexStackerReload() {
-        for (StackerHook stackerHook : stackerHooks) {
-            if (stackerHook.getRequiredPlugin().equalsIgnoreCase("VortexStacker")) {
-                if (stackerHook.canEnable() && !stackerHook.isEnabled()) {
-                    stackerHook.onEnable();
-                    stackerHook.setEnabled(true);
-                } else if (!stackerHook.canEnable() && stackerHook.isEnabled()) {
-                    stackerHook.onDisable();
-                    stackerHook.setEnabled(false);
-                }
-            }
-        }
+    @EventHandler
+    public void onPluginEnable(PluginEnableEvent event) {
+        reloadHooks();
+    }
+
+    @EventHandler
+    public void onPluginDisable(PluginDisableEvent event) {
+        reloadHooks();
     }
 }

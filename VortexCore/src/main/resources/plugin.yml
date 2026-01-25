@@ -5,3 +5,4 @@ libraries:
   - 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
   - 'com.h2database:h2:2.2.224'
   - 'com.google.code.gson:gson:2.8.8'
+  - 'com.fasterxml.jackson.core:jackson-databind:2.21.0'

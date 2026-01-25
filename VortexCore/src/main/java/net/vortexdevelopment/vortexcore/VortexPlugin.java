@@ -40,17 +40,17 @@ public abstract class VortexPlugin extends JavaPlugin {
     private static VortexPlugin instance;
     private DependencyContainer dependencyContainer;
     private RepositoryContainer repositoryContainer;
-    private Database database;
+    private final Database database = new Database();
     @Getter
-    private CommandManager commandManager = new CommandManager();
+    private final CommandManager commandManager = new CommandManager();
 
-    private Set<ReloadHook> reloadHooks = new HashSet<>();
+    private final Set<ReloadHook> reloadHooks = new HashSet<>();
 
     private boolean emergencyStop = false;
-    private List<DataMigration> migrations = new ArrayList<>();
     private PluginInitState initState = PluginInitState.NOT_INITIALIZED;
 
     private boolean initDatabaseCalled = false;
+    private DataMigration[] pendingMigrations;
 
     /**
      * Verify the plugin license. This method is called during onLoad().
@@ -109,22 +109,6 @@ public abstract class VortexPlugin extends JavaPlugin {
         }
 
         commandManager.init(this);
-
-        // Read the database config in case it needs to be used in the plugin load
-        File databaseConfigFile = new File(getDataFolder(), "database.yml");
-        if (!databaseConfigFile.exists()) {
-            saveResource("database.yml", false);
-        }
-        YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
-        database = new Database(
-                databaseConfig.getString("Connection Settings.Hostname"),
-                databaseConfig.getString("Connection Settings.Port"),
-                databaseConfig.getString("Connection Settings.Database"),
-                databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH),
-                databaseConfig.getString("Connection Settings.Username"),
-                databaseConfig.getString("Connection Settings.Password"),
-                databaseConfig.getInt("Connection Settings.Pool Size"),
-                new File(getDataFolder(), getName().toLowerCase()));
         Database.setTablePrefix(this.getName().toLowerCase() + "_");
         onPluginLoad();
     }
@@ -151,25 +135,21 @@ public abstract class VortexPlugin extends JavaPlugin {
 
             // Scan the packages for
             repositoryContainer = new RepositoryContainer(database);
+
+            connectDatabase();
+
             dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this,
                     database, repositoryContainer, unused -> {
                         onPreComponentLoad();
                     });
+
+            runDatabaseMigrations();
 
             dependencyContainer.getInjectionEngine().injectStatic(this.getClass());
             dependencyContainer.getInjectionEngine().inject(this); // inject root class after all components are loaded
 
             // Register Database bean
             dependencyContainer.addBean(Database.class, database);
-
-            if (initDatabaseCalled) {
-                MigrationRepository migrationRepository = dependencyContainer.getDependency(MigrationRepository.class);
-                DataMigrationManager dataMigrationManager = new DataMigrationManager(migrationRepository);
-                dataMigrationManager.registerMigrations(migrations);
-                try (Connection connection = database.getConnection()) {
-                    dataMigrationManager.runMigrations(connection, this.getName().toLowerCase() + "_");
-                }
-            }
 
             onPluginEnable();
             AdventureUtils.sendMessage("§aEnabled successfully!", Bukkit.getConsoleSender());
@@ -240,25 +220,67 @@ public abstract class VortexPlugin extends JavaPlugin {
     }
 
     protected void initDatabase(DataMigration... migrations) {
+        if (this.initState != PluginInitState.ON_LOAD) {
+            throw new IllegalStateException("Database must be initialized during onPluginLoad()");
+        }
+        this.initDatabaseCalled = true;
+        this.pendingMigrations = migrations;
+    }
+
+    private void connectDatabase() {
+        if (!initDatabaseCalled) {
+            return;
+        }
         try {
-            if (this.initState != PluginInitState.ON_LOAD) {
-                throw new IllegalStateException("Database must be initialized during onLoad()");
+            // Read the database config in case it needs to be used in the plugin load
+            File databaseConfigFile = new File(getDataFolder(), "database.yml");
+            if (!databaseConfigFile.exists()) {
+                saveResource("database.yml", false);
             }
-            initDatabaseCalled = true;
-            this.database.init();
-            if (migrations != null) {
-                this.migrations = Arrays.asList(migrations);
+            YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
+            this.database.init(
+                    databaseConfig.getString("Connection Settings.Hostname"),
+                    databaseConfig.getString("Connection Settings.Port"),
+                    databaseConfig.getString("Connection Settings.Database"),
+                    databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH),
+                    databaseConfig.getString("Connection Settings.Username"),
+                    databaseConfig.getString("Connection Settings.Password"),
+                    databaseConfig.getInt("Connection Settings.Pool Size"),
+                    new File(getDataFolder(), getName().toLowerCase()));
+
+            this.database.connect(); // Setups Hikari pool
+        } catch (Exception e) {
+            handleDatabaseError(e);
+        }
+    }
+
+    private void runDatabaseMigrations() {
+        if (!initDatabaseCalled) {
+            return;
+        }
+        try {
+            if (pendingMigrations != null && pendingMigrations.length > 0) {
+                MigrationRepository migrationRepository = dependencyContainer.getDependency(MigrationRepository.class);
+                DataMigrationManager dataMigrationManager = new DataMigrationManager(migrationRepository);
+                dataMigrationManager.registerMigrations(Arrays.asList(pendingMigrations));
+                try (Connection connection = database.getConnection()) {
+                    dataMigrationManager.runMigrations(connection, this.getName().toLowerCase() + "_");
+                }
             }
         } catch (Exception e) {
-            this.emergencyStop = true;
-            AdventureUtils.sendMessage("§cCould not connect to the database: " + e.getMessage(), Bukkit.getConsoleSender());
-            e.printStackTrace();
-            AdventureUtils.sendMessage("§cPlease correctly set up your database connection in the database.yml file.", Bukkit.getConsoleSender());
-            AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
-            Bukkit.getScheduler().cancelTasks(this);
-            HandlerList.unregisterAll(this);
-            Bukkit.getPluginManager().disablePlugin(this);
+            handleDatabaseError(e);
         }
+    }
+
+    private void handleDatabaseError(Exception e) {
+        this.emergencyStop = true;
+        AdventureUtils.sendMessage("§cCould not connect to the database: " + e.getMessage(), Bukkit.getConsoleSender());
+        e.printStackTrace();
+        AdventureUtils.sendMessage("§cPlease correctly set up your database connection in the database.yml file.", Bukkit.getConsoleSender());
+        AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
+        Bukkit.getScheduler().cancelTasks(this);
+        HandlerList.unregisterAll(this);
+        Bukkit.getPluginManager().disablePlugin(this);
     }
 
     protected void replaceBean(Class<?> holder, Object bean) {

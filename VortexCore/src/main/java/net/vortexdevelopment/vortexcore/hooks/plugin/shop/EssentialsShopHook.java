@@ -1,12 +1,14 @@
 package net.vortexdevelopment.vortexcore.hooks.plugin.shop;
 
 import net.ess3.api.IEssentials;
+import net.vortexdevelopment.vinject.annotation.component.Element;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
 
+@Element(priority = 1)
 public class EssentialsShopHook extends ShopHook {
 
     private IEssentials essentials;
