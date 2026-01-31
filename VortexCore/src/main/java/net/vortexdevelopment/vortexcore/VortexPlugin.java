@@ -19,11 +19,13 @@ import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
 import net.vortexdevelopment.vortexcore.utils.PluginInitState;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.sql.Connection;
@@ -51,6 +53,10 @@ public abstract class VortexPlugin extends JavaPlugin {
 
     private boolean initDatabaseCalled = false;
     private DataMigration[] pendingMigrations;
+
+    private Metrics bstats;
+
+    private final Object lock = new Object();
 
     /**
      * Verify the plugin license. This method is called during onLoad().
@@ -83,20 +89,6 @@ public abstract class VortexPlugin extends JavaPlugin {
                 Bukkit.getPluginManager().disablePlugin(this);
                 return;
             }
-
-            // Enable trial mode
-            Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
-                // Check if player count is above 3, if not disable plugin and display trial version message
-                if (Bukkit.getOnlinePlayers().size() > 3) {
-                    this.emergencyStop = true;
-                    AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getOnlinePlayers().toArray(new Player[0]));
-                    AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getConsoleSender());
-                    AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
-                    Bukkit.getScheduler().cancelTasks(this);
-                    HandlerList.unregisterAll(this);
-                    Bukkit.getPluginManager().disablePlugin(this);
-                }
-            }, 0L, 100L);
         } catch (Exception e) {
             this.emergencyStop = true;
             AdventureUtils.sendMessage("§cAn error occurred during license verification: " + e.getMessage(), Bukkit.getConsoleSender());
@@ -152,6 +144,30 @@ public abstract class VortexPlugin extends JavaPlugin {
             dependencyContainer.addBean(Database.class, database);
 
             onPluginEnable();
+
+            // Enable bStats if present
+            Integer bstatsId = getBstatsPluginId();
+            if (bstatsId != null) {
+                bstats = new Metrics(this, bstatsId);
+            }
+
+            try {
+                verifyLicense();
+            } catch (IllegalStateException e) {
+                Bukkit.getScheduler().runTaskTimerAsynchronously(this, () -> {
+                    // Check if player count is above 3, if not disable plugin and display trial version message
+                    if (Bukkit.getOnlinePlayers().size() > 3) {
+                        this.emergencyStop = true;
+                        AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getOnlinePlayers().toArray(new Player[0]));
+                        AdventureUtils.sendMessage("§cTrial version exceeded player limit of 3 players.", Bukkit.getConsoleSender());
+                        AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
+                        Bukkit.getScheduler().cancelTasks(this);
+                        HandlerList.unregisterAll(this);
+                        Bukkit.getPluginManager().disablePlugin(this);
+                    }
+                }, 0L, 100L);
+            }
+
             AdventureUtils.sendMessage("§aEnabled successfully!", Bukkit.getConsoleSender());
             AdventureUtils.sendMessage("§a===================", Bukkit.getConsoleSender());
         } catch (Exception e) {
@@ -183,6 +199,11 @@ public abstract class VortexPlugin extends JavaPlugin {
         if (dependencyContainer != null) {
             dependencyContainer.release();
         }
+
+        if (bstats != null) {
+            bstats = null;
+        }
+
         AdventureUtils.sendMessage("§cDisabled successfully!", Bukkit.getConsoleSender());
         AdventureUtils.sendMessage("§c===================", Bukkit.getConsoleSender());
     }
@@ -214,6 +235,9 @@ public abstract class VortexPlugin extends JavaPlugin {
     protected abstract void onPluginEnable();
 
     protected abstract void onPluginDisable();
+
+    @Nullable
+    protected abstract Integer getBstatsPluginId();
 
     public static VortexPlugin getInstance() {
         return instance;

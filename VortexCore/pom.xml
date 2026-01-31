@@ -60,7 +60,10 @@
 <!--                            <pattern>net.kyori</pattern>-->
 <!--                            <shadedPattern>net.vortexdevelopment.vortexcore.libs</shadedPattern>-->
 <!--                        </relocation>-->
-
+                        <relocation>
+                            <pattern>org.bstats</pattern>
+                            <shadedPattern>net.vortexdevelopment.vortexcore.libs</shadedPattern>
+                        </relocation>
                     </relocations>
 
                     <filters>
@@ -369,6 +372,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.bstats</groupId>
+            <artifactId>bstats-bukkit</artifactId>
+            <version>3.1.0</version>
+            <scope>compile</scope>
+        </dependency>
 
 
         <!-- Testing Dependencies -->
