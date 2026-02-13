@@ -78,10 +78,12 @@ public class AdventureUtils {
             }
     );
 
+
     private static final TagResolver playerCommandResolver = TagResolver.resolver(
             "playercommand", (args, context) -> {
                 try {
                     String command = args.pop().value();
+                    // Does not work in 1.18.2 - target method does not exist
                     Pointered pointered = context.target();
                     if (pointered instanceof Player player) {
                         //Run command on player
@@ -336,7 +338,13 @@ public class AdventureUtils {
         ItemMeta meta = item.getItemMeta();
         if (meta == null) return;
 
-        meta.itemName(name);
+        try {
+            // Does not exists in 1.18.2
+            meta.itemName(name);
+        } catch (Throwable e) {
+            // Need to explicitly set italic false for the name, as item names are italic by default in Minecraft
+            meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+        }
         item.setItemMeta(meta);
     }
 
@@ -349,7 +357,12 @@ public class AdventureUtils {
             return;
         }
 
-        meta.itemName(name);
+        try {
+            meta.itemName(name);
+        } catch (Throwable e) {
+            // Need to explicitly set italic false for the name, as item names are italic by default in Minecraft
+            meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+        }
     }
 
     private static void setItemLore(ItemMeta meta, Component... lore) {
@@ -618,7 +631,7 @@ public class AdventureUtils {
     }
 
     //Bukkit defaults for time
-    public static Title createTitle (Component title, Component subtitle) {
+    public static Title createTitle(Component title, Component subtitle) {
         return Title.title(title, subtitle, Title.Times.times(
                 Duration.of(10 * 50L, ChronoUnit.MILLIS),
                 Duration.of(70 * 50L, ChronoUnit.MILLIS),
@@ -626,7 +639,7 @@ public class AdventureUtils {
         ));
     }
     // times in ticks
-    public static Title createTitle (Component title, Component subtitle, int fadeIn, int stay, int fadeOut) {
+    public static Title createTitle(Component title, Component subtitle, int fadeIn, int stay, int fadeOut) {
         return Title.title(title, subtitle, Title.Times.times(
                 Duration.of(fadeIn * 50L, ChronoUnit.MILLIS),
                 Duration.of(stay * 50L, ChronoUnit.MILLIS),

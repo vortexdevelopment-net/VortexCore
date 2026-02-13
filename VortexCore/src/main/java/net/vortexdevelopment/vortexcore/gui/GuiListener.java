@@ -5,8 +5,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
+import java.lang.reflect.Method;
 import java.util.function.Consumer;
 
 public class GuiListener implements Listener {
@@ -30,7 +32,7 @@ public class GuiListener implements Listener {
                 onGlobalClick.accept(event);
             }
 
-            if (event.getRawSlot() < event.getView().getTopInventory().getSize()) {
+            if (event.getRawSlot() < getTopInventorySize(event)) {
                 if (onTopClick != null) {
                     onTopClick.accept(event);
                 }
@@ -70,7 +72,7 @@ public class GuiListener implements Listener {
                 onGlobalDrag.accept(event);
             }
 
-            if (event.getRawSlot() < event.getView().getTopInventory().getSize()) {
+            if (event.getRawSlot() < getTopInventorySize(event)) {
                 if (onTopDrag != null) {
                     onTopDrag.accept(event);
                 }
@@ -95,6 +97,43 @@ public class GuiListener implements Listener {
             }
 
             gui.onClose((Player) event.getPlayer());
+        }
+    }
+
+    /**
+     * Returns the top inventory size safely across multiple versions.
+     */
+    public static int getTopInventorySize(InventoryClickEvent event) {
+        try {
+            return event.getView().getTopInventory().getSize();
+        } catch (Throwable e) {
+            // likely a version where getView() or getTopInventory() is not available
+            // fallback to reflection below
+        }
+
+        try {
+            // Use declared methods and set accessible to handle non-public methods across versions
+            Method getView = event.getClass().getMethod("getView");
+            getView.setAccessible(true);
+            Object view = getView.invoke(event);
+
+            Method getTopInventory = view.getClass().getMethod("getTopInventory");
+            getTopInventory.setAccessible(true);
+            Object topInventory = getTopInventory.invoke(view);
+
+            Method getSize = topInventory.getClass().getMethod("getSize");
+            getSize.setAccessible(true);
+            Object sizeObj = getSize.invoke(topInventory);
+
+            if (sizeObj instanceof Number) {
+                return ((Number) sizeObj).intValue();
+            }
+            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // fallback: return the clicked inventory size
+            Inventory inv = event.getInventory();
+            return inv != null ? inv.getSize() : 0;
         }
     }
 }
