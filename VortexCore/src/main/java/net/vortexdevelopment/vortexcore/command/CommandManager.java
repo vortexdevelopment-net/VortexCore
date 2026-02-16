@@ -288,7 +288,7 @@ public class CommandManager {
             String[] patternParts = pattern.split(" ");
             
             // Skip if no permission
-            if (!hasPermission(sender, instance.getClass(), method)) {
+            if (!hasPermission(sender, instance.getClass(), method, true)) {
                 continue;
             }
             
@@ -350,7 +350,7 @@ public class CommandManager {
             Method method = entry.getValue();
             
             // Skip if no permission
-            if (!hasPermission(sender, instance.getClass(), method)) {
+            if (!hasPermission(sender, instance.getClass(), method, true)) {
                 continue;
             }
             
@@ -551,7 +551,7 @@ public class CommandManager {
     private boolean executeCommand(CommandSender sender, Object instance, Method method, String[] args) {
         try {
             // Check permissions first
-            if (!hasPermission(sender, instance.getClass(), method)) {
+            if (!hasPermission(sender, instance.getClass(), method, false)) {
                 return true; // Return true to indicate we handled the command
             }
             
@@ -595,11 +595,11 @@ public class CommandManager {
     /**
      * Checks if a sender has permission to execute a command
      */
-    private boolean hasPermission(CommandSender sender, Class<?> commandClass, Method method) {
+    private boolean hasPermission(CommandSender sender, Class<?> commandClass, Method method, boolean tabcomplete) {
         // Check method-level permission first (more specific)
         if (method.isAnnotationPresent(Permission.class)) {
             Permission permission = method.getAnnotation(Permission.class);
-            if (!sender.hasPermission(permission.value())) {
+            if (!sender.hasPermission(permission.value()) && !tabcomplete) {
                 String message = permission.message();
                 if (message.isEmpty()) {
                     message = "§cYou don't have permission to use this command.";
@@ -612,7 +612,7 @@ public class CommandManager {
         // Then check class-level permission
         if (commandClass.isAnnotationPresent(Permission.class)) {
             Permission permission = commandClass.getAnnotation(Permission.class);
-            if (!sender.hasPermission(permission.value())) {
+            if (!sender.hasPermission(permission.value()) && !tabcomplete) {
                 String message = permission.message();
                 if (message.isEmpty()) {
                     message = "§cYou don't have permission to use this command.";
