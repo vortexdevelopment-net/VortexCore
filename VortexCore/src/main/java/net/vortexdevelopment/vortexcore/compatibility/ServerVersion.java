@@ -5,9 +5,21 @@ import org.bukkit.Bukkit;
 public class ServerVersion {
 
     private static final String SERVER_VERSION;
+    private static final KnownServerVersions CURRENT_VERSION;
 
     static {
         SERVER_VERSION = Bukkit.getMinecraftVersion();
+        KnownServerVersions matchedVersion = null;
+        CURRENT_VERSION = init();
+    }
+
+    private static KnownServerVersions init() {
+        for (KnownServerVersions version : KnownServerVersions.values()) {
+            if (SERVER_VERSION.equals(version.getVersionString())) {
+                return version;
+            }
+        }
+        return null; // Unknown version
     }
 
     public static boolean isAtLeastVersion(String version) {
@@ -43,5 +55,9 @@ public class ServerVersion {
 
     public static boolean isItemComponentsAvailable() {
         return isAtLeastVersion("1.21");
+    }
+
+    public static KnownServerVersions getCurrentVersion() {
+        return CURRENT_VERSION;
     }
 }
