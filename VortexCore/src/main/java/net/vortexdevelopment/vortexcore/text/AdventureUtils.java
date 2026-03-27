@@ -664,4 +664,8 @@ public class AdventureUtils {
 //            throw new RuntimeException("Could not create inventory. Old server version?", e);
 //        }
     }
+
+    public static Inventory createInventory(InventoryHolder owner, int rows, Component title) {
+        return (Inventory) Bukkit.createInventory(owner, rows * 9, title);
+    }
 }

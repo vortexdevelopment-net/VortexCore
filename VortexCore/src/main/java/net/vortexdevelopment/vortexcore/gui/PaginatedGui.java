@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.gui;
 
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
@@ -54,7 +55,7 @@ public class PaginatedGui implements GuiHolder {
     // Button customization
     private Supplier<ItemStack> previousButtonSupplier;
     private Supplier<ItemStack> nextButtonSupplier;
-    private final String baseTitle;
+    private final Component baseTitle;
 
     // Page indicator
     private Supplier<ItemStack> pageIndicatorSupplier;
@@ -65,6 +66,34 @@ public class PaginatedGui implements GuiHolder {
     private boolean usePattern = false;
 
     public PaginatedGui(String title, int rows) {
+        this.rows = rows;
+        this.baseTitle = AdventureUtils.formatComponent(title);
+        this.inventory = AdventureUtils.createInventory(this, rows, baseTitle);
+        this.itemsPerPage = (rows - 1) * 9; // Reserve bottom row for navigation
+
+        // Default button suppliers
+        this.previousButtonSupplier = () -> {
+            ItemStack item = new ItemStack(Material.ARROW);
+            AdventureUtils.formatItemName(item, "§aPrevious Page");
+            return item;
+        };
+
+        this.nextButtonSupplier = () -> {
+            ItemStack item = new ItemStack(Material.ARROW);
+            AdventureUtils.formatItemName(item, "§aNext Page");
+            return item;
+        };
+
+        // Default page indicator
+        this.pageIndicatorSupplier = () -> {
+            ItemStack item = new ItemStack(Material.BOOK);
+            AdventureUtils.formatItemName(item, "§7Page " + (currentPage + 1) + "/" + Math.max(1, pages.size()));
+            return item;
+        };
+        this.pageIndicatorSlot = (rows - 1) * 9 + 4; // Center of bottom row
+    }
+
+    public PaginatedGui(Component title, int rows) {
         this.rows = rows;
         this.baseTitle = title;
         this.inventory = AdventureUtils.createInventory(this, rows, title);
@@ -516,26 +545,27 @@ public class PaginatedGui implements GuiHolder {
 
     private void renderNavigationButtons() {
         int bottomRow = (rows - 1) * 9;
+        boolean hasMultiplePages = pages.size() > 1;
 
-        // Previous page button (if not on first page)
-        if (currentPage > 0) {
+        // Previous page button (if not on first page and multiple pages exist)
+        if (hasMultiplePages && currentPage > 0) {
             inventory.setItem(bottomRow + 3, previousButtonSupplier.get());
         } else {
-            // Clear the previous button slot when on first page
             inventory.setItem(bottomRow + 3, null);
         }
 
-        // Next page button (if not on last page)
-        if (currentPage < pages.size() - 1) {
+        // Next page button (if not on last page and multiple pages exist)
+        if (hasMultiplePages && currentPage < pages.size() - 1) {
             inventory.setItem(bottomRow + 5, nextButtonSupplier.get());
         } else {
-            // Clear the next button slot when on last page
             inventory.setItem(bottomRow + 5, null);
         }
 
-        // Page indicator
-        if (pageIndicatorSlot >= 0 && pageIndicatorSupplier != null) {
+        // Page indicator (only when multiple pages)
+        if (hasMultiplePages && pageIndicatorSlot >= 0 && pageIndicatorSupplier != null) {
             inventory.setItem(pageIndicatorSlot, pageIndicatorSupplier.get());
+        } else if (pageIndicatorSlot >= 0) {
+            inventory.setItem(pageIndicatorSlot, null);
         }
 
         // Back button if previous GUI exists
@@ -546,7 +576,7 @@ public class PaginatedGui implements GuiHolder {
         }
     }
 
-    private String getPageTitle() {
+    private Component getPageTitle() {
         return baseTitle;
     }
 
@@ -561,6 +591,10 @@ public class PaginatedGui implements GuiHolder {
             return this;
         }
 
+        // Ensure at least page 0 exists (avoids NPE when no paginated items added)
+        if (!pages.containsKey(0)) {
+            pages.put(0, new ArrayList<>());
+        }
         renderPage();
         player.openInventory(inventory);
 
@@ -771,7 +805,7 @@ public class PaginatedGui implements GuiHolder {
 
     @Override
     public void autoUpdate() {
-        List<GuiItem> itemsToUpdate = pages.get(currentPage).stream().filter(guiItem -> guiItem.getState() == State.AUTO_UPDATE).toList();
+        List<GuiItem> itemsToUpdate = pages.getOrDefault(currentPage, new ArrayList<>()).stream().filter(guiItem -> guiItem.getState() == State.AUTO_UPDATE).toList();
         if (itemsToUpdate.isEmpty()) {
             return;
         }

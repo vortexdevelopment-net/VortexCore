@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.gui;
 
 import lombok.Getter;
+import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
@@ -49,6 +50,11 @@ public class Gui implements GuiHolder {
     public static String BACK_BUTTON_NAME = "§cBack";
 
     public Gui(String name, int rows) {
+        this.rows = rows;
+        this.inventory = AdventureUtils.createInventory(this, rows, name);
+    }
+
+    public Gui(Component name, int rows) {
         this.rows = rows;
         this.inventory = AdventureUtils.createInventory(this, rows, name);
     }
