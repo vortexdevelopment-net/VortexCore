@@ -1,0 +1,15 @@
+presets:
+  blood_moon:
+    sky_color: "#330000"
+    fog_color: "#200000"
+    water_color: "#550000"
+    ambient_light: 0.2
+    # fixed_time: 18000
+  toxic_storm:
+    sky_color: "#223300"
+    fog_color: "#112200"
+    ambient_light: 0.5
+  purple_dream:
+    sky_color: "#440044"
+    fog_color: "#220022"
+    ambient_light: 0.3

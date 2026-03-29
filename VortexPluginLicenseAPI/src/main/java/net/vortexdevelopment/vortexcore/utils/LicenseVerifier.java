@@ -32,6 +32,9 @@ import java.util.stream.Collectors;
 /**
  * License verification utility for Vortex plugins.
  * Handles both online and offline license verification.
+ * <p>
+ * If the build cannot inject a per-customer license id, place the license UUID on the first line of
+ * {@code product.key} in the plugin data folder; it is read before contacting the auth server.
  *
  * Usage:
  * 
@@ -68,6 +71,9 @@ public class LicenseVerifier {
 
     // License file name
     private static final String LICENSE_FILE_NAME = ".license";
+
+    /** Optional: first non-empty line = license UUID when JAR injection is unavailable (e.g. external stores). */
+    private static final String PRODUCT_KEY_FILE_NAME = "product.key";
 
     // Cached public key (loaded once from resource)
     private static ECPublicKey cachedPublicKey;
@@ -199,21 +205,6 @@ public class LicenseVerifier {
             return;
         }
 
-        // Do not use the string literal anywhere else or it gets replaced during
-        // injection
-        // Validate injected values
-        // LICENSE is optional (VIP users may not have a license UUID)
-        // USER_ID is required for VIP check when no license is found
-        if ((LICENSE == null || LICENSE.equals(LICENSE_PLACEHOLDER) || LICENSE.isEmpty()) &&
-                (USER_ID == null || USER_ID.equals(USER_ID_PLACEHOLDER) || USER_ID.isEmpty())) {
-            throw new LicenseVerificationException(
-                    "License UUID or User ID not found. Plugin may not be properly licensed.");
-        }
-
-        if (PRODUCT_KEY == null || PRODUCT_KEY.equals(PRODUCT_KEY_PLACEHOLDER) || PRODUCT_KEY.isEmpty()) {
-            throw new LicenseVerificationException("Product key not found. Plugin may not be properly licensed.");
-        }
-
         if (productName == null || productName.isEmpty()) {
             throw new LicenseVerificationException("Product name cannot be null or empty.");
         }
@@ -222,9 +213,24 @@ public class LicenseVerifier {
             throw new LicenseVerificationException("Data folder cannot be null.");
         }
 
-        // Ensure data folder exists
+        // Ensure data folder exists (product.key and .license live here)
         if (!dataFolder.exists()) {
             dataFolder.mkdirs();
+        }
+
+        // Resolve license UUID: product.key in data folder first, then injected LICENSE (external stores)
+        String effectiveLicenseUuid = resolveEffectiveLicenseUuid(dataFolder);
+
+        // LICENSE is optional (VIP users may not have a license UUID)
+        // USER_ID is required for VIP check when no license is found
+        boolean hasUserId = USER_ID != null && !USER_ID.equals(USER_ID_PLACEHOLDER) && !USER_ID.isEmpty();
+        if ((effectiveLicenseUuid == null || effectiveLicenseUuid.isEmpty()) && !hasUserId) {
+            throw new LicenseVerificationException(
+                    "License UUID or User ID not found. Put your license id in product.key in the plugin folder, or use a properly licensed build.");
+        }
+
+        if (PRODUCT_KEY == null || PRODUCT_KEY.equals(PRODUCT_KEY_PLACEHOLDER) || PRODUCT_KEY.isEmpty()) {
+            throw new LicenseVerificationException("Product key not found. Plugin may not be properly licensed.");
         }
 
         // First, try to load token from .license file
@@ -234,7 +240,7 @@ public class LicenseVerifier {
         if (tokenFromFile != null && !tokenFromFile.isEmpty()) {
             // Token found in file, try offline verification
             try {
-                verifyTokenOffline(tokenFromFile);
+                verifyTokenOffline(tokenFromFile, effectiveLicenseUuid);
 
                 // Check if token expires soon (refresh threshold)
                 long now = System.currentTimeMillis() / 1000;
@@ -243,7 +249,7 @@ public class LicenseVerifier {
                 if (expiresAt > 0 && expiresAt - now < TOKEN_REFRESH_THRESHOLD_MS / 1000) {
                     // Token expires soon, refresh it online
                     try {
-                        verifyOnline(productName, pluginVersion, licenseFile);
+                        verifyOnline(productName, pluginVersion, licenseFile, effectiveLicenseUuid);
                         return;
                     } catch (LicenseVerificationException e) {
                         // If refresh fails, token is still valid for now
@@ -265,7 +271,7 @@ public class LicenseVerifier {
         }
 
         // No valid token in file, perform online verification
-        verifyOnline(productName, pluginVersion, licenseFile);
+        verifyOnline(productName, pluginVersion, licenseFile, effectiveLicenseUuid);
     }
 
     /**
@@ -283,22 +289,66 @@ public class LicenseVerifier {
     }
 
     /**
+     * License UUID for verification: first non-empty line of {@code product.key} in the data folder,
+     * otherwise injected {@link #LICENSE} when set.
+     */
+    private static String resolveEffectiveLicenseUuid(File dataFolder) {
+        String fromFile = readFirstNonEmptyLine(new File(dataFolder, PRODUCT_KEY_FILE_NAME));
+        if (fromFile != null && !fromFile.isEmpty()) {
+            return fromFile;
+        }
+        if (LICENSE != null && !LICENSE.equals(LICENSE_PLACEHOLDER) && !LICENSE.isEmpty()) {
+            return LICENSE;
+        }
+        return null;
+    }
+
+    /**
+     * Reads the first non-empty, trimmed line. Strips a UTF-8 BOM if present.
+     */
+    private static String readFirstNonEmptyLine(File file) {
+        if (file == null || !file.exists() || !file.isFile()) {
+            return null;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file, StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                if (trimmed.charAt(0) == '\uFEFF') {
+                    trimmed = trimmed.substring(1).trim();
+                }
+                if (!trimmed.isEmpty()) {
+                    return trimmed;
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        return null;
+    }
+
+    /**
      * Verifies license online with the auth server.
      *
-     * @param productName   The product name
-     * @param pluginVersion The plugin version
-     * @param licenseFile   The license file to save the token to
+     * @param productName          The product name (User-Agent)
+     * @param pluginVersion        The plugin version
+     * @param licenseFile          The license file to save the token to
+     * @param effectiveLicenseUuid Resolved license id ({@code product.key} or injection); null for VIP-only flow
      * @throws LicenseVerificationException if verification fails
      */
-    private static void verifyOnline(String productName, String pluginVersion, File licenseFile)
+    private static void verifyOnline(String productName, String pluginVersion, File licenseFile,
+            String effectiveLicenseUuid)
             throws LicenseVerificationException {
         try {
             // Build request body
             JsonObject requestBody = new JsonObject();
 
             // Add license_uuid if available (may be null for VIP users)
-            if (LICENSE != null && !LICENSE.equals(LICENSE_PLACEHOLDER) && !LICENSE.isEmpty()) {
-                requestBody.addProperty("license_uuid", LICENSE);
+            if (effectiveLicenseUuid != null && !effectiveLicenseUuid.isEmpty()) {
+                requestBody.addProperty("license_uuid", effectiveLicenseUuid);
             }
 
             // Use PRODUCT_KEY for product_name (injected value, matches database)
@@ -403,7 +453,7 @@ public class LicenseVerifier {
                     : System.currentTimeMillis() / 1000 + (3 * 24 * 60 * 60); // Default 3 days
 
             // Verify token offline (validate signature)
-            verifyTokenOffline(token);
+            verifyTokenOffline(token, effectiveLicenseUuid);
 
             // Cache token
             cachedToken = token;
@@ -489,7 +539,8 @@ public class LicenseVerifier {
      * @param token The JWT token to verify
      * @throws LicenseVerificationException if verification fails
      */
-    private static void verifyTokenOffline(String token) throws LicenseVerificationException {
+    private static void verifyTokenOffline(String token, String effectiveLicenseUuid)
+            throws LicenseVerificationException {
         try {
             // Parse and verify token
             DecodedJWT jwt = JWT.require(getAlgorithm())
@@ -503,13 +554,13 @@ public class LicenseVerifier {
                 throw new LicenseVerificationException("Token license UUID is missing.");
             }
 
-            // For regular licenses, token must match the injected LICENSE
-            if (LICENSE != null && !LICENSE.equals("%%__LICENSE__%%") && !LICENSE.isEmpty()) {
-                if (!licenseUuid.equals(LICENSE)) {
+            // For regular licenses, token must match resolved license id (product.key or injected)
+            if (effectiveLicenseUuid != null && !effectiveLicenseUuid.isEmpty()) {
+                if (!licenseUuid.equals(effectiveLicenseUuid)) {
                     throw new LicenseVerificationException("Token license UUID does not match plugin license.");
                 }
             }
-            // For VIP users (no LICENSE set), accept tokens with VIP- prefix
+            // For VIP users (no license UUID), accept tokens with VIP- prefix
             else if (!licenseUuid.startsWith("VIP-")) {
                 throw new LicenseVerificationException("Token license UUID is invalid for VIP user.");
             }

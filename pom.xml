@@ -11,19 +11,38 @@
 
     <name>VortexCore-Parent</name>
     <modules>
-        <module>VortexCore</module>
+        <module>VortexCore-API</module>
+        <module>VortexCore-Paper</module>
+        <module>VortexCore-Spigot</module>
         <module>VortexPluginLicenseAPI</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <adventure.version>4.25.0</adventure.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>net.kyori</groupId>
+                <artifactId>adventure-bom</artifactId>
+                <version>${adventure.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <repositories>
         <repository>
             <id>vortex-repo</id>
             <url>https://repo.vortexdevelopment.net/repository</url>
+        </repository>
+        <repository>
+            <id>spigot-repo</id>
+            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
             <id>PaperMC</id>

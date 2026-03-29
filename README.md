@@ -35,6 +35,14 @@ mvn clean install
 
 ### Using VortexCore as a Dependency
 
+The build is split into a shared API JAR and **platform** JARs you must match to your server:
+
+- **`VortexCore-API`**: shared code only (no Paper/Spigot platform bridges such as command-map registration). Use this when you need types or compile against the library in a multi-module build, not as the sole runtime dependency for a plugin.
+- **`VortexCore-Paper`**: use on **Paper** (or Paper forks). This is the Paper-first shaded artifact; compile and ship this for Paper servers.
+- **`VortexCore-Spigot`**: use on **Spigot** when you target Spigot’s distribution. Do not add `VortexCore-Paper` alongside it. See [VortexCore-Spigot/README.md](VortexCore-Spigot/README.md) for `plugin.yml` `libraries:` (Kyori) requirements.
+
+**Adventure on items and GUIs:** In code you still author with MiniMessage / `Component` via `AdventureUtils`. On Paper, names, lore, inventory titles, and `Component` messages use native Adventure Bukkit APIs. On Spigot, the same APIs are backed by **legacy section strings** (`§`); behavior should match for typical text, but you must ship the **Spigot** artifact so `SpigotBukkitAdventureBridge` is registered.
+
 Add the Vortexdevelopment repository to your `pom.xml`:
 
 ```xml
@@ -44,16 +52,18 @@ Add the Vortexdevelopment repository to your `pom.xml`:
 </repository>
 ```
 
-Then add the dependency:
+Then add **one** platform dependency (Paper example):
 
 ```xml
 <dependency>
     <groupId>net.vortexdevelopment</groupId>
-    <artifactId>VortexCore</artifactId>
-    <version>1.0.1</version>
+    <artifactId>VortexCore-Paper</artifactId>
+    <version>1.0.3</version>
     <scope>compile</scope>
 </dependency>
 ```
+
+Or for Spigot-oriented builds, use `artifactId` `VortexCore-Spigot` with the same `groupId` and `version`.
 
 ### Plugin.yml Transformer Setup
 
@@ -109,7 +119,7 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
         createInstance = false,
         templateDependencies = {
                 //For intellij plugin
-                @TemplateDependency(groupId = "net.vortexdevelopment", artifactId = "VortexCore", version = "1.0.0-SNAPSHOT")
+                @TemplateDependency(groupId = "net.vortexdevelopment", artifactId = "VortexCore-Paper", version = "1.0.0-SNAPSHOT")
         }
 )
 public final class MyPlugin extends VortexPlugin {
@@ -250,5 +260,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Support
 
-For support, please open an issue in the GitHub repository or contact the development team on [discord](https://dc.vortexdevelopment.net) 
-`
+For support, please open an issue in the GitHub repository or contact the development team on [discord](https://dc.vortexdevelopment.net).
