@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.vortexdevelopment</groupId>
         <artifactId>VortexCore-Parent</artifactId>
-        <version>1.0.3</version>
+        <version>2.0.0</version>
     </parent>
 
     <artifactId>VortexCore-Paper</artifactId>
