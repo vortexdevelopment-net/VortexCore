@@ -2,7 +2,10 @@ package net.vortexdevelopment.vortexcore.platform.paper;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.vortexdevelopment.vinject.annotation.lifecycle.PostConstruct;
+import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
+import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridge;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import org.bukkit.Bukkit;
@@ -21,6 +24,19 @@ import java.util.List;
 @net.vortexdevelopment.vinject.annotation.component.Component
 public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
 
+    /**
+     * §-based legacy with hex ({@code §x§r§r§g§g§b§b}); same settings as the Spigot platform bridge for any API code
+     * that must stringify components for legacy consumers.
+     */
+    public static final LegacyComponentSerializer LEGACY_SECTION = LegacyComponentSerializer.builder()
+            .hexColors()
+            .hexCharacter('§')
+            .useUnusualXRepeatedCharacterHexFormat()
+            .build();
+
+    /** ItemMeta.itemName / hasItemName exist from 1.20.5; older servers use display name only. */
+    private static final boolean ITEM_NAME_COMPONENT_API = ServerVersion.isAtLeastVersion(KnownServerVersions.V1_20_5);
+
     @PostConstruct
     public void registerBridge() {
         BukkitAdventureBridges.install(this);
@@ -31,9 +47,13 @@ public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
         if (name == null || meta == null) {
             return;
         }
-        try {
-            meta.itemName(name);
-        } catch (Throwable e) {
+        if (ITEM_NAME_COMPONENT_API) {
+            try {
+                meta.itemName(name);
+            } catch (Throwable e) {
+                meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+            }
+        } else {
             meta.displayName(name.decoration(TextDecoration.ITALIC, false));
         }
     }
@@ -82,7 +102,10 @@ public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
 
     @Override
     public boolean hasItemName(ItemMeta meta) {
-        return meta != null && (meta.hasItemName() || meta.hasDisplayName());
+        if (meta == null) {
+            return false;
+        }
+        return (ITEM_NAME_COMPONENT_API && meta.hasItemName()) || meta.hasDisplayName();
     }
 
     @Override
@@ -90,7 +113,7 @@ public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
         if (meta == null) {
             return null;
         }
-        if (meta.hasItemName()) {
+        if (ITEM_NAME_COMPONENT_API && meta.hasItemName()) {
             return meta.itemName();
         }
         if (meta.hasDisplayName()) {

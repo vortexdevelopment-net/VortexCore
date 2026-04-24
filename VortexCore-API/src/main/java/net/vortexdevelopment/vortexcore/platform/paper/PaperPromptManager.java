@@ -52,7 +52,7 @@ public class PaperPromptManager implements Listener, ChatPromptService {
                 Object response = originalMessageMethod.invoke(event);
                 Component shaded = AdventureUtils.convertToShadedComponent(response);
                 Bukkit.getServer().getScheduler().callSyncMethod(VortexPlugin.getInstance(), () -> {
-                    consumer.accept(AdventureUtils.toLegacy(shaded));
+                    consumer.accept(PaperBukkitAdventureBridge.LEGACY_SECTION.serialize(shaded));
                     return CompletableFuture.runAsync(() -> {}); //Return empty future, can't return null
                 });
             }

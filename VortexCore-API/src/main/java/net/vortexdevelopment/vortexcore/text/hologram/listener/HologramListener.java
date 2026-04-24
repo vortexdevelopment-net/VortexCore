@@ -5,8 +5,10 @@ import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 import org.bukkit.Chunk;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.persistence.PersistentDataType;
@@ -36,5 +38,11 @@ public class HologramListener implements Listener {
     @EventHandler
     public void onChunkUnload(ChunkUnloadEvent event) {
         HologramManager.unloadHologramsInChunk(event.getChunk());
+    }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        HologramManager.onPlayerJoin(player);
     }
 }

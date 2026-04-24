@@ -20,7 +20,6 @@ import java.util.UUID;
 
 /**
  * Text holograms. Line text uses {@link BukkitAdventureBridges} for Paper {@code customName(Component)} vs Spigot
- * legacy; movement uses {@link BukkitAdventureBridges#teleportLivingEntity} and chunk checks use {@link WorldUtils}.
  */
 public class Hologram {
 
@@ -90,7 +89,7 @@ public class Hologram {
             double yOffset = (lines.size() - 1 - armorStands.size()) * 0.25;
             Location correctLocation = location.clone().add(0, yOffset, 0);
             ArmorStand armorStand = HologramManager.createArmorStand(this, correctLocation);
-            armorStands.addLast(armorStand);
+            armorStands.add(armorStand);
         }
         
         // Now ensure each armor stand at index i corresponds to line i
@@ -105,14 +104,8 @@ public class Hologram {
             double yOffset = (lines.size() - 1 - i) * 0.25;
             Location correctLocation = location.clone().add(0, yOffset, 0);
 
-            //Check if the armorstand was spawned or not
-            if (!armorStand.isInWorld()) {
-                // Entity is already at correct location, just add to world
-                armorStand.getWorld().addEntity(armorStand);
-            } else {
-                // For existing stands, teleport to ensure correct position
-                BukkitAdventureBridges.get().teleportLivingEntity(armorStand, correctLocation);
-            }
+            HologramManager.registerArmorStandInWorldIfNeeded(armorStand);
+            BukkitAdventureBridges.get().teleportLivingEntity(armorStand, correctLocation);
             
             // Update the custom name for this line - ensure it matches the line at this index
             updateArmorStandName(armorStand, line);

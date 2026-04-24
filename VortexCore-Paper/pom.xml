@@ -36,7 +36,7 @@
                         </goals>
                         <configuration>
                             <sources>
-                                <source>${project.parent.basedir}/VortexCore-API/src/main/java</source>
+                                <source>${project.basedir}/../VortexCore-API/src/main/java</source>
                             </sources>
                         </configuration>
                     </execution>
@@ -241,7 +241,7 @@
         </plugins>
         <resources>
             <resource>
-                <directory>${project.parent.basedir}/VortexCore-API/src/main/resources</directory>
+                <directory>${project.basedir}/../VortexCore-API/src/main/resources</directory>
                 <includes>
                     <include>**/*</include>
                 </includes>

@@ -1,6 +1,8 @@
 package net.vortexdevelopment.vortexcore.text.hologram;
 
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
+import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
@@ -12,29 +14,196 @@ import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 public class HologramManager {
 
     private static final UUID sessionId = UUID.randomUUID();
+
+    /** Comma-separated UUID strings; empty string means no viewers. */
+    private static final String VIEWERS_DELIMITER = ",";
 
     private static final NamespacedKey SESSION_ID_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_session_id");
     private static final NamespacedKey HOLOGRAM_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram");
     private static final NamespacedKey VIEWERS_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_viewers");
 
     private static final Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
+
+    private static final @Nullable Method WORLD_CREATE_ENTITY;
+    private static final @Nullable Method WORLD_ADD_ENTITY;
+    private static final @Nullable Method ENTITY_IS_IN_WORLD;
+    private static final @Nullable Method ENTITY_SET_VISIBLE_BY_DEFAULT;
+
+    static {
+        WORLD_CREATE_ENTITY = resolveMethod(World.class, "createEntity", Location.class, Class.class);
+        WORLD_ADD_ENTITY = resolveMethod(World.class, "addEntity", Entity.class);
+        ENTITY_IS_IN_WORLD = resolveMethod(Entity.class, "isInWorld");
+        ENTITY_SET_VISIBLE_BY_DEFAULT = resolveMethod(Entity.class, "setVisibleByDefault", boolean.class);
+    }
+
+    private static @Nullable Method resolveMethod(Class<?> clazz, String name, Class<?>... parameterTypes) {
+        try {
+            return clazz.getMethod(name, parameterTypes);
+        } catch (NoSuchMethodException e) {
+            return null;
+        }
+    }
+
+    private static String encodeViewers(List<UUID> viewers) {
+        if (viewers == null || viewers.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < viewers.size(); i++) {
+            if (i > 0) {
+                sb.append(VIEWERS_DELIMITER);
+            }
+            sb.append(viewers.get(i).toString());
+        }
+        return sb.toString();
+    }
+
+    private static List<UUID> decodeViewers(@Nullable String raw) {
+        if (raw == null || raw.isEmpty()) {
+            return List.of();
+        }
+        List<UUID> out = new ArrayList<>();
+        for (String part : raw.split(VIEWERS_DELIMITER)) {
+            String s = part.trim();
+            if (s.isEmpty()) {
+                continue;
+            }
+            try {
+                out.add(UUID.fromString(s));
+            } catch (IllegalArgumentException ignored) {
+                // skip malformed token
+            }
+        }
+        return Collections.unmodifiableList(out);
+    }
+
+    private static void applyVisibleByDefault(Entity entity, boolean visible) {
+        if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
+            return;
+        }
+        try {
+            ENTITY_SET_VISIBLE_BY_DEFAULT.invoke(entity, visible);
+        } catch (ReflectiveOperationException ignored) {
+            // If the runtime rejects the call, fall back to per-player hide/show only
+        }
+    }
+
+    /**
+     * Per-viewer visibility: uses {@code setVisibleByDefault} when the server API exposes it; otherwise
+     * {@link Player#hideEntity}/{@link Player#showEntity} for every online player.
+     */
+    private static void applyHologramViewerVisibility(ArmorStand stand, Hologram hologram) {
+        if (hologram.useViewers()) {
+            applyVisibleByDefault(stand, false);
+            for (UUID uuid : hologram.getViewers()) {
+                Player player = Bukkit.getPlayer(uuid);
+                if (player != null) {
+                    player.showEntity(VortexPlugin.getInstance(), stand);
+                }
+            }
+            if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    if (!hologram.getViewers().contains(player.getUniqueId())) {
+                        player.hideEntity(VortexPlugin.getInstance(), stand);
+                    }
+                }
+            }
+        } else {
+            applyVisibleByDefault(stand, true);
+            if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
+                for (Player player : Bukkit.getOnlinePlayers()) {
+                    player.showEntity(VortexPlugin.getInstance(), stand);
+                }
+            }
+        }
+    }
+
+    /**
+     * When a player joins, re-apply viewer rules (needed for viewer lists and for servers without
+     * {@code setVisibleByDefault}).
+     */
+    public static void onPlayerJoin(Player player) {
+        Set<Hologram> set = holograms.get(VortexPlugin.getInstance());
+        if (set == null) {
+            return;
+        }
+        UUID uuid = player.getUniqueId();
+        for (Hologram hologram : set) {
+            if (!hologram.useViewers()) {
+                continue;
+            }
+            for (ArmorStand stand : hologram.getArmorStands()) {
+                if (hologram.getViewers().contains(uuid)) {
+                    player.showEntity(VortexPlugin.getInstance(), stand);
+                } else if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
+                    player.hideEntity(VortexPlugin.getInstance(), stand);
+                }
+            }
+        }
+    }
+
+    /**
+     * Registers a stand created via {@code World#createEntity} (1.20.3+). No-op when spawn was used or the API is absent.
+     */
+    public static void registerArmorStandInWorldIfNeeded(ArmorStand stand) {
+        if (!ServerVersion.isAtLeastVersion(KnownServerVersions.V1_20_3)) {
+            return;
+        }
+        if (WORLD_ADD_ENTITY == null || ENTITY_IS_IN_WORLD == null) {
+            return;
+        }
+        try {
+            if (!(Boolean) ENTITY_IS_IN_WORLD.invoke(stand)) {
+                WORLD_ADD_ENTITY.invoke(stand.getWorld(), stand);
+            }
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Prefer {@code World#createEntity} on 1.20.3+ when present; otherwise {@link World#spawn(Location, Class)}.
+     */
+    private static ArmorStand createArmorStandEntity(Location location, Consumer<ArmorStand> configure) {
+        World world = location.getWorld();
+        if (world == null) {
+            throw new IllegalArgumentException("location has no world");
+        }
+        if (ServerVersion.isAtLeastVersion(KnownServerVersions.V1_20_3) && WORLD_CREATE_ENTITY != null) {
+            try {
+                Object created = WORLD_CREATE_ENTITY.invoke(world, location, ArmorStand.class);
+                ArmorStand stand = (ArmorStand) created;
+                configure.accept(stand);
+                return stand;
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        ArmorStand armorStand = world.spawn(location, ArmorStand.class);
+        configure.accept(armorStand);
+        return armorStand;
+    }
 
     public static void init() {
         clear();
@@ -82,38 +251,29 @@ public class HologramManager {
         int lineCount = hologram.getLines().size();
         for (int i = 0; i < lineCount; i++) {
             double yOffset = (lineCount - 1 - i) * 0.25;
-            ArmorStand armorStand = location.getWorld().createEntity(location.clone().add(0, yOffset, 0), ArmorStand.class);
-            armorStand.setGravity(false);
-            armorStand.setVisible(false);
-            armorStand.setMarker(true);
-            armorStand.setCollidable(false);
-            armorStand.setPersistent(false);
+            Location lineLoc = location.clone().add(0, yOffset, 0);
+            final int lineIndex = i;
+            ArmorStand armorStand = createArmorStandEntity(lineLoc, stand -> {
+                stand.setGravity(false);
+                stand.setVisible(false);
+                stand.setMarker(true);
+                stand.setCollidable(false);
+                stand.setPersistent(false);
 
-            BukkitAdventureBridges.get().setEntityCustomName(armorStand,
-                    AdventureUtils.formatComponent(hologram.getLines().get(i), placeholders));
-            armorStand.setCustomNameVisible(true);
+                BukkitAdventureBridges.get().setEntityCustomName(stand,
+                        AdventureUtils.formatComponent(hologram.getLines().get(lineIndex), placeholders));
+                stand.setCustomNameVisible(true);
 
-            PersistentDataContainer data = armorStand.getPersistentDataContainer();
-            data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
-            data.set(SESSION_ID_KEY, PersistentDataType.STRING, sessionId.toString());
-            if (hologram.useViewers()) {
-                //Make only the players in the viewers list see the hologram
-                armorStand.setVisibleByDefault(false);
-                for (UUID uuid : hologram.getViewers()) {
-                    Player player = Bukkit.getPlayer(uuid);
-                    if (player != null) {
-                        player.showEntity(VortexPlugin.getInstance(), armorStand);
-                    }
+                PersistentDataContainer data = stand.getPersistentDataContainer();
+                data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
+                data.set(SESSION_ID_KEY, PersistentDataType.STRING, sessionId.toString());
+                if (hologram.useViewers()) {
+                    data.set(VIEWERS_KEY, PersistentDataType.STRING, encodeViewers(hologram.getViewers()));
                 }
-                //Set viewers to the armor stand persistent data
-                data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
-            } else {
-                //Show it to all players
-                armorStand.setVisibleByDefault(true);
-            }
+                applyHologramViewerVisibility(stand, hologram);
+            });
 
-            //Show the hologram to the world
-            armorStand.getWorld().addEntity(armorStand);
+            registerArmorStandInWorldIfNeeded(armorStand);
             hologram.getArmorStands().add(armorStand);
         }
     }
@@ -139,30 +299,20 @@ public class HologramManager {
             }
         }
 
-        ArmorStand armorStand = location.getWorld().createEntity(location, ArmorStand.class);
-        armorStand.setGravity(false);
-        armorStand.setVisible(false);
-        armorStand.setMarker(true);
-        armorStand.setCollidable(false);
+        ArmorStand armorStand = createArmorStandEntity(location, stand -> {
+            stand.setGravity(false);
+            stand.setVisible(false);
+            stand.setMarker(true);
+            stand.setCollidable(false);
+            stand.setPersistent(false);
 
-        //Set viewers to the armor stand persistent data
-        PersistentDataContainer data = armorStand.getPersistentDataContainer();
-        data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
-        if (hologram.useViewers()) {
-            //Make only the players in the viewers list see the hologram
-            armorStand.setVisibleByDefault(false);
-            for (UUID uuid : hologram.getViewers()) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    player.showEntity(VortexPlugin.getInstance(), armorStand);
-                }
+            PersistentDataContainer data = stand.getPersistentDataContainer();
+            data.set(HOLOGRAM_KEY, PersistentDataType.STRING, hologram.getId());
+            if (hologram.useViewers()) {
+                data.set(VIEWERS_KEY, PersistentDataType.STRING, encodeViewers(hologram.getViewers()));
             }
-            //Set viewers to the armor stand persistent data
-            data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
-        } else {
-            //Show it to all players
-            armorStand.setVisibleByDefault(true);
-        }
+            applyHologramViewerVisibility(stand, hologram);
+        });
 
         return armorStand;
     }
@@ -217,7 +367,8 @@ public class HologramManager {
         }
         for (ArmorStand armorStand : hologram.getArmorStands()) {
             PersistentDataContainer data = armorStand.getPersistentDataContainer();
-            List<UUID> oldViewers = data.get(VIEWERS_KEY, PersistentDataType.LIST.strings()).stream().map(UUID::fromString).toList();
+            String rawOld = data.get(VIEWERS_KEY, PersistentDataType.STRING);
+            List<UUID> oldViewers = decodeViewers(rawOld);
             for (UUID uuid : oldViewers) {
                 Player player = Bukkit.getPlayer(uuid);
                 if (player != null) {
@@ -225,13 +376,12 @@ public class HologramManager {
                 }
             }
 
-            data.set(VIEWERS_KEY, PersistentDataType.LIST.strings(), hologram.getViewers().stream().map(UUID::toString).toList());
-            for (UUID uuid : hologram.getViewers()) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    player.showEntity(VortexPlugin.getInstance(), armorStand);
-                }
+            if (hologram.useViewers()) {
+                data.set(VIEWERS_KEY, PersistentDataType.STRING, encodeViewers(hologram.getViewers()));
+            } else {
+                data.remove(VIEWERS_KEY);
             }
+            applyHologramViewerVisibility(armorStand, hologram);
         }
     }
 

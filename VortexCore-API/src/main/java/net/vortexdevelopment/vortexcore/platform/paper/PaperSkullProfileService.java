@@ -19,7 +19,7 @@ import java.util.UUID;
 public class PaperSkullProfileService implements SkullProfileService {
 
     @PostConstruct
-    public void register() {
+    public void registerSkullProfile() {
         SkullProfiles.install(this);
     }
 

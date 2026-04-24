@@ -29,7 +29,7 @@ public class SpigotSkullProfileService implements SkullProfileService {
     private static final Pattern SKIN_URL_PATTERN = Pattern.compile("\"url\"\\s*:\\s*\"([^\"]+)\"");
 
     @PostConstruct
-    public void register() {
+    public void registerSkullProfile() {
         SkullProfiles.install(this);
     }
 

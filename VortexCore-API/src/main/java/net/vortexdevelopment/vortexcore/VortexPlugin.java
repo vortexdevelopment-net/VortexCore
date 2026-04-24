@@ -17,6 +17,7 @@ import net.vortexdevelopment.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
+import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
 import net.vortexdevelopment.vortexcore.utils.PluginInitState;
@@ -30,6 +31,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -128,6 +134,13 @@ public abstract class VortexPlugin extends JavaPlugin {
                                 + "minimizeJar, disable it or keep net/**/platform/** — minimization can strip those "
                                 + "classes because they are only loaded by name.");
             }
+            if (!SkullProfiles.installEarlyIfAbsent(getClass())) {
+                getLogger().warning(
+                        "SkullProfileService was not pre-installed. Skull / player head deserialization from YAML "
+                                + "may fail until DI finishes. Use VortexCore-Paper or VortexCore-Spigot (not API-only), "
+                                + "and if you shade, keep net/**/platform/** or call SkullProfiles.installEarlyIfAbsent "
+                                + "from onEnable before constructing DependencyContainer.");
+            }
             GuiManager.register(this); // TODO add lang support
 
             String pluginRoot = getClass().getAnnotation(Root.class).packageName();
@@ -193,11 +206,10 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Override
     public final void onDisable() {
         this.initState = PluginInitState.ON_DISABLE;
+        AdventureUtils.sendMessage("§c===================", Bukkit.getConsoleSender());
+        AdventureUtils.sendMessage("§cDisabling " + getDescription().getName() + " v" + getDescription().getVersion(), Bukkit.getConsoleSender());
         GuiManager.disable();
         HologramManager.clear();
-        AdventureUtils.sendMessage("§c===================", Bukkit.getConsoleSender());
-        AdventureUtils.sendMessage("§cDisabling " + getDescription().getName() + " v" + getDescription().getVersion(),
-                Bukkit.getConsoleSender());
         Bukkit.getScheduler().cancelTasks(this); // Make sure all tasks are canceled
         if (!emergencyStop) {
             onPluginDisable();
@@ -211,6 +223,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         }
 
         if (bstats != null) {
+            bstats.shutdown();
             bstats = null;
         }
 
@@ -261,6 +274,39 @@ public abstract class VortexPlugin extends JavaPlugin {
         this.pendingMigrations = migrations;
     }
 
+    /**
+     * Creates a config file from VortexCore-API resources on the classpath, or writes {@code defaultYamlContent}
+     * when the dependent plugin JAR does not embed that resource.
+     */
+    private static void ensureBundledConfigYaml(File configFile, String resourceFileName)
+            throws IOException {
+        if (configFile.exists()) {
+            return;
+        }
+        File parent = configFile.getParentFile();
+        if (parent != null) {
+            parent.mkdirs();
+        }
+        try (InputStream in = VortexPlugin.class.getResourceAsStream("/" + resourceFileName)) {
+            if (in != null) {
+                Files.copy(in, configFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                return;
+            }
+        }
+    }
+
+    private void ensureDatabaseYaml(File databaseConfigFile) throws IOException {
+        ensureBundledConfigYaml(databaseConfigFile, "database.yml");
+    }
+
+    public static void ensureGlobalYaml(File globalConfigFile) throws IOException {
+        ensureBundledConfigYaml(globalConfigFile, "global.yml");
+    }
+
+    public static void ensureSkyYaml(File skyConfigFile) throws IOException {
+        //ensureBundledConfigYaml(skyConfigFile, "sky.yml");
+    }
+
     private void connectDatabase() {
         if (!initDatabaseCalled) {
             return;
@@ -268,9 +314,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         try {
             // Read the database config in case it needs to be used in the plugin load
             File databaseConfigFile = new File(getDataFolder(), "database.yml");
-            if (!databaseConfigFile.exists()) {
-                saveResource("database.yml", false);
-            }
+            ensureDatabaseYaml(databaseConfigFile);
             YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
             this.database.init(
                     databaseConfig.getString("Connection Settings.Hostname"),

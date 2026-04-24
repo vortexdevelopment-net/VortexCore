@@ -3,6 +3,7 @@ package net.vortexdevelopment.vortexcore.text.lang;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.yaml.YamlConfig;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
 import net.vortexdevelopment.vortexcore.gui.Gui;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
@@ -24,7 +25,6 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -337,16 +337,20 @@ public class Lang implements ReloadHook {
         if (material == null) {
             return "Unknown";
         }
-        String key = "item.minecraft." + material.name().toLowerCase(Locale.ROOT);
-        return translateClientKeyTo(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKeyTo(material.getTranslationKey());
+        }
+        return translateClientKeyTo(material.translationKey());
     }
 
     public static Component translateItemNameComponent(Material material) {
         if (material == null) {
             return Component.text("Unknown");
         }
-        String key = "item.minecraft." + material.name().toLowerCase(Locale.ROOT);
-        return translateClientKey(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKey(material.getTranslationKey());
+        }
+        return translateClientKey(material.translationKey());
     }
 
     /**
@@ -358,16 +362,21 @@ public class Lang implements ReloadHook {
         if (entityType == null) {
             return "Unknown";
         }
-        String key = "entity.minecraft." + entityType.name().toLowerCase(Locale.ROOT);
-        return translateClientKeyTo(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKeyTo(entityType.getTranslationKey());
+        } else {
+            return translateClientKeyTo(entityType.translationKey());
+        }
     }
 
     public static Component translateMobNameComponent(EntityType entityType) {
         if (entityType == null) {
             return Component.text("Unknown");
         }
-        String key = "entity.minecraft." + entityType.name().toLowerCase(Locale.ROOT);
-        return translateClientKey(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKey(entityType.getTranslationKey());
+        }
+        return translateClientKey(entityType.translationKey());
     }
 
     /**
@@ -379,15 +388,19 @@ public class Lang implements ReloadHook {
         if (material == null) {
             return "Unknown";
         }
-        String key = "block.minecraft." + material.name().toLowerCase(Locale.ROOT);
-        return translateClientKeyTo(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKeyTo(material.getTranslationKey());
+        }
+        return translateClientKeyTo(material.translationKey());
     }
 
     public static Component translateBlockNameComponent(Material material) {
         if (material == null) {
             return Component.text("Unknown");
         }
-        String key = "block.minecraft." + material.name().toLowerCase(Locale.ROOT);
-        return translateClientKey(key);
+        if (ServerProject.isServer(ServerProject.SPIGOT)) {
+            return translateClientKey(material.getTranslationKey());
+        }
+        return translateClientKey(material.translationKey());
     }
 }

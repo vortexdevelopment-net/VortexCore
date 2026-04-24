@@ -210,7 +210,7 @@
         </plugins>
         <resources>
             <resource>
-                <directory>${project.parent.basedir}/VortexCore-API/src/main/resources</directory>
+                <directory>${project.basedir}/../VortexCore-API/src/main/resources</directory>
                 <excludes>
                     <exclude>plugin.yml</exclude>
                 </excludes>
