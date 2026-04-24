@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -472,14 +473,19 @@ public class CommandManager {
     }
 
     /**
-     * Filters completions based on the current input prefix
+     * Filters completions based on the current input: prefix match or substring match (case-insensitive).
+     * Substring matches are included so ids like {@code red_crate} appear when the player types {@code crate}.
      */
     private List<String> filterCompletions(List<String> completions, String prefix) {
         if (prefix.isEmpty()) return completions;
-        
+
+        String needle = prefix.toLowerCase(Locale.ROOT);
         return completions.stream()
-            .filter(s -> s.toLowerCase().startsWith(prefix.toLowerCase()))
-            .collect(Collectors.toList());
+                .filter(s -> {
+                    String haystack = s.toLowerCase(Locale.ROOT);
+                    return haystack.startsWith(needle) || haystack.contains(needle);
+                })
+                .collect(Collectors.toList());
     }
 
     /**
