@@ -225,7 +225,12 @@ public class Gui implements GuiHolder {
     }
 
     public Gui closeAll() {
-        for (Player player : openers) {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), this::closeAll);
+            return this;
+        }
+        // Copy: closeInventory() fires InventoryCloseEvent synchronously and onClose() mutates openers.
+        for (Player player : new ArrayList<>(openers)) {
             player.closeInventory();
         }
         openers.clear();
