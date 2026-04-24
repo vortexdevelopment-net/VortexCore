@@ -1,8 +1,10 @@
 package net.vortexdevelopment.vortexcore.vinject.serializer;
 
+import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.annotation.yaml.YamlSerializer;
 import net.vortexdevelopment.vinject.config.serializer.YamlSerializerBase;
+import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Material;
@@ -17,6 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.persistence.PersistentDataContainer;
@@ -42,6 +45,10 @@ import org.bukkit.inventory.meta.BlockStateMeta;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.ShulkerBox;
 import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
+
+import io.papermc.paper.datacomponent.DataComponentTypes;
+
+import java.lang.reflect.Method;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -138,7 +145,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                 map.put("Custom Model Data", meta.getCustomModelData());
             }
 
-            if (meta.hasItemModel()) {
+            if (ServerVersion.isItemComponentsAvailable() && meta.hasItemModel()) {
                 NamespacedKey model = meta.getItemModel();
                 if (model != null) {
                     map.put("Custom Model", model.toString());
@@ -164,12 +171,12 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                 }
             }
 
-            // Tipped arrow and potion types serialization
+            // Tipped arrow and potion types serialization (1.18: PotionData; 1.20.5+: BasePotionType)
             if (meta instanceof PotionMeta potionMeta) {
-                // Serialize to "Potion" key if it is a tripped arrow or potion
                 if (item.getType() == Material.TIPPED_ARROW || item.getType() == Material.POTION) {
-                    if (potionMeta.getBasePotionType() != null) {
-                        map.put("Potion", potionMeta.getBasePotionType().name());
+                    PotionType baseType = readBasePotionType(potionMeta);
+                    if (baseType != null) {
+                        map.put("Potion", baseType.name());
                     }
                 }
             }
@@ -301,6 +308,16 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             }
         }
 
+        if (ServerVersion.isTooltipStyleSupported()) {
+            try {
+                Key tooltipStyle = item.getData(DataComponentTypes.TOOLTIP_STYLE);
+                if (tooltipStyle != null) {
+                    map.put("Tooltip Style", tooltipStyle.asString());
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
         return map;
     }
 
@@ -406,7 +423,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             }
         }
 
-        if (map.containsKey("Custom Model")) {
+        if (map.containsKey("Custom Model") && ServerVersion.isItemComponentsAvailable()) {
             String modelStr = (String) map.get("Custom Model");
             meta.setItemModel(NamespacedKey.fromString(modelStr));
         }
@@ -440,12 +457,12 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             }
         }
 
-        // Potion type deserialization
+        // Potion type deserialization (1.18: setBasePotionData; 1.20.5+: setBasePotionType)
         if (map.containsKey("Potion") && meta instanceof PotionMeta potionMeta) {
             String potionTypeName = (String) map.get("Potion");
             try {
                 PotionType potionType = PotionType.valueOf(potionTypeName.toUpperCase());
-                potionMeta.setBasePotionType(potionType);
+                applyBasePotionType(potionMeta, potionType);
             } catch (Exception ignored) {}
         }
 
@@ -661,6 +678,18 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         item.setItemMeta(meta);
+
+        if (map.containsKey("Tooltip Style") && ServerVersion.isTooltipStyleSupported()) {
+            Object rawStyle = map.get("Tooltip Style");
+            if (rawStyle != null) {
+                try {
+                    Key styleKey = Key.key(rawStyle.toString().trim());
+                    item.setData(DataComponentTypes.TOOLTIP_STYLE, styleKey);
+                } catch (Throwable ignored) {
+                }
+            }
+        }
+
         return item;
     }
 
@@ -720,5 +749,33 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             colorStr = colorStr.substring(1);
         }
         return Color.fromRGB(Integer.parseInt(colorStr, 16));
+    }
+
+    /**
+     * 1.20.5+ exposes {@code getBasePotionType}; 1.18.x uses {@link PotionMeta#getBasePotionData()} only.
+     * Reflection avoids {@link NoSuchMethodError} when this module is compiled against a newer Paper API.
+     */
+    private static PotionType readBasePotionType(PotionMeta meta) {
+        try {
+            Method getter = PotionMeta.class.getMethod("getBasePotionType");
+            Object r = getter.invoke(meta);
+            return r instanceof PotionType ? (PotionType) r : null;
+        } catch (ReflectiveOperationException ignored) {
+            try {
+                PotionData data = meta.getBasePotionData();
+                return data != null ? data.getType() : null;
+            } catch (Throwable ignored2) {
+                return null;
+            }
+        }
+    }
+
+    private static void applyBasePotionType(PotionMeta meta, PotionType type) throws Exception {
+        try {
+            Method setter = PotionMeta.class.getMethod("setBasePotionType", PotionType.class);
+            setter.invoke(meta, type);
+        } catch (NoSuchMethodError | NoSuchMethodException e) {
+            meta.setBasePotionData(new PotionData(type, false, false));
+        }
     }
 }

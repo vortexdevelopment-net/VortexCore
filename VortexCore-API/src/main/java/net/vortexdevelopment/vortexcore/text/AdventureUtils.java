@@ -362,14 +362,14 @@ public class AdventureUtils {
 
         TagResolver.Builder localBuilder = TagResolver.builder();
         for (MiniMessagePlaceholder placeholder : placeholders) {
+            String key = placeholder.getPlaceholder();
             if (placeholder.isComponent()) {
-                localBuilder.resolver(Placeholder.component(placeholder.getPlaceholder(), (Component) placeholder.getValue()));
+                localBuilder.resolver(Placeholder.component(key, (Component) placeholder.getValue()));
             } else {
-                localBuilder.resolver(Placeholder.parsed(placeholder.getPlaceholder(), replaceLegacy(placeholder.getValue().toString())));
+                localBuilder.resolver(Placeholder.parsed(key, replaceLegacy(placeholder.getValue().toString())));
             }
         }
 
-        // Explicitly combine baseResolver and localResolvers
         return getMiniMessage().deserialize(replaceLegacy(text), localBuilder.build());
     }
 
@@ -427,7 +427,11 @@ public class AdventureUtils {
     }
 
     public static String toMiniMessage(Component component) {
-        return getMiniMessage().serialize(component).replaceAll("<!(italic|i|underlined|u|strikethrough|st|bold|b|obfuscated|obf)>", "");
+        String s = getMiniMessage().serialize(component);
+        // Strip negation tags MiniMessage emits; closing </!x> was missing and broke YAML round-trips
+        s = s.replaceAll("<!(italic|i|underlined|u|strikethrough|st|bold|b|obfuscated|obf)>", "");
+        s = s.replaceAll("</!(italic|i|underlined|u|strikethrough|st|bold|b|obfuscated|obf)>", "");
+        return s;
     }
 
     public static List<String> toMiniMessage(List<Component> components) {

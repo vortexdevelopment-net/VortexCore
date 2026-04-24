@@ -57,6 +57,13 @@ public class ServerVersion {
         return isAtLeastVersion("1.21");
     }
 
+    /**
+     * {@code minecraft:tooltip_style} data component (Paper item stacks) is available from 1.21.2+.
+     */
+    public static boolean isTooltipStyleSupported() {
+        return isAtLeastVersion("1.21.2");
+    }
+
     public static KnownServerVersions getCurrentVersion() {
         return CURRENT_VERSION;
     }
