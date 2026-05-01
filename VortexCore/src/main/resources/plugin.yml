@@ -1,0 +1,17 @@
+# Merge into Bukkit plugin descriptors.
+libraries:
+  - 'com.zaxxer:HikariCP:5.1.0'
+  - 'mysql:mysql-connector-java:8.0.33'
+  - 'org.mariadb.jdbc:mariadb-java-client:3.4.1'
+  - 'com.h2database:h2:2.2.224'
+  - 'com.google.code.gson:gson:2.8.8'
+  - 'com.fasterxml.jackson.core:jackson-databind:2.21.0'
+  - 'net.kyori:adventure-api:4.25.0'
+  - 'net.kyori:adventure-key:4.25.0'
+  - 'net.kyori:adventure-text-minimessage:4.25.0'
+  - 'net.kyori:adventure-text-serializer-gson:4.25.0'
+  - 'net.kyori:adventure-text-serializer-legacy:4.25.0'
+  - 'net.kyori:adventure-text-serializer-plain:4.25.0'
+  - 'net.kyori:adventure-platform-bukkit:4.4.1'
+softdepend:
+  - ProtocolLib

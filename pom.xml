@@ -6,14 +6,12 @@
 
     <groupId>net.vortexdevelopment</groupId>
     <artifactId>VortexCore-Parent</artifactId>
-    <version>2.0.1</version>
+    <version>3.0.0</version>
     <packaging>pom</packaging>
 
     <name>VortexCore-Parent</name>
     <modules>
-        <module>VortexCore-API</module>
-        <module>VortexCore-Paper</module>
-        <module>VortexCore-Spigot</module>
+        <module>VortexCore</module>
         <module>VortexPluginLicenseAPI</module>
     </modules>
 

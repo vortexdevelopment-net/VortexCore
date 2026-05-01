@@ -7,7 +7,7 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 
 ## Features
 
-- Modern Paper API integration
+- Unified Paper and Spigot runtime support
 - Comprehensive plugin management system
 - Advanced configuration handling
 - Built-in command framework
@@ -22,7 +22,7 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 ## Requirements
 
 - Java 17 or higher
-- Paper API 1.21.3 or higher
+- Java 17-compatible Paper or Spigot server
 - Maven 3.6.0 or higher
 
 ## Installation
@@ -35,13 +35,11 @@ mvn clean install
 
 ### Using VortexCore as a Dependency
 
-The build is split into a shared API JAR and **platform** JARs you must match to your server:
+The build publishes one unified `VortexCore` artifact:
 
-- **`VortexCore-API`**: shared code only (no Paper/Spigot platform bridges such as command-map registration). Use this when you need types or compile against the library in a multi-module build, not as the sole runtime dependency for a plugin.
-- **`VortexCore-Paper`**: use on **Paper** (or Paper forks). This is the Paper-first shaded artifact; compile and ship this for Paper servers.
-- **`VortexCore-Spigot`**: use on **Spigot** when you target Spigot’s distribution. Do not add `VortexCore-Paper` alongside it. See [VortexCore-Spigot/README.md](VortexCore-Spigot/README.md) for `plugin.yml` `libraries:` (Kyori) requirements.
+- **`VortexCore`**: unified runtime artifact for both Paper and Spigot. It bundles both platform bridges and prefers Paper implementations when Paper APIs are available.
 
-**Adventure on items and GUIs:** In code you still author with MiniMessage / `Component` via `AdventureUtils`. On Paper, names, lore, inventory titles, and `Component` messages use native Adventure Bukkit APIs. On Spigot, the same APIs are backed by **legacy section strings** (`§`); behavior should match for typical text, but you must ship the **Spigot** artifact so `SpigotBukkitAdventureBridge` is registered.
+**Adventure on items and GUIs:** In code you still author with MiniMessage / `Component` via `AdventureUtils`. On Paper, names, lore, inventory titles, and `Component` messages use native Adventure Bukkit APIs. On Spigot, the same APIs are backed by **legacy section strings** (`§`); behavior should match for typical text.
 
 Add the Vortexdevelopment repository to your `pom.xml`:
 
@@ -52,22 +50,20 @@ Add the Vortexdevelopment repository to your `pom.xml`:
 </repository>
 ```
 
-Then add **one** platform dependency (Paper example):
+Then add the unified runtime dependency:
 
 ```xml
 <dependency>
     <groupId>net.vortexdevelopment</groupId>
-    <artifactId>VortexCore-Paper</artifactId>
-    <version>1.0.3</version>
+    <artifactId>VortexCore</artifactId>
+    <version>2.0.1</version>
     <scope>compile</scope>
 </dependency>
 ```
 
-Or for Spigot-oriented builds, use `artifactId` `VortexCore-Spigot` with the same `groupId` and `version`.
-
 ### Plugin.yml Transformer Setup
 
-For proper plugin.yml handling in child projects, add the following to your `pom.xml`:
+For proper `plugin.yml` and `paper-plugin.yml` handling in child projects, add the following to your `pom.xml`:
 
 ```xml
 <build>
@@ -94,6 +90,7 @@ For proper plugin.yml handling in child projects, add the following to your `pom
                             <transformer implementation="net.vortexdevelopment.MavenYamlTransformer">
                                 <paths>
                                     <path>plugin.yml</path>
+                                    <path>paper-plugin.yml</path>
                                 </paths>
                             </transformer>
                         </transformers>
@@ -119,7 +116,7 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
         createInstance = false,
         templateDependencies = {
                 //For intellij plugin
-                @TemplateDependency(groupId = "net.vortexdevelopment", artifactId = "VortexCore-Paper", version = "1.0.0-SNAPSHOT")
+                @TemplateDependency(groupId = "net.vortexdevelopment", artifactId = "VortexCore", version = "2.0.1")
         }
 )
 public final class MyPlugin extends VortexPlugin {
