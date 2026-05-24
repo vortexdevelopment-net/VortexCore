@@ -33,6 +33,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -61,7 +62,8 @@ public class AdventureUtils {
                         //Run command on player
                         player.performCommand(command);
                     }
-                } catch (ParsingException ignored) {}
+                } catch (ParsingException ignored) {
+                }
                 return Tag.selfClosingInserting(Component.empty());
             }
     );
@@ -71,7 +73,8 @@ public class AdventureUtils {
                 try {
                     String command = args.pop().value();
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), command);
-                } catch (ParsingException ignored) {}
+                } catch (ParsingException ignored) {
+                }
                 return Tag.selfClosingInserting(Component.empty());
             }
     );
@@ -109,7 +112,6 @@ public class AdventureUtils {
      * Convert a shaded component to a json string
      *
      * @param component The shaded Component to convert
-     *
      * @return Json string
      */
     public static String convertToJson(Component component) {
@@ -121,7 +123,6 @@ public class AdventureUtils {
      * Cast it to the correct type
      *
      * @param json Json string
-     *
      * @return Non-shaded component
      */
     public static Object convertToOriginalComponent(String json) {
@@ -133,7 +134,6 @@ public class AdventureUtils {
      * Cast it to the correct type
      *
      * @param component Shaded component
-     *
      * @return Original component
      */
     public static Object convertToOriginalComponent(Component component) {
@@ -145,7 +145,6 @@ public class AdventureUtils {
      * Cast it to the correct type
      *
      * @param components List of shaded components
-     *
      * @return List of original components
      */
     public static Object convertToOriginalComponent(List<Component> components) {
@@ -166,7 +165,6 @@ public class AdventureUtils {
      * Cast it to the correct type
      *
      * @param components List of shaded components
-     *
      * @return List of original components
      */
     public static Object convertToOriginalComponent(Component... components) {
@@ -235,8 +233,8 @@ public class AdventureUtils {
         formatItemName(item, formatComponent(name, placeholders));
     }
 
-    public static void formatItemName(ItemStack item, String name, List<MiniMessagePlaceholder>placeholders) {
-        formatItemName(item, formatComponent(name,placeholders));
+    public static void formatItemName(ItemStack item, String name, List<MiniMessagePlaceholder> placeholders) {
+        formatItemName(item, formatComponent(name, placeholders));
     }
 
     //
@@ -267,7 +265,7 @@ public class AdventureUtils {
         formatItemLore(item, lore.toArray(new String[0]), placeholders);
     }
 
-    public static void formatItemLore(ItemStack item, List<String> lore, List<MiniMessagePlaceholder>placeholders) {
+    public static void formatItemLore(ItemStack item, List<String> lore, List<MiniMessagePlaceholder> placeholders) {
         formatItemLore(item, lore.toArray(new String[0]), placeholders.toArray(new MiniMessagePlaceholder[0]));
     }
 
@@ -295,6 +293,22 @@ public class AdventureUtils {
         setItemLore(item, lore);
     }
 
+    public static void appendItemLore(ItemStack item, String... lore) {
+        appendItemLore(item, formatComponent(lore));
+    }
+
+    public static void appendItemLore(ItemMeta item, String... lore) {
+        appendItemLore(item, formatComponent(lore));
+    }
+
+    public static void appendItemLore(ItemStack item, Component... lore) {
+        appendItemLore(item, Arrays.stream(lore).toList());
+    }
+
+    public static void appendItemLore(ItemMeta meta, Component... lore) {
+        appendItemLore(meta, Arrays.stream(lore).toList());
+    }
+
     public static void appendItemLore(ItemStack item, List<Component> lore) {
         ItemMeta meta = item.getItemMeta();
         if (meta == null || !BukkitAdventureBridges.get().hasItemLore(meta)) {
@@ -303,6 +317,15 @@ public class AdventureUtils {
         List<Component> currentLore = new ArrayList<>(BukkitAdventureBridges.get().getItemLore(meta));
         currentLore.addAll(lore);
         setItemLore(item, currentLore.toArray(new Component[0]));
+    }
+
+    public static void appendItemLore(ItemMeta meta, List<Component> lore) {
+        if (meta == null || !BukkitAdventureBridges.get().hasItemLore(meta)) {
+            return;
+        }
+        List<Component> currentLore = new ArrayList<>(BukkitAdventureBridges.get().getItemLore(meta));
+        currentLore.addAll(lore);
+        setItemLore(meta, currentLore.toArray(new Component[0]));
     }
 
     private static void setItemName(ItemStack item, Component name) {
@@ -589,6 +612,7 @@ public class AdventureUtils {
                 Duration.of(20 * 50L, ChronoUnit.MILLIS)
         ));
     }
+
     // times in ticks
     public static Title createTitle(Component title, Component subtitle, int fadeIn, int stay, int fadeOut) {
         return Title.title(title, subtitle, Title.Times.times(

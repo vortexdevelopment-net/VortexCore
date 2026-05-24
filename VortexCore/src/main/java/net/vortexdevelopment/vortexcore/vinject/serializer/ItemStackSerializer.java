@@ -65,11 +65,30 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * YAML keys and examples for {@link ItemStack} fields are documented in the repo at
+ * {@code docs/itemstack-yaml-serializer.md}.
+ */
+
 @net.vortexdevelopment.vinject.annotation.component.Component
 @YamlSerializer
 public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
     private static final Pattern PDC_PATTERN = Pattern.compile("^([a-z0-9._/:-]+):([A-Z_]+):(.*)$");
+
+    /**
+     * Paper adds {@link Attribute#key()}; Spigot does not. Calling it directly causes
+     * {@link NoSuchMethodError} on Spigot when this module is compiled against Paper.
+     */
+    private static final Method ATTRIBUTE_KEY_METHOD = resolveAttributeKeyMethod();
+
+    private static Method resolveAttributeKeyMethod() {
+        try {
+            return Attribute.class.getMethod("key");
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        }
+    }
 
     @Override
     public Class<ItemStack> getTargetType() {
@@ -155,9 +174,13 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (meta.hasAttributeModifiers()) {
                 List<String> attributes = new ArrayList<>();
                 meta.getAttributeModifiers().asMap().forEach((attribute, modifiers) -> {
+                    String attributeKey = resolveAttributeRegistryKey(attribute);
+                    if (attributeKey == null) {
+                        return;
+                    }
                     for (AttributeModifier modifier : modifiers) {
                         StringBuilder sb = new StringBuilder();
-                        sb.append(attribute.key().key()).append(":");
+                        sb.append(attributeKey).append(":");
                         sb.append(modifier.getAmount()).append(":");
                         sb.append(modifier.getOperation().name());
                         if (modifier.getSlotGroup() != null && modifier.getSlotGroup() != EquipmentSlotGroup.ANY) {
@@ -749,6 +772,24 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             colorStr = colorStr.substring(1);
         }
         return Color.fromRGB(Integer.parseInt(colorStr, 16));
+    }
+
+    /**
+     * Paper: {@link Attribute#key()} via reflection (method exists at runtime).
+     * Spigot: {@link Registry#ATTRIBUTE} reverse lookup.
+     */
+    private static String resolveAttributeRegistryKey(Attribute attribute) {
+        if (ATTRIBUTE_KEY_METHOD != null) {
+            try {
+                Object key = ATTRIBUTE_KEY_METHOD.invoke(attribute);
+                if (key instanceof Key adventureKey) {
+                    return adventureKey.value();
+                }
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
+        NamespacedKey namespacedKey = Registry.ATTRIBUTE.getKey(attribute);
+        return namespacedKey != null ? namespacedKey.getKey() : null;
     }
 
     /**

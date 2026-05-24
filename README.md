@@ -5,6 +5,10 @@
 
 A modern Minecraft development framework built on the Paper API, designed to simplify plugin development and provide powerful tools for server administrators.
 
+## Documentation
+
+- [ItemStack YAML serializer](docs/itemstack-yaml-serializer.md) - all YAML keys and a full example for `ItemStack` fields in Vinject configs.
+
 ## Features
 
 - Unified Paper and Spigot runtime support

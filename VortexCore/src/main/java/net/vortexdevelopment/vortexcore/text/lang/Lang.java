@@ -3,6 +3,7 @@ package net.vortexdevelopment.vortexcore.text.lang;
 import net.kyori.adventure.text.Component;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vinject.config.yaml.YamlConfig;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.ServerProject;

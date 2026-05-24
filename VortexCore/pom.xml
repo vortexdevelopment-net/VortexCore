@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
@@ -18,6 +18,14 @@
         <paper.api.version>1.21.11-R0.1-SNAPSHOT</paper.api.version>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- Shared with plugin.yml, paper-plugin.yml, and VortexCorePluginLoader (via filtered sources) -->
+        <dep.hikari.version>5.1.0</dep.hikari.version>
+        <dep.h2.version>2.2.224</dep.h2.version>
+        <dep.mysql.version>8.0.33</dep.mysql.version>
+        <dep.mariadb.version>3.4.1</dep.mariadb.version>
+        <dep.gson.version>2.8.8</dep.gson.version>
+        <dep.jackson.databind.version>2.21.0</dep.jackson.databind.version>
+        <dep.adventure.platform.bukkit.version>4.4.1</dep.adventure.platform.bukkit.version>
     </properties>
 
     <build>
@@ -59,7 +67,15 @@
                     <relocations>
                         <relocation>
                             <pattern>org.bstats</pattern>
-                            <shadedPattern>net.vortexdevelopment.vortexcore.libs</shadedPattern>
+                            <shadedPattern>net.vortexdevelopment.vortexcore.libs.bstats</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.fasterxml.jackson</pattern>
+                            <shadedPattern>net.vortexdevelopment.vortexcore.libs.jackson</shadedPattern>
+                        </relocation>
+                        <relocation>
+                            <pattern>com.google.gson</pattern>
+                            <shadedPattern>net.vortexdevelopment.vortexcore.libs.gson</shadedPattern>
                         </relocation>
                     </relocations>
                     <filters>
@@ -75,12 +91,6 @@
                                 <exclude>com/google/auto/service/AutoService.class</exclude>
                                 <exclude>google/protobuf/**</exclude>
                                 <exclude>javax/annotation/**</exclude>
-                                <exclude>com/zaxxer/**</exclude>
-                                <exclude>com/mysql/**</exclude>
-                                <exclude>org/mariadb/**</exclude>
-                                <exclude>org/yaml/snakeyaml/**</exclude>
-                                <exclude>com/fasterxml/**</exclude>
-                                <exclude>org/slf4j/**</exclude>
                                 <exclude>**/README*</exclude>
                                 <exclude>**/CHANGELOG*</exclude>
                                 <exclude>**/CHANGES*</exclude>
@@ -100,64 +110,22 @@
                             </excludes>
                         </filter>
                         <filter>
-                            <artifact>net.vortexdevelopment:*</artifact>
+                            <artifact>com.fasterxml.jackson.core:*</artifact>
                             <includes>
                                 <include>**</include>
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>com.google.code.gson:gson</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
+                            <artifact>net.kyori:*</artifact>
+                            <includes>
+                                <include>**</include>
+                            </includes>
                         </filter>
                         <filter>
-                            <artifact>com.zaxxer:HikariCP</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>mysql:mysql-connector-java</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>org.mariadb.jdbc:mariadb-java-client</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>org.yaml:snakeyaml</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>com.fasterxml.jackson.core:*</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>com.fasterxml.jackson.databind:*</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>com.fasterxml.jackson.annotation:*</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
-                        </filter>
-                        <filter>
-                            <artifact>org.slf4j:*</artifact>
-                            <excludes>
-                                <exclude>**</exclude>
-                            </excludes>
+                            <artifact>net.vortexdevelopment:*</artifact>
+                            <includes>
+                                <include>**</include>
+                            </includes>
                         </filter>
                         <filter>
                             <artifact>net.vortexdevelopment:VInject</artifact>
@@ -165,10 +133,7 @@
                                 <exclude>com/zaxxer/**</exclude>
                                 <exclude>com/mysql/**</exclude>
                                 <exclude>org/mariadb/**</exclude>
-                                <exclude>com/fasterxml/**</exclude>
-                                <exclude>com/sun/**</exclude>
-                                <exclude>org/slf4j/**</exclude>
-                                <exclude>org/yaml/**</exclude>
+                                <exclude>org/h2/**</exclude>
                             </excludes>
                             <includes>
                                 <include>**</include>
@@ -212,8 +177,16 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <excludes>
+                    <exclude>plugin.yml</exclude>
+                </excludes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
                 <includes>
-                    <include>**/*</include>
+                    <include>plugin.yml</include>
                 </includes>
             </resource>
         </resources>
@@ -294,28 +267,35 @@
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
-            <version>5.1.0</version>
+            <version>${dep.hikari.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <version>2.2.224</version>
+            <version>${dep.h2.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.33</version>
+            <version>${dep.mysql.version}</version>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
             <artifactId>mariadb-java-client</artifactId>
-            <version>3.4.1</version>
+            <version>${dep.mariadb.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${dep.jackson.databind.version}</version>
             <scope>provided</scope>
         </dependency>
 
