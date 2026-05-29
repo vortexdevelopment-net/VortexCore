@@ -20,7 +20,8 @@ public class EssentialsShopHook extends ShopHook {
         if (!canSell(itemStack)) {
             return 0;
         }
-        return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
+        ItemStack cleanStack = new ItemStack(itemStack.getType());
+        return essentials.getWorth().getPrice(essentials, cleanStack).doubleValue();
     }
 
     @Override
@@ -28,15 +29,17 @@ public class EssentialsShopHook extends ShopHook {
         if (!canSell(itemStack)) {
             return 0;
         }
-        return essentials.getWorth().getPrice(essentials, itemStack).doubleValue();
+        ItemStack cleanStack = new ItemStack(itemStack.getType());
+        return essentials.getWorth().getPrice(essentials, cleanStack).doubleValue();
     }
 
     @Override
     public boolean canSell(ItemStack itemStack) {
-        if (!canEnable() && !isEnabled() && essentials == null) {
+        if (!canEnable() || !isEnabled() || essentials == null) {
             return false;
         }
-        BigDecimal price = essentials.getWorth().getPrice(essentials, itemStack);
+        ItemStack cleanStack = new ItemStack(itemStack.getType());
+        BigDecimal price = essentials.getWorth().getPrice(essentials, cleanStack);
         if (price == null) {
             return false;
         }

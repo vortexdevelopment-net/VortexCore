@@ -21,7 +21,7 @@ public class VortexStackerHook extends StackerHook {
 
     @Override
     public @NotNull BigInteger getRealAmount(@NotNull Item item) {
-        if (stackedItemManager == null) {
+        if (stackedItemManager == null || !stackedItemManager.canStack(item.getItemStack())) {
             return BigInteger.valueOf(item.getItemStack().getAmount());
         }
         StackedItem stackedItem = stackedItemManager.getStackedItem(item);

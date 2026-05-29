@@ -13,17 +13,23 @@ public class ShopGUIPlusHook extends ShopHook {
 
     @Override
     public double getPrice(ItemStack itemStack) {
-        return ShopGuiPlusApi.getItemStackPriceSell(itemStack);
+        ItemStack cleanStack = itemStack.clone();
+        cleanStack.setAmount(1);
+        return ShopGuiPlusApi.getItemStackPriceSell(cleanStack);
     }
 
     @Override
     public double getPrice(ItemStack itemStack, Player player) {
-        return ShopGuiPlusApi.getItemStackPriceSell(player, itemStack);
+        ItemStack cleanStack = itemStack.clone();
+        cleanStack.setAmount(1);
+        return ShopGuiPlusApi.getItemStackPriceSell(player, cleanStack);
     }
 
     @Override
     public boolean canSell(ItemStack itemStack) {
-        return ShopGuiPlusApi.getItemStackPriceSell(itemStack) != -1.0;
+        ItemStack cleanStack = itemStack.clone();
+        cleanStack.setAmount(1);
+        return ShopGuiPlusApi.getItemStackPriceSell(cleanStack) != -1.0;
     }
 
     @Override
