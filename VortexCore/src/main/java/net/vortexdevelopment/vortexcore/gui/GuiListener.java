@@ -47,6 +47,10 @@ public class GuiListener implements Listener {
                 return;
             }
 
+            if (event.getRawSlot() >= getTopInventorySize(event)) {
+                return;
+            }
+
             GuiItem item = gui.getItem(event.getSlot());
 
             if (item != null) {

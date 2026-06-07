@@ -143,24 +143,38 @@ public class Hologram {
     }
 
      /**
-     * Updates only the armor stands that have placeholders needing updates.
-     * This method checks each line for placeholders and updates only those lines.
-     */
+      * Updates only the armor stands that have placeholders needing updates.
+      * This method checks each line for placeholders and updates only those lines.
+      */
     public synchronized void updatePlaceholders(boolean force) {
         //Check if we need to update any placeholder or do we have any at all
-        if (placeholders.isEmpty() || !WorldUtils.isChunkLoadedAtLocation(getLocation())) return;
-        if (placeholders.values().stream().noneMatch(HologramPlaceholder::shouldUpdate) && !force) return;
+        if (placeholders.isEmpty() || !WorldUtils.isChunkLoadedAtLocation(getLocation())) {
+            return;
+        }
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> {
+                updatePlaceholders(force);
+            });
+            return;
+        }
+
+        boolean anyUpdate = force;
+        for (HologramPlaceholder placeholder : placeholders.values()) {
+            if (placeholder.shouldUpdate(force)) {
+                anyUpdate = true;
+            }
+        }
+        if (!anyUpdate) {
+            return;
+        }
 
         // Only update lines that contain placeholders that need updating
         for (int i = 0; i < lines.size() && i < armorStands.size(); i++) {
             String line = lines.get(i);
             boolean needsUpdate = false;
 
-            // Check if this line has any placeholders that need updating
-            for (Map.Entry<String, HologramPlaceholder> entry : placeholders.entrySet()) {
-                String placeholderKey = entry.getKey();
-                HologramPlaceholder hologramPlaceholder = entry.getValue();
-                
+            // Check if this line has any placeholders
+            for (String placeholderKey : placeholders.keySet()) {
                 if (line.contains(placeholderKey)) {
                     needsUpdate = true;
                     break;

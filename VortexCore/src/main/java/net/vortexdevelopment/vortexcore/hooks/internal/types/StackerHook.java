@@ -23,7 +23,6 @@ public abstract class StackerHook extends PluginHook {
      *
      * @param item The item entity to stack.
      * @param amount The amount to stack.
-     * @return The created StackedItem.
      */
     public abstract void createStackedItem(@NotNull Item item, @NotNull BigInteger amount);
 
@@ -33,7 +32,6 @@ public abstract class StackerHook extends PluginHook {
      * @param itemStack The item stack to stack.
      * @param location The location to spawn the stacked item.
      * @param amount The amount to stack.
-     * @return The created StackedItem, or null if creation failed.
      */
     public abstract void createStackedItem(@NotNull Location location, @NotNull ItemStack itemStack, @NotNull BigInteger amount);
 }

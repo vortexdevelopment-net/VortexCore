@@ -219,13 +219,13 @@ public abstract class VortexPlugin extends JavaPlugin {
         if (!emergencyStop) {
             onPluginDisable();
         }
+        if (dependencyContainer != null) {
+            dependencyContainer.release();
+        }
         if (database != null) {
             database.shutdown();
         }
         HandlerList.unregisterAll(this);
-        if (dependencyContainer != null) {
-            dependencyContainer.release();
-        }
 
         if (bstats != null) {
             bstats.shutdown();

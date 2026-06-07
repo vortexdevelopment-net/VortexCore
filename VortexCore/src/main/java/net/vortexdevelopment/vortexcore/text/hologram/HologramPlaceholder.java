@@ -22,7 +22,19 @@ class HologramPlaceholder {
     }
 
     boolean shouldUpdate() {
-        return updateIntervalTicks != 0 && System.currentTimeMillis() - lastUpdate >= updateIntervalTicks * 20;
+        return shouldUpdate(false);
+    }
+
+    boolean shouldUpdate(boolean force) {
+        if (updateIntervalTicks == 0) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (force || now - lastUpdate >= updateIntervalTicks * 50L) {
+            lastUpdate = now;
+            return true;
+        }
+        return false;
     }
 
 }
