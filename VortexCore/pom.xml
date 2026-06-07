@@ -7,7 +7,7 @@
     <parent>
         <groupId>net.vortexdevelopment</groupId>
         <artifactId>VortexCore-Parent</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>VortexCore</artifactId>
@@ -46,6 +46,27 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>net.vortexdevelopment</groupId>
+                <artifactId>vinject-maven-plugin</artifactId>
+                <version>2.0.0-SNAPSHOT</version>
+                <executions>
+                    <execution>
+                        <id>process-classes</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>transform-classes</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>process-test-classes</id>
+                        <phase>process-test-classes</phase>
+                        <goals>
+                            <goal>transform-classes</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -231,7 +252,7 @@
         <dependency>
             <groupId>net.vortexdevelopment</groupId>
             <artifactId>VInject</artifactId>
-            <version>1.0.0-SNAPSHOT</version>
+            <version>2.0.0-SNAPSHOT</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
