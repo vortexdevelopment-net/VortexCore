@@ -16,7 +16,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
@@ -279,9 +278,13 @@ public class Lang implements ReloadHook {
             // Add missing keys from bundled resource
             InputStream defConfigStream = VortexPlugin.getInstance().getResource("lang.yml");
             if (defConfigStream != null) {
-                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defConfigStream, StandardCharsets.UTF_8));
+                String defContent = new String(defConfigStream.readAllBytes(), StandardCharsets.UTF_8);
+                YamlConfig defConfig = YamlConfig.load(defContent);
                 boolean changed = false;
                 for (String key : defConfig.getKeys(true)) {
+                    if (defConfig.isSection(key)) {
+                        continue;
+                    }
                     if (!lang.contains(key) || (lang.get(key) == null) || lang.getString(key).isEmpty()) {
                         lang.set(key, defConfig.get(key));
                         changed = true;

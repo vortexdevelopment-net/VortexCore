@@ -82,7 +82,7 @@
                 </executions>
                 <configuration>
                     <minimizeJar>true</minimizeJar>
-                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                    <createDependencyReducedPom>true</createDependencyReducedPom>
                     <keepDependenciesWithProvidedScope>false</keepDependenciesWithProvidedScope>
                     <promoteTransitiveDependencies>false</promoteTransitiveDependencies>
                     <relocations>
@@ -156,6 +156,12 @@
                                 <exclude>org/mariadb/**</exclude>
                                 <exclude>org/h2/**</exclude>
                             </excludes>
+                            <includes>
+                                <include>**</include>
+                            </includes>
+                        </filter>
+                        <filter>
+                            <artifact>org.bstats:*</artifact>
                             <includes>
                                 <include>**</include>
                             </includes>
