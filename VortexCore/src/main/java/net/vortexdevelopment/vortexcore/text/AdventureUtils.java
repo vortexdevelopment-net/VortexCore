@@ -34,8 +34,12 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class AdventureUtils {
 
@@ -212,6 +216,77 @@ public class AdventureUtils {
     //
     // Item name formatting
     //
+
+    public static void formatPlaceholders(ItemStack itemStack, List<MiniMessagePlaceholder> placeholders) {
+        formatPlaceholders(itemStack, placeholders.toArray(new MiniMessagePlaceholder[0]));
+    }
+
+    public static void formatPlaceholders(ItemStack itemStack, MiniMessagePlaceholder... placeholders) {
+        formatPlaceholders(itemStack.getItemMeta(), placeholders);
+    }
+
+    public static void formatPlaceholders(ItemMeta itemMeta, List<MiniMessagePlaceholder> placeholders) {
+        formatPlaceholders(itemMeta, placeholders.toArray(new MiniMessagePlaceholder[0]));
+    }
+
+    public static void formatPlaceholders(ItemMeta itemMeta, MiniMessagePlaceholder... placeholders) {
+        if (itemMeta == null) {
+            return;
+        }
+        BukkitAdventureBridge adventureBridge = BukkitAdventureBridges.get();
+
+        // check for name and lore
+        if (adventureBridge.hasItemName(itemMeta)) {
+            adventureBridge.applyItemName(itemMeta, formatPlaceholders(adventureBridge.getItemName(itemMeta), placeholders));
+        }
+
+        // Check for Lore
+        if (adventureBridge.hasItemLore(itemMeta)) {
+            adventureBridge.applyItemLore(itemMeta, formatPlaceholders(adventureBridge.getItemLore(itemMeta), placeholders));
+        }
+    }
+
+    public static List<Component> formatPlaceholders(List<Component> components, MiniMessagePlaceholder... placeholders) {
+        return components.stream()
+                .map(component -> formatPlaceholders(component, placeholders))
+                .collect(Collectors.toList());
+    }
+
+    public static Component formatPlaceholders(Component message, MiniMessagePlaceholder... placeholders) {
+        if (message == null || placeholders == null || placeholders.length == 0) {
+            return message;
+        }
+
+        // 1. Build a lookup map of full tag literals (e.g. "<player>" -> placeholder)
+        Map<String, MiniMessagePlaceholder> placeholderMap = new HashMap<>();
+        for (MiniMessagePlaceholder p : placeholders) {
+            placeholderMap.put("<" + p.getPlaceholder() + ">", p);
+        }
+
+        // 2. Compile a single regex matching any of the literal tags, escaping special regex chars
+        String regex = placeholderMap.keySet().stream()
+                .map(Pattern::quote)
+                .collect(Collectors.joining("|"));
+        Pattern pattern = Pattern.compile(regex);
+
+        // 3. Perform a single-pass replacement traversal
+        return message.replaceText(builder -> {
+            builder.match(pattern).replacement(result -> {
+                // result is a TextComponent.Builder. Use content() to get the matched text string.
+                String matchedTag = result.content(); // e.g. "<player>"
+                MiniMessagePlaceholder placeholder = placeholderMap.get(matchedTag);
+
+                if (placeholder != null) {
+                    if (placeholder.isComponent()) {
+                        return (Component) placeholder.getValue();
+                    } else {
+                        return formatComponent(placeholder.getValue().toString());
+                    }
+                }
+                return null; // Return null to leave unmatched text as-is
+            });
+        });
+    }
 
     public static void formatItemName(ItemMeta meta, String name) {
         setItemName(meta, formatComponent(name));
@@ -609,18 +684,6 @@ public class AdventureUtils {
         }
         components.add(formatComponent(builder.toString()));
         return components;
-    }
-
-    public static Component formatPlaceholder(Component message, MiniMessagePlaceholder... placeholder) {
-        return message.replaceText(builder -> {
-            for (MiniMessagePlaceholder place : placeholder) {
-                if (place.isComponent()) {
-                    builder.matchLiteral("{" + place.getPlaceholder() + "}").replacement((Component) place.getValue());
-                } else {
-                    builder.matchLiteral(place.getPlaceholder()).replacement(formatComponent(place.getValue().toString()));
-                }
-            }
-        });
     }
 
     //Bukkit defaults for time
