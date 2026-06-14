@@ -4,6 +4,7 @@ import net.milkbowl.vault.economy.Economy;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 
+import java.util.Optional;
 import java.util.function.Consumer;
 
 public class EconomyHook {
@@ -18,6 +19,10 @@ public class EconomyHook {
         } catch (Throwable e) {
             VortexPlugin.getInstance().getLogger().warning("Vault not found! Economy features will not work.");
         }
+    }
+
+    public static Optional<EconomyWrapper> getEconomy() {
+        return Optional.ofNullable(economy);
     }
 
     public static void access(Consumer<EconomyWrapper> economyConsumer) {
