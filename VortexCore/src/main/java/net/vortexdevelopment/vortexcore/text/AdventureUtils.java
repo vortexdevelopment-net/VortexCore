@@ -485,7 +485,26 @@ public class AdventureUtils {
         return list;
     }
 
+    private static String replaceCurrencyTags(String text) {
+        if (text == null) {
+            return null;
+        }
+        if (VortexPlugin.getInstance() != null && VortexPlugin.getInstance().getName().equalsIgnoreCase("VortexBazaar")) {
+            // Remove hardcoded currency words after placeholders (e.g. <price> coins -> <price>)
+            text = text.replaceAll("(?i)(<\\w+>)\\s*(coins|érme|érmét)\\b", "$1");
+            
+            // Replace standalone currency words with currency name from lang.yml
+            String currencyName = net.vortexdevelopment.vortexcore.text.lang.Lang.getString("General.Currency Name", "coins");
+            text = text.replaceAll("(?i)\\b(coins|érme|érmét)\\b", currencyName);
+        }
+        return text;
+    }
+
     public static String replaceLegacy(String legacy) {
+        if (legacy == null) {
+            return null;
+        }
+        legacy = replaceCurrencyTags(legacy);
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < legacy.length(); i++) {
             char current = legacy.charAt(i);

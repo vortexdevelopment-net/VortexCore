@@ -5,6 +5,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 
@@ -63,27 +64,33 @@ public class GuiListener implements Listener {
     }
 
     @EventHandler
-    public void onInventoryDrag(InventoryClickEvent event) {
+    public void onInventoryDrag(InventoryDragEvent event) {
         InventoryHolder holder = event.getInventory().getHolder();
-
         if (holder instanceof GuiHolder gui) {
-
-            Consumer<InventoryClickEvent> onGlobalDrag = gui.getOnGlobalDrag();
-            Consumer<InventoryClickEvent> onTopDrag = gui.getOnTopDrag();
-            Consumer<InventoryClickEvent> onBottomDrag = gui.getOnBottomDrag();
-
+            int topSize = getTopInventorySize(event);
+            boolean affectsTop = false;
+            boolean affectsBottom = false;
+            for (int rawSlot : event.getRawSlots()) {
+                if (rawSlot < topSize) {
+                    affectsTop = true;
+                } else {
+                    affectsBottom = true;
+                }
+            }
+            if (affectsTop && gui.cancelClick()) {
+                event.setCancelled(true);
+            }
+            Consumer<InventoryDragEvent> onGlobalDrag = gui.getOnGlobalDrag();
+            Consumer<InventoryDragEvent> onTopDrag = gui.getOnTopDrag();
+            Consumer<InventoryDragEvent> onBottomDrag = gui.getOnBottomDrag();
             if (onGlobalDrag != null) {
                 onGlobalDrag.accept(event);
             }
-
-            if (event.getRawSlot() < getTopInventorySize(event)) {
-                if (onTopDrag != null) {
-                    onTopDrag.accept(event);
-                }
-            } else {
-                if (onBottomDrag != null) {
-                    onBottomDrag.accept(event);
-                }
+            if (affectsTop && onTopDrag != null) {
+                onTopDrag.accept(event);
+            }
+            if (affectsBottom && onBottomDrag != null) {
+                onBottomDrag.accept(event);
             }
         }
     }
@@ -129,6 +136,39 @@ public class GuiListener implements Listener {
             getSize.setAccessible(true);
             Object sizeObj = getSize.invoke(topInventory);
 
+            if (sizeObj instanceof Number) {
+                return ((Number) sizeObj).intValue();
+            }
+            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // fallback: return the clicked inventory size
+            Inventory inv = event.getInventory();
+            return inv != null ? inv.getSize() : 0;
+        }
+    }
+
+    /**
+     * Returns the top inventory size safely across multiple versions for drag events.
+     */
+    public static int getTopInventorySize(InventoryDragEvent event) {
+        try {
+            return event.getView().getTopInventory().getSize();
+        } catch (Throwable e) {
+            // likely a version where getView() or getTopInventory() is not available
+            // fallback to reflection below
+        }
+        try {
+            // Use declared methods and set accessible to handle non-public methods across versions
+            Method getView = event.getClass().getMethod("getView");
+            getView.setAccessible(true);
+            Object view = getView.invoke(event);
+            Method getTopInventory = view.getClass().getMethod("getTopInventory");
+            getTopInventory.setAccessible(true);
+            Object topInventory = getTopInventory.invoke(view);
+            Method getSize = topInventory.getClass().getMethod("getSize");
+            getSize.setAccessible(true);
+            Object sizeObj = getSize.invoke(topInventory);
             if (sizeObj instanceof Number) {
                 return ((Number) sizeObj).intValue();
             }

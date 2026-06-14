@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -39,9 +40,9 @@ public class PaginatedGui implements GuiHolder {
     private @Getter Consumer<InventoryClickEvent> onTopClick;
     private @Getter Consumer<InventoryClickEvent> onBottomClick;
 
-    private @Getter Consumer<InventoryClickEvent> onGlobalDrag;
-    private @Getter Consumer<InventoryClickEvent> onTopDrag;
-    private @Getter Consumer<InventoryClickEvent> onBottomDrag;
+    private @Getter Consumer<InventoryDragEvent> onGlobalDrag;
+    private @Getter Consumer<InventoryDragEvent> onTopDrag;
+    private @Getter Consumer<InventoryDragEvent> onBottomDrag;
 
     private @Getter Consumer<InventoryCloseEvent> onClose;
 
@@ -690,19 +691,19 @@ public class PaginatedGui implements GuiHolder {
     }
 
     @Override
-    public PaginatedGui setOnGlobalDrag(Consumer<InventoryClickEvent> onGlobalDrag) {
+    public PaginatedGui setOnGlobalDrag(Consumer<InventoryDragEvent> onGlobalDrag) {
         this.onGlobalDrag = onGlobalDrag;
         return this;
     }
 
     @Override
-    public PaginatedGui setOnTopDrag(Consumer<InventoryClickEvent> onTopDrag) {
+    public PaginatedGui setOnTopDrag(Consumer<InventoryDragEvent> onTopDrag) {
         this.onTopDrag = onTopDrag;
         return this;
     }
 
     @Override
-    public PaginatedGui setOnBottomDrag(Consumer<InventoryClickEvent> onBottomDrag) {
+    public PaginatedGui setOnBottomDrag(Consumer<InventoryDragEvent> onBottomDrag) {
         this.onBottomDrag = onBottomDrag;
         return this;
     }

@@ -10,6 +10,7 @@ import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
@@ -39,9 +40,9 @@ public class Gui implements GuiHolder {
     @Getter private Consumer<InventoryClickEvent> onTopClick;
     @Getter private Consumer<InventoryClickEvent> onBottomClick;
 
-    @Getter private Consumer<InventoryClickEvent> onGlobalDrag;
-    @Getter private Consumer<InventoryClickEvent> onTopDrag;
-    @Getter private Consumer<InventoryClickEvent> onBottomDrag;
+    @Getter private Consumer<InventoryDragEvent> onGlobalDrag;
+    @Getter private Consumer<InventoryDragEvent> onTopDrag;
+    @Getter private Consumer<InventoryDragEvent> onBottomDrag;
 
     @Getter private Consumer<InventoryCloseEvent> onClose;
 
@@ -303,17 +304,17 @@ public class Gui implements GuiHolder {
         return this;
     }
 
-    public Gui setOnGlobalDrag(Consumer<InventoryClickEvent> onGlobalDrag) {
+    public Gui setOnGlobalDrag(Consumer<InventoryDragEvent> onGlobalDrag) {
         this.onGlobalDrag = onGlobalDrag;
         return this;
     }
 
-    public Gui setOnTopDrag(Consumer<InventoryClickEvent> onTopDrag) {
+    public Gui setOnTopDrag(Consumer<InventoryDragEvent> onTopDrag) {
         this.onTopDrag = onTopDrag;
         return this;
     }
 
-    public Gui setOnBottomDrag(Consumer<InventoryClickEvent> onBottomDrag) {
+    public Gui setOnBottomDrag(Consumer<InventoryDragEvent> onBottomDrag) {
         this.onBottomDrag = onBottomDrag;
         return this;
     }

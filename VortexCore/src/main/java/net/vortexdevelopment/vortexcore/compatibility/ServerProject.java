@@ -3,11 +3,17 @@ package net.vortexdevelopment.vortexcore.compatibility;
 import org.bukkit.Bukkit;
 
 public enum ServerProject {
-    UNKNOWN, CRAFTBUKKIT, SPIGOT, PAPER;
+    UNKNOWN, CRAFTBUKKIT, SPIGOT, PAPER, FOLIA;
     private static final ServerProject serverProject = checkProject();
 
     private static ServerProject checkProject() {
         String serverPath = Bukkit.getServer().getClass().getName();
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            return FOLIA;
+        } catch (ClassNotFoundException ignore) {
+        }
+
         try {
             Class.forName("com.destroystokyo.paperclip.Paperclip");
             return PAPER;
@@ -45,5 +51,9 @@ public enum ServerProject {
             }
         }
         return false;
+    }
+
+    public static boolean isFolia() {
+        return serverProject == FOLIA;
     }
 }

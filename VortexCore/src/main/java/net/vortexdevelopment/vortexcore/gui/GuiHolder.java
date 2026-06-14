@@ -3,6 +3,7 @@ package net.vortexdevelopment.vortexcore.gui;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.InventoryHolder;
 import org.jetbrains.annotations.NotNull;
 
@@ -15,11 +16,11 @@ import java.util.function.Consumer;
  */
 public interface GuiHolder extends InventoryHolder {
 
-    Consumer<InventoryClickEvent> getOnGlobalDrag();
+    Consumer<InventoryDragEvent> getOnGlobalDrag();
 
-    Consumer<InventoryClickEvent> getOnTopDrag();
+    Consumer<InventoryDragEvent> getOnTopDrag();
 
-    Consumer<InventoryClickEvent> getOnBottomDrag();
+    Consumer<InventoryDragEvent> getOnBottomDrag();
 
     Consumer<InventoryClickEvent> getOnGlobalClick();
 
@@ -29,11 +30,11 @@ public interface GuiHolder extends InventoryHolder {
 
     Consumer<InventoryCloseEvent> getOnClose();
 
-    GuiHolder setOnGlobalDrag(Consumer<InventoryClickEvent> onGlobalDrag);
+    GuiHolder setOnGlobalDrag(Consumer<InventoryDragEvent> onGlobalDrag);
 
-    GuiHolder setOnTopDrag(Consumer<InventoryClickEvent> onTopDrag);
+    GuiHolder setOnTopDrag(Consumer<InventoryDragEvent> onTopDrag);
 
-    GuiHolder setOnBottomDrag(Consumer<InventoryClickEvent> onBottomDrag);
+    GuiHolder setOnBottomDrag(Consumer<InventoryDragEvent> onBottomDrag);
 
     GuiHolder setOnGlobalClick(Consumer<InventoryClickEvent> onGlobalClick);
 

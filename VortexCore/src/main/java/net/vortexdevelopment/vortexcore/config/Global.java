@@ -30,4 +30,8 @@ public class Global implements ReloadHook {
     public static <T> T isFeatureEnabled(String feature, boolean defaultValue, Class<T> type) {
         return (T) config.get(feature, false);
     }
+
+    public static int getMaxBlocksPerTick() {
+        return config != null ? config.getInt("Settings.Max Blocks Per Tick", 100) : 100;
+    }
 }
