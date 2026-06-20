@@ -57,6 +57,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     private final CommandManager commandManager = new CommandManager();
 
     private final Set<ReloadHook> reloadHooks = new HashSet<>();
+    private final List<Object> registeredPlaceholderExpansions = new ArrayList<>();
 
     private boolean emergencyStop = false;
     private PluginInitState initState = PluginInitState.NOT_INITIALIZED;
@@ -215,6 +216,15 @@ public abstract class VortexPlugin extends JavaPlugin {
         AdventureUtils.sendMessage("§cDisabling " + getDescription().getName() + " v" + getDescription().getVersion(), Bukkit.getConsoleSender());
         GuiManager.disable();
         HologramManager.clear();
+        for (Object expansion : registeredPlaceholderExpansions) {
+            try {
+                java.lang.reflect.Method unregisterMethod = expansion.getClass().getMethod("unregister");
+                unregisterMethod.invoke(expansion);
+            } catch (Exception e) {
+                getLogger().warning("Failed to unregister PlaceholderAPI expansion: " + e.getMessage());
+            }
+        }
+        registeredPlaceholderExpansions.clear();
         Bukkit.getScheduler().cancelTasks(this); // Make sure all tasks are canceled
         if (!emergencyStop) {
             onPluginDisable();
@@ -270,6 +280,10 @@ public abstract class VortexPlugin extends JavaPlugin {
 
     public static VortexPlugin getInstance() {
         return instance;
+    }
+
+    public void registerPlaceholderExpansion(Object expansion) {
+        registeredPlaceholderExpansions.add(expansion);
     }
 
     public boolean sendAudienceMessage(CommandSender sender, net.kyori.adventure.text.Component message) {
