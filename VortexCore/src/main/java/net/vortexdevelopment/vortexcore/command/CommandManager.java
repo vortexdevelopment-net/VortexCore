@@ -241,6 +241,10 @@ public class CommandManager {
                 }
             }
             
+            if (tabCompleteMethods.isEmpty() && paramTabCompleteMethods.isEmpty()) {
+                return Collections.emptyList();
+            }
+            
             // Get all subcommands for this command
             Map<String, Method> subCommands = new HashMap<>();
             for (Method method : instance.getClass().getDeclaredMethods()) {
@@ -256,11 +260,8 @@ public class CommandManager {
                     }
                 }
             }
-
-            // Always suggest static subcommand literals from @SubCommand patterns
-            handleSubCommandLiteralTabCompletions(sender, args, subCommands, instance, completions);
-
-            // Then try parameter-based completions (require explicit @TabComplete methods)
+            
+            // First try parameter-based completions
             if (!paramTabCompleteMethods.isEmpty()) {
                 handleParameterBasedTabCompletions(sender, args, paramTabCompleteMethods, subCommands, instance, completions);
             }
@@ -274,46 +275,6 @@ public class CommandManager {
             String currentArg = args.length > 0 ? args[args.length - 1] : "";
             return filterCompletions(completions, currentArg);
         };
-    }
-
-    /**
-     * Suggests static literal parts of @SubCommand patterns (e.g. "admin", "reset") automatically,
-     * without requiring any explicit @TabComplete methods. Permission-gated per subcommand.
-     */
-    private void handleSubCommandLiteralTabCompletions(CommandSender sender, String[] args,
-                                                       Map<String, Method> subCommands, Object instance,
-                                                       List<String> completions) {
-        for (Map.Entry<String, Method> entry : subCommands.entrySet()) {
-            String pattern = entry.getKey();
-            Method method = entry.getValue();
-            String[] patternParts = pattern.split(" ");
-
-            // Skip if the sender lacks permission for this subcommand
-            if (!hasPermission(sender, instance.getClass(), method, true)) {
-                continue;
-            }
-
-            // Skip if the already-typed args don't match the prefix of this pattern
-            if (!matchesPartialPattern(patternParts, args)) {
-                continue;
-            }
-
-            // The current arg index is the last one being typed
-            int argIndex = args.length - 1;
-
-            if (argIndex < patternParts.length) {
-                String patternPart = patternParts[argIndex];
-                // Only suggest if this slot in the pattern is a static literal, not a parameter
-                if (!patternPart.startsWith("{") || !patternPart.endsWith("}")) {
-                    String currentArg = args[argIndex];
-                    if (patternPart.toLowerCase().startsWith(currentArg.toLowerCase())) {
-                        if (!completions.contains(patternPart)) {
-                            completions.add(patternPart);
-                        }
-                    }
-                }
-            }
-        }
     }
 
     /**
