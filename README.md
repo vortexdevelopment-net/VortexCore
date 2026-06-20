@@ -7,7 +7,10 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 
 ## Documentation
 
-- [ItemStack YAML serializer](docs/itemstack-yaml-serializer.md) - all YAML keys and a full example for `ItemStack` fields in Vinject configs.
+- [Documentation index](docs/README.md) - all plugin development guides
+- [Agent skill](.cursor/skills/vortex-plugindev/SKILL.md) - compact agent router for plugin tasks
+- [AGENTS.md](AGENTS.md) - agent quick start
+- [ItemStack YAML serializer](docs/itemstack-yaml-serializer.md) - all YAML keys for `ItemStack` fields in Vinject configs
 
 ## Features
 
@@ -148,64 +151,47 @@ public final class MyPlugin extends VortexPlugin {
 ### Example command
 
 ```java
-@Command(value = "pm", aliases = {"msg", "tell"}) //Registers the command /pm with aliases /msg and /tell
-@Permission("pm.use") //Requires the permission pm.use to execute
+import net.vortexdevelopment.vortexcore.command.annotation.BaseCommand;
+import net.vortexdevelopment.vortexcore.command.annotation.Command;
+import net.vortexdevelopment.vortexcore.command.annotation.Param;
+import net.vortexdevelopment.vortexcore.command.annotation.Permission;
+import net.vortexdevelopment.vortexcore.command.annotation.Sender;
+import net.vortexdevelopment.vortexcore.command.annotation.SubCommand;
+import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+
+@Command(value = "pm", aliases = {"msg", "tell"})
+@Permission("pm.use")
 public class PrivateMessageCommand {
 
     @BaseCommand
     public void baseCommand(@Sender CommandSender sender) {
-        sender.sendMessage(ChatColor.YELLOW + "Usage: /pm <player> <message>");
+        Lang.send(sender, "Commands.Private Message Usage");
     }
 
-    @SubCommand(command = "{player} {**}") // {**} means the rest of the command
+    @SubCommand(command = "{player} {**}")
     public void sendPrivateMessage(
-            @Param("player") Player recipient, 
-            @Param("**") String message, 
-            @Sender CommandSender sender //Annotated parameters can be placed in any order
+            @Param("player") Player recipient,
+            @Param("**") String message,
+            @Sender CommandSender sender
     ) {
         if (message.trim().isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Your message cannot be empty.");
+            Lang.send(sender, "Commands.Private Message Empty");
             return;
         }
-
-        String senderName = sender instanceof Player ? ((Player) sender).getDisplayName() : "Console";
-
-        // Format for the sender
-        sender.sendMessage(ChatColor.GRAY + "[" + ChatColor.GREEN + "You" + ChatColor.GRAY + " -> " +
-                ChatColor.GREEN + recipient.getDisplayName() + ChatColor.GRAY + "] " +
-                ChatColor.WHITE + message);
-
-        // Format for the recipient
-        recipient.sendMessage(ChatColor.GRAY + "[" + ChatColor.GREEN + senderName + ChatColor.GRAY + " -> " +
-                ChatColor.GREEN + "You" + ChatColor.GRAY + "] " +
-                ChatColor.WHITE + message);
-    }
-
-    @SubCommand(command = "all {**}" )
-    @Permission("pm.all") //Requires the permission pm.all to execute
-    public void sendMessageToAll(@Sender CommandSender sender, @Param("**") String message) {
-        if (message.trim().isEmpty()) {
-            sender.sendMessage(ChatColor.RED + "Your message cannot be empty.");
-            return;
-        }
-
-        String fullMessage = ChatColor.GRAY + "[" + ChatColor.GREEN + "Broadcast" + ChatColor.GRAY + "] " +
-                ChatColor.WHITE + message;
-
-        Bukkit.getOnlinePlayers().forEach(player -> player.sendMessage(fullMessage));
-    }
-
-    //Registers a tab completion for the {player} parameter
-    @TabComplete(param = "player")
-    public List<String> tabCompletePlayer(@Sender Player player/*, @Args String[] args, @TabIndex int index*/) {
-        // Only suggest players that aren't the sender
-        return Bukkit.getOnlinePlayers().stream()
-                .filter(p -> !p.equals(player))
-                .map(Player::getName)
-                .toList();
+        Lang.send(sender, "Commands.Private Message Sent",
+                new MiniMessagePlaceholder("recipient", recipient.getName()),
+                new MiniMessagePlaceholder("message", message));
+        Lang.send(recipient, "Commands.Private Message Received",
+                new MiniMessagePlaceholder("sender", sender.getName()),
+                new MiniMessagePlaceholder("message", message));
     }
 }
 ```
+
+See [docs/commands-and-listeners.md](docs/commands-and-listeners.md) and [docs/messaging.md](docs/messaging.md) for full patterns.
 
 ### Register a Command Parameter Resolver
 
