@@ -57,7 +57,26 @@ public class Hologram {
     }
 
     public List<MiniMessagePlaceholder> getPlaceholders() {
-        return placeholders.values().stream().map(HologramPlaceholder::getPlaceholder).toList();
+        if (placeholders.isEmpty()) {
+            return List.of();
+        }
+        List<MiniMessagePlaceholder> list = new ArrayList<>(placeholders.size());
+        for (HologramPlaceholder placeholder : placeholders.values()) {
+            list.add(placeholder.getPlaceholder());
+        }
+        return list;
+    }
+
+    private MiniMessagePlaceholder[] resolvePlaceholders() {
+        if (placeholders.isEmpty()) {
+            return new MiniMessagePlaceholder[0];
+        }
+        MiniMessagePlaceholder[] resolved = new MiniMessagePlaceholder[placeholders.size()];
+        int idx = 0;
+        for (HologramPlaceholder ph : placeholders.values()) {
+            resolved[idx++] = ph.getPlaceholder();
+        }
+        return resolved;
     }
 
     public synchronized void update() {
@@ -65,10 +84,10 @@ public class Hologram {
     }
 
      /**
-     * Updates the hologram's armor stands to match the current lines.
-     * This method ensures that each armor stand corresponds to the correct line,
-     * adjusting positions and names as necessary.
-     */
+      * Updates the hologram's armor stands to match the current lines.
+      * This method ensures that each armor stand corresponds to the correct line,
+      * adjusting positions and names as necessary.
+      */
     public synchronized void update(boolean force) {
         if ((!shouldUpdate && !force) || !WorldUtils.isChunkLoadedAtLocation(getLocation())) return;
         if (!Bukkit.isPrimaryThread()) {
@@ -92,6 +111,8 @@ public class Hologram {
             armorStands.add(armorStand);
         }
         
+        MiniMessagePlaceholder[] resolvedPlaceholders = resolvePlaceholders();
+
         // Now ensure each armor stand at index i corresponds to line i
         // This guarantees proper order regardless of previous state
         for (int i = 0; i < lines.size(); i++) {
@@ -108,7 +129,7 @@ public class Hologram {
             BukkitAdventureBridges.get().teleportLivingEntity(armorStand, correctLocation);
             
             // Update the custom name for this line - ensure it matches the line at this index
-            updateArmorStandName(armorStand, line);
+            updateArmorStandName(armorStand, line, resolvedPlaceholders);
             armorStand.setCustomNameVisible(true);
         }
         
@@ -129,13 +150,17 @@ public class Hologram {
      * This method processes all placeholders in a single pass for efficiency.
      */
     private void updateArmorStandName(ArmorStand armorStand, String line) {
-        if (placeholders.isEmpty()) {
+        updateArmorStandName(armorStand, line, resolvePlaceholders());
+    }
+
+    private void updateArmorStandName(ArmorStand armorStand, String line, MiniMessagePlaceholder[] resolvedPlaceholders) {
+        if (resolvedPlaceholders.length == 0) {
             BukkitAdventureBridges.get().setEntityCustomName(armorStand, AdventureUtils.formatComponent(line));
             return;
         }
 
         BukkitAdventureBridges.get().setEntityCustomName(armorStand,
-                AdventureUtils.formatComponent(line, placeholders.values().stream().map(HologramPlaceholder::getPlaceholder).toArray(MiniMessagePlaceholder[]::new)));
+                AdventureUtils.formatComponent(line, resolvedPlaceholders));
     }
 
     public synchronized void updatePlaceholders() {
@@ -168,6 +193,8 @@ public class Hologram {
             return;
         }
 
+        MiniMessagePlaceholder[] resolvedPlaceholders = resolvePlaceholders();
+
         // Only update lines that contain placeholders that need updating
         for (int i = 0; i < lines.size() && i < armorStands.size(); i++) {
             String line = lines.get(i);
@@ -183,7 +210,7 @@ public class Hologram {
 
             if (needsUpdate) {
                 ArmorStand armorStand = armorStands.get(i);
-                updateArmorStandName(armorStand, line);
+                updateArmorStandName(armorStand, line, resolvedPlaceholders);
             }
         }
     }

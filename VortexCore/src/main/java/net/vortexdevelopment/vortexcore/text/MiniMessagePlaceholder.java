@@ -14,17 +14,17 @@ public class MiniMessagePlaceholder {
 
     public MiniMessagePlaceholder(String placeholder, String value) {
         this.placeholder = placeholder;
-        this.value = AdventureUtils.replaceLegacy(value);
+        this.value = value != null ? AdventureUtils.replaceLegacy(value) : "";
     }
 
     public MiniMessagePlaceholder(String placeholder, Number value) {
         this.placeholder = placeholder;
-        this.value = String.valueOf(value);
+        this.value = value != null ? String.valueOf(value) : "";
     }
 
     public MiniMessagePlaceholder(String placeholder, Component value) {
         this.placeholder = placeholder;
-        this.value = value;
+        this.value = value != null ? value : Component.empty();
     }
 
     public String replace(String string) {
