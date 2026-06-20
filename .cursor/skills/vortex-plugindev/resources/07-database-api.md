@@ -17,6 +17,10 @@ Requires `vinject-maven-plugin` for `@Entity`.
 
 Initialize DB in `onPluginLoad()`: `initDatabase(new _1_InitialMigration());`
 
+## database.yml (H2)
+
+`Connection Settings.Disable H2 Server Mode` defaults to `false` (AUTO_SERVER enabled). Missing keys are merged from bundled defaults on startup. Only set `true` in rare containerized setups where H2 server mode causes unknown host errors. When `true`, PlugMan reloads break H2 database access - the server logs a warning on enable.
+
 ## API Module Pattern
 
 ```java

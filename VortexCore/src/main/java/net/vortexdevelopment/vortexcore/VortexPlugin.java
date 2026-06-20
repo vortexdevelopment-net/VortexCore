@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -338,6 +339,9 @@ public abstract class VortexPlugin extends JavaPlugin {
      * Creates a config file from VortexCore resources on the classpath, or writes {@code defaultYamlContent}
      * when the dependent plugin JAR does not embed that resource.
      */
+    private static final String DATABASE_CONFIG_PATH = "Connection Settings.";
+    private static final String DATABASE_DISABLE_H2_SERVER_MODE_KEY = DATABASE_CONFIG_PATH + "Disable H2 Server Mode";
+
     private static void ensureBundledConfigYaml(File configFile, String resourceFileName)
             throws IOException {
         if (configFile.exists()) {
@@ -359,6 +363,45 @@ public abstract class VortexPlugin extends JavaPlugin {
         ensureBundledConfigYaml(databaseConfigFile, "database.yml");
     }
 
+    private YamlConfiguration loadDatabaseConfiguration(File databaseConfigFile) throws IOException {
+        ensureDatabaseYaml(databaseConfigFile);
+        YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
+
+        try (InputStream defaultsStream = getClass().getResourceAsStream("/database.yml")) {
+            if (defaultsStream == null) {
+                return databaseConfig;
+            }
+            YamlConfiguration defaults = YamlConfiguration.loadConfiguration(
+                    new InputStreamReader(defaultsStream, StandardCharsets.UTF_8));
+            boolean changed = false;
+            for (String key : defaults.getKeys(true)) {
+                if (defaults.isConfigurationSection(key)) {
+                    continue;
+                }
+                if (!databaseConfig.contains(key)) {
+                    databaseConfig.set(key, defaults.get(key));
+                    changed = true;
+                }
+            }
+            if (changed) {
+                databaseConfig.save(databaseConfigFile);
+            }
+        }
+        return databaseConfig;
+    }
+
+    private void warnIfH2ServerModeDisabled(String databaseType, boolean disableH2ServerMode) {
+        if (!"h2".equalsIgnoreCase(databaseType) || !disableH2ServerMode) {
+            return;
+        }
+        getLogger().warning("H2 server mode is disabled in database.yml (Disable H2 Server Mode: true).");
+        getLogger().warning("This should only be used in rare containerized setups where H2 AUTO_SERVER causes unknown host errors.");
+        getLogger().warning("When disabled, PlugMan reloads will break this plugin's H2 database access. Leave this false in almost all cases.");
+        AdventureUtils.sendMessage("§e[" + getName() + "] H2 server mode is disabled in database.yml.", Bukkit.getConsoleSender());
+        AdventureUtils.sendMessage("§eThis is not recommended for most servers and breaks PlugMan reloads with H2.", Bukkit.getConsoleSender());
+        AdventureUtils.sendMessage("§eOnly use Disable H2 Server Mode when required by your hosting environment.", Bukkit.getConsoleSender());
+    }
+
     public static void ensureGlobalYaml(File globalConfigFile) throws IOException {
         ensureBundledConfigYaml(globalConfigFile, "global.yml");
     }
@@ -374,17 +417,20 @@ public abstract class VortexPlugin extends JavaPlugin {
         try {
             // Read the database config in case it needs to be used in the plugin load
             File databaseConfigFile = new File(getDataFolder(), "database.yml");
-            ensureDatabaseYaml(databaseConfigFile);
-            YamlConfiguration databaseConfig = YamlConfiguration.loadConfiguration(databaseConfigFile);
+            YamlConfiguration databaseConfig = loadDatabaseConfiguration(databaseConfigFile);
+            String databaseType = databaseConfig.getString(DATABASE_CONFIG_PATH + "Type").toLowerCase(Locale.ENGLISH);
+            boolean disableH2ServerMode = databaseConfig.getBoolean(DATABASE_DISABLE_H2_SERVER_MODE_KEY, false);
+            warnIfH2ServerModeDisabled(databaseType, disableH2ServerMode);
             this.database.init(
-                    databaseConfig.getString("Connection Settings.Hostname"),
-                    databaseConfig.getString("Connection Settings.Port"),
-                    databaseConfig.getString("Connection Settings.Database"),
-                    databaseConfig.getString("Connection Settings.Type").toLowerCase(Locale.ENGLISH),
-                    databaseConfig.getString("Connection Settings.Username"),
-                    databaseConfig.getString("Connection Settings.Password"),
-                    databaseConfig.getInt("Connection Settings.Pool Size"),
-                    new File(getDataFolder(), getName().toLowerCase()));
+                    databaseConfig.getString(DATABASE_CONFIG_PATH + "Hostname"),
+                    databaseConfig.getString(DATABASE_CONFIG_PATH + "Port"),
+                    databaseConfig.getString(DATABASE_CONFIG_PATH + "Database"),
+                    databaseType,
+                    databaseConfig.getString(DATABASE_CONFIG_PATH + "Username"),
+                    databaseConfig.getString(DATABASE_CONFIG_PATH + "Password"),
+                    databaseConfig.getInt(DATABASE_CONFIG_PATH + "Pool Size"),
+                    new File(getDataFolder(), getName().toLowerCase()),
+                    !disableH2ServerMode);
 
             this.database.connect(); // Setups Hikari pool
         } catch (Exception e) {
