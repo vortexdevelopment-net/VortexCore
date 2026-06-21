@@ -7,7 +7,7 @@ This repository includes agent-oriented documentation for VortexCore plugin deve
 1. Read [`.cursor/skills/vortex-plugindev/SKILL.md`](.cursor/skills/vortex-plugindev/SKILL.md)
 2. Identify your task domain (config, GUI, listener, etc.)
 3. Read **only** the matching `resources/0X-*.md` file from the skill directory
-4. Pull 1-2 canonical reference files from a similar plugin before writing code
+4. Pull 1-2 canonical reference files from a **released** similar plugin before writing code (see skill `09-project-catalog.md`)
 
 ## Documentation
 

@@ -23,13 +23,17 @@ Open only the matching file from this skill's `resources/` folder. Do not read a
 
 Search sibling plugins in the workspace for the same pattern:
 
+Prefer **released** plugins when searching for patterns. See [09-project-catalog.md](09-project-catalog.md) for the full list.
+
 ```
 # Example: find YamlDirectory with Map
 rg "@YamlDirectory" --glob "*.java"
 rg "Map<String" --glob "*Config*.java"
 ```
 
-Prefer newer plugins (VortexSellWands, VortexMinions, VortexPacks) over legacy List-based configs.
+Released references: VortexGens, VortexPacks, VortexStacker, VortexPrisonCore, VortexVouchers.
+
+In-dev plugins (VortexBazaar, VortexMinions, VortexTrade, VortexSellWands): breaking changes are fine, no migrations required, assume fresh plugin deploy before each server test.
 
 ## Step 4 - Pull Canonical Files
 
@@ -38,7 +42,7 @@ Read 1-2 reference files fully before writing. Examples:
 | Task | Read first |
 | --- | --- |
 | New listener | Similar listener in same plugin; `RegisterListenerHandler.java` if unsure |
-| New YAML directory | `VortexSellWands/.../WandsDirectory.java` |
+| New YAML directory | Released: `VortexGens` or `VortexPacks`; in-dev: `VortexSellWands/.../WandsDirectory.java` |
 | New GUI | Similar GUI class in same plugin |
 | New command | `VortexStacker/.../StackerCommand.java` |
 

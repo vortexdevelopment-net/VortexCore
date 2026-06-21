@@ -6,6 +6,7 @@ description: >-
   @YamlCollection, @RegisterListener, @Command, @Api, ReloadHook, Lang.send,
   AdventureUtils, lang.yml, Gui, PaginatedGui, ItemStack YAML, @Qualifier,
   or any Vortex plugin module. Read task-specific resource files before editing.
+  Know released vs in-dev Vortex plugins (see 09-project-catalog.md).
 ---
 
 # Vortex Plugin Development
@@ -61,21 +62,33 @@ Before writing code:
 | [06-commands-listeners.md](resources/06-commands-listeners.md) | Commands, listeners |
 | [07-database-api.md](resources/07-database-api.md) | `@Entity`, `@Repository`, `@Api`, `@Qualifier` |
 | [08-code-style.md](resources/08-code-style.md) | Imports, style rules |
+| [09-project-catalog.md](resources/09-project-catalog.md) | Released vs in-dev plugins, reference priority |
 
 ## 5. Canonical Repo Docs
 
 - VortexCore: [docs/README.md](../../docs/README.md)
 - Vinject: `VInject/docs/README.md` (components, lifecycle, YAML internals)
 
-## 6. Reference Plugins
+## 6. Project Catalog (summary)
 
-| Task | Inspect |
+**Released:** VortexFallingStars, VortexFileSync, VortexGens, VortexPacks, VortexPrisonCore, VortexSellChests, VortexStacker, VortexVouchers
+
+**In development (unreleased):** VortexBazaar, VortexMinions, VortexTrade, VortexSellWands
+
+For in-dev projects: breaking changes are OK, no migrations needed, assume the user redeployed the plugin before each server test. Full list and reference map: [09-project-catalog.md](resources/09-project-catalog.md).
+
+## 7. Reference Plugins
+
+Prefer **released** plugins when grepping for patterns. In-dev plugins are valid references only when editing that project or no released example exists.
+
+| Task | Inspect (released first) |
 | --- | --- |
 | API + Plugin split | VortexStacker |
-| Map `@YamlDirectory` | VortexSellWands `WandsDirectory` |
+| Map `@YamlDirectory` | VortexGens, VortexPacks, VortexPrisonCore |
 | Single `@YamlConfiguration` | VortexStacker `StackerConfig` |
-| GUI YAML batch | VortexBazaar `BazaarGuiConfig` |
-| `PaginatedGui` | VortexBazaar `CategoryItemsGui` |
-| Fixed `Gui` | VortexStacker `SpawnerUpgradeGui` |
-| `lang.yml` | VortexStacker or VortexBazaar plugin resources |
-| `includedPackages` | VortexGens, VortexMinions |
+| Fixed `Gui` | VortexStacker `SpawnerUpgradeGui`, VortexVouchers |
+| `PaginatedGui` | VortexPrisonCore, VortexVouchers |
+| `lang.yml` | VortexStacker, VortexVouchers, VortexGens |
+| `includedPackages` | VortexGens, VortexPrisonCore |
+
+In-dev only: VortexBazaar GUIs, VortexSellWands `WandsDirectory`, VortexMinions configs.
