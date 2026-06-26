@@ -26,6 +26,7 @@
         <dep.gson.version>2.8.8</dep.gson.version>
         <dep.jackson.databind.version>2.21.0</dep.jackson.databind.version>
         <dep.adventure.platform.bukkit.version>4.4.1</dep.adventure.platform.bukkit.version>
+        <vinject.version>2.0.0-SNAPSHOT</vinject.version>
     </properties>
 
     <build>
@@ -50,7 +51,7 @@
             <plugin>
                 <groupId>net.vortexdevelopment</groupId>
                 <artifactId>vinject-maven-plugin</artifactId>
-                <version>2.0.0-SNAPSHOT</version>
+                <version>${vinject.version}</version>
                 <executions>
                     <execution>
                         <id>process-classes</id>
@@ -149,12 +150,13 @@
                             </includes>
                         </filter>
                         <filter>
-                            <artifact>net.vortexdevelopment:VInject</artifact>
+                            <artifact>net.vortexdevelopment:VInject-Core</artifact>
                             <excludes>
                                 <exclude>com/zaxxer/**</exclude>
                                 <exclude>com/mysql/**</exclude>
                                 <exclude>org/mariadb/**</exclude>
                                 <exclude>org/h2/**</exclude>
+                                <exclude>**/examples/**</exclude>
                             </excludes>
                             <includes>
                                 <include>**</include>
@@ -257,8 +259,8 @@
     <dependencies>
         <dependency>
             <groupId>net.vortexdevelopment</groupId>
-            <artifactId>VInject</artifactId>
-            <version>2.0.0-SNAPSHOT</version>
+            <artifactId>VInject-Core</artifactId>
+            <version>${vinject.version}</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
