@@ -14,6 +14,7 @@ import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.database.DataMigrationManager;
 import net.vortexdevelopment.vortexcore.database.MigrationRepository;
 import net.vortexdevelopment.vortexcore.gui.GuiManager;
+import net.vortexdevelopment.vortexcore.hooks.internal.ConfigReloadHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
@@ -57,7 +58,7 @@ public abstract class VortexPlugin extends JavaPlugin {
     @Getter
     private final CommandManager commandManager = new CommandManager();
 
-    private final Set<ReloadHook> reloadHooks = new HashSet<>();
+    private final Set<RegisteredReloadHook> reloadHooks = new HashSet<>();
     private final List<Object> registeredPlaceholderExpansions = new ArrayList<>();
 
     private boolean emergencyStop = false;
@@ -484,14 +485,27 @@ public abstract class VortexPlugin extends JavaPlugin {
     }
 
     public void registerReloadHook(ReloadHook hook) {
-        reloadHooks.add(hook);
+        reloadHooks.add(new RegisteredReloadHook(hook, resolveReloadHookPriority(hook)));
     }
 
     public void runReloadHooks() {
-        // Order by priority
-        List<ReloadHook> hooks = new ArrayList<>(reloadHooks);
-        hooks.sort((o1, o2) -> Integer.compare(o2.getClass().getAnnotation(RegisterReloadHook.class).priority(),
-                o1.getClass().getAnnotation(RegisterReloadHook.class).priority()));
-        hooks.forEach(ReloadHook::onReload);
+        List<RegisteredReloadHook> hooks = new ArrayList<>(reloadHooks);
+        hooks.sort((o1, o2) -> Integer.compare(o2.priority(), o1.priority()));
+        hooks.forEach(entry -> entry.hook().onReload());
+    }
+
+    private int resolveReloadHookPriority(ReloadHook hook) {
+        if (hook instanceof ConfigReloadHook configReloadHook) {
+            return resolveReloadHookPriority(configReloadHook.sourceClass());
+        }
+        return resolveReloadHookPriority(hook.getClass());
+    }
+
+    private int resolveReloadHookPriority(Class<?> clazz) {
+        RegisterReloadHook annotation = clazz.getAnnotation(RegisterReloadHook.class);
+        return annotation != null ? annotation.priority() : 10;
+    }
+
+    private record RegisteredReloadHook(ReloadHook hook, int priority) {
     }
 }
