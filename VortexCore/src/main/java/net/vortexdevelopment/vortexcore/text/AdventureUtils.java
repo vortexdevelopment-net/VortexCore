@@ -257,35 +257,24 @@ public class AdventureUtils {
             return message;
         }
 
-        // 1. Build a lookup map of full tag literals (e.g. "<player>" -> placeholder)
-        Map<String, MiniMessagePlaceholder> placeholderMap = new HashMap<>();
-        for (MiniMessagePlaceholder p : placeholders) {
-            placeholderMap.put("<" + p.getPlaceholder() + ">", p);
+        // Serialize the component back to a MiniMessage string
+        String serialized = toMiniMessage(message);
+        
+        // MiniMessage serializes literal `<` and `>` as `\<` and `\>` to prevent them being parsed as tags.
+        // We unescape them so they can be properly parsed as tags/placeholders by our TagResolver.
+        serialized = serialized.replace("\\<", "<").replace("\\>", ">");
+
+        Component formatted = formatComponent(serialized, placeholders);
+        
+        // toMiniMessage strips negation tags (like <!italic>).
+        // If the original message explicitly disabled a decoration (e.g. false italic for lore), restore it.
+        for (TextDecoration decoration : TextDecoration.values()) {
+            if (message.style().decoration(decoration) == TextDecoration.State.FALSE) {
+                formatted = formatted.decoration(decoration, false);
+            }
         }
 
-        // 2. Compile a single regex matching any of the literal tags, escaping special regex chars
-        String regex = placeholderMap.keySet().stream()
-                .map(Pattern::quote)
-                .collect(Collectors.joining("|"));
-        Pattern pattern = Pattern.compile(regex);
-
-        // 3. Perform a single-pass replacement traversal
-        return message.replaceText(builder -> {
-            builder.match(pattern).replacement(result -> {
-                // result is a TextComponent.Builder. Use content() to get the matched text string.
-                String matchedTag = result.content(); // e.g. "<player>"
-                MiniMessagePlaceholder placeholder = placeholderMap.get(matchedTag);
-
-                if (placeholder != null) {
-                    if (placeholder.isComponent()) {
-                        return (Component) placeholder.getValue();
-                    } else {
-                        return formatComponent(placeholder.getValue().toString());
-                    }
-                }
-                return null; // Return null to leave unmatched text as-is
-            });
-        });
+        return formatted;
     }
 
     public static void formatItemName(ItemMeta meta, String name) {
