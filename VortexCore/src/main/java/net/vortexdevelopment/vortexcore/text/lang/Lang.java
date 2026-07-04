@@ -37,11 +37,24 @@ import java.util.stream.Stream;
 public class Lang implements ReloadHook {
 
     private static boolean initialized = false;
+    private static boolean warnedNotInitialized = false;
     private static YamlConfig lang;
     public static List<MiniMessagePlaceholder> staticPlaceholders = new ArrayList<>();
 
     private Lang() {
         onReload();
+    }
+
+    public static boolean isInitialized() {
+        return initialized;
+    }
+
+    /**
+     * Loads lang.yml before DI components and YAML configs are deserialized.
+     * Safe to call multiple times.
+     */
+    public static void initializeEarly() {
+        loadLanguageFile();
     }
 
     /**
@@ -77,7 +90,7 @@ public class Lang implements ReloadHook {
 
     public static String getString(String key) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return key;
         }
         return replaceStaticPlaceholders(lang.getString(key, key));
@@ -85,7 +98,6 @@ public class Lang implements ReloadHook {
 
     public static String getString(String key, String defaultValue) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
             return defaultValue;
         }
         return replaceStaticPlaceholders(lang.getString(key, defaultValue));
@@ -93,7 +105,7 @@ public class Lang implements ReloadHook {
 
     public static Component getComponent(String key) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return AdventureUtils.formatComponent(key);
         }
         return AdventureUtils.formatComponent(lang.getString(key, key), staticPlaceholders);
@@ -101,7 +113,7 @@ public class Lang implements ReloadHook {
 
     public static Component getComponent(String key, MiniMessagePlaceholder... placeholders) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return AdventureUtils.formatComponent(key);
         }
         return AdventureUtils.formatComponent(lang.getString(key, key), createPlaceholders(placeholders));
@@ -109,7 +121,7 @@ public class Lang implements ReloadHook {
 
     public static List<String> getList(String key) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return List.of(key);
         }
         return lang.getStringList(key);
@@ -117,7 +129,7 @@ public class Lang implements ReloadHook {
 
     public static void send(CommandSender player, String key) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return;
         }
         AdventureUtils.sendMessage(getComponent(key), player);
@@ -125,7 +137,7 @@ public class Lang implements ReloadHook {
 
     public static void sendPrefixed(CommandSender player, String key) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return;
         }
         AdventureUtils.sendMessage(getPrefix().append(getComponent(key)), player);
@@ -133,7 +145,7 @@ public class Lang implements ReloadHook {
 
     public static void send(CommandSender player, String key, MiniMessagePlaceholder... placeholders) {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
+            warnNotInitialized();
             return;
         }
         AdventureUtils.sendMessage(getComponent(key, placeholders), player);
@@ -141,7 +153,6 @@ public class Lang implements ReloadHook {
 
     private static String getPrefixString() {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
             return VortexPlugin.getInstance().getPrefixString();
         }
         return lang.getString("General.Plugin Prefix", VortexPlugin.getInstance().getPrefixString());
@@ -149,10 +160,17 @@ public class Lang implements ReloadHook {
 
     public static Component getPrefix() {
         if (!initialized) {
-            VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
             return VortexPlugin.getInstance().getPrefixWithDash();
         }
         return getComponent("General.Plugin Prefix");
+    }
+
+    private static void warnNotInitialized() {
+        if (warnedNotInitialized) {
+            return;
+        }
+        warnedNotInitialized = true;
+        VortexPlugin.getInstance().getLogger().warning("Language file has not been initialized!");
     }
 
     public static void runConsoleCommands(@Nullable Player player, List<String> commands) {
@@ -263,12 +281,16 @@ public class Lang implements ReloadHook {
 
     @Override
     public void onReload() {
+        loadLanguageFile();
+    }
+
+    private static void loadLanguageFile() {
         try {
             staticPlaceholders.clear();
             File langFile = new File(VortexPlugin.getInstance().getDataFolder(), "lang.yml");
             if (!langFile.exists()) {
                 // Check if it exists in the jar
-                if (VortexPlugin.class.getResource("/lang.yml") == null) {
+                if (VortexPlugin.getInstance().getResource("lang.yml") == null) {
                     return;
                 }
                 VortexPlugin.getInstance().saveResource("lang.yml", false);

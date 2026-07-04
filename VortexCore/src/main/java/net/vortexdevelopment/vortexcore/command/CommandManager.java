@@ -3,10 +3,12 @@ package net.vortexdevelopment.vortexcore.command;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.command.annotation.BaseCommand;
 import net.vortexdevelopment.vortexcore.command.annotation.Command;
+import net.vortexdevelopment.vortexcore.command.annotation.Current;
 import net.vortexdevelopment.vortexcore.command.annotation.Param;
 import net.vortexdevelopment.vortexcore.command.annotation.Permission;
 import net.vortexdevelopment.vortexcore.command.annotation.Sender;
 import net.vortexdevelopment.vortexcore.command.annotation.SubCommand;
+import net.vortexdevelopment.vortexcore.command.annotation.TabArgs;
 import net.vortexdevelopment.vortexcore.command.annotation.TabComplete;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
 import org.bukkit.command.CommandExecutor;
@@ -181,13 +183,23 @@ public class CommandManager {
                 return executeCommand(sender, instance, baseCommand, args);
             }
 
-            // Try to match a subcommand
+            // Try to match a subcommand - prefer the most specific pattern (literals over wildcards)
+            Method bestMatch = null;
+            int bestSpecificity = -1;
             for (Map.Entry<Method, List<String>> entry : subCommandPatterns.entrySet()) {
                 for (String pattern : entry.getValue()) {
                     if (matchesSubCommand(pattern, args)) {
-                        return executeCommand(sender, instance, entry.getKey(), args);
+                        int specificity = getPatternSpecificity(pattern);
+                        if (specificity > bestSpecificity) {
+                            bestSpecificity = specificity;
+                            bestMatch = entry.getKey();
+                        }
                     }
                 }
+            }
+
+            if (bestMatch != null) {
+                return executeCommand(sender, instance, bestMatch, args);
             }
 
             // Fall back to base command
@@ -360,13 +372,14 @@ public class CommandManager {
                 TabComplete tabComplete = method.getAnnotation(TabComplete.class);
                 int argIndex = tabComplete.argIndex();
                 
-                // If argIndex is -1, use the last argument
+                // If argIndex is -1, use the last argument (or the first slot when none typed yet)
                 if (argIndex == -1) {
-                    argIndex = args.length - 1;
+                    argIndex = Math.max(0, args.length - 1);
                 }
                 
-                // Only complete if we're at the right argument index
-                if (argIndex >= 0 && argIndex < args.length) {
+                // Base tab completion has no pattern parts, so invoke whenever it matches
+                boolean shouldInvoke = pattern.isEmpty() || (argIndex >= 0 && argIndex < args.length);
+                if (shouldInvoke) {
                     try {
                         // Create an array with only the parameters the method expects
                         Object[] methodParams = createMatchingParameters(sender, method, args, argIndex);
@@ -397,7 +410,9 @@ public class CommandManager {
             Parameter param = parameters[i];
             if (param.getType().equals(CommandSender.class)) {
                 values[i] = sender;
-            } else if (param.isAnnotationPresent(net.vortexdevelopment.vortexcore.command.annotation.Current.class)) {
+            } else if (param.isAnnotationPresent(TabArgs.class)) {
+                values[i] = args;
+            } else if (param.isAnnotationPresent(Current.class)) {
                 // Inject the "current tab argument" as a string.
                 String current = (argIndex >= 0 && argIndex < args.length) ? args[argIndex] : "";
                 values[i] = current;
@@ -486,6 +501,32 @@ public class CommandManager {
                     return haystack.startsWith(needle) || haystack.contains(needle);
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Returns a specificity score for a subcommand pattern.
+     * Literal segments score highest, named parameters lower, and {@code {**}} lowest
+     * so exact subcommands like {@code reset} win over catch-all wildcards.
+     */
+    private int getPatternSpecificity(String pattern) {
+        String[] patternParts = pattern.split(" ");
+        int score = 0;
+
+        for (String part : patternParts) {
+            if (part.startsWith("{") && part.endsWith("}")) {
+                String paramContent = part.substring(1, part.length() - 1);
+                if (paramContent.equals("**")) {
+                    score += 1;
+                } else {
+                    score += 10;
+                }
+            } else {
+                score += 1000;
+            }
+        }
+
+        // Tie-breaker: prefer longer, more structured patterns
+        return score * 100 + patternParts.length;
     }
 
     /**

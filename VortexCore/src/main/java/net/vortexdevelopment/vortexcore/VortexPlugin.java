@@ -16,6 +16,7 @@ import net.vortexdevelopment.vortexcore.database.MigrationRepository;
 import net.vortexdevelopment.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vortexcore.hooks.internal.ConfigReloadHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
 import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
@@ -158,6 +159,8 @@ public abstract class VortexPlugin extends JavaPlugin {
             repositoryContainer = new RepositoryContainer(database);
 
             connectDatabase();
+
+            Lang.initializeEarly();
 
             dependencyContainer = new DependencyContainer(getClass().getAnnotation(Root.class), getClass(), this,
                     database, repositoryContainer, unused -> {
