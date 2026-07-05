@@ -1,6 +1,9 @@
 package net.vortexdevelopment.vortexcore.text.lang;
 
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TranslatableComponent;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import net.kyori.adventure.translation.GlobalTranslator;
 import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.TextComponent;
 import net.vortexdevelopment.vinject.config.ConfigurationSection;
@@ -27,6 +30,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -336,6 +340,58 @@ public class Lang implements ReloadHook {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Resolves the locale used by a player client, falling back to English when unavailable.
+     */
+    public static Locale getPlayerLocale(@Nullable Player player) {
+        if (player == null) {
+            return Locale.ENGLISH;
+        }
+        try {
+            Object localeValue = player.locale();
+            if (localeValue instanceof Locale locale) {
+                return locale;
+            }
+            if (localeValue instanceof String tag && !tag.isBlank()) {
+                return Locale.forLanguageTag(tag.replace('_', '-'));
+            }
+        } catch (NoSuchMethodError | AbstractMethodError ignored) {
+        }
+        return Locale.ENGLISH;
+    }
+
+    /**
+     * Translates a component to the player's client language when possible.
+     */
+    public static Component translateForPlayer(@NotNull Component component, @Nullable Player player) {
+        if (player == null) {
+            return component;
+        }
+        if (component instanceof TranslatableComponent translatable) {
+            try {
+                return GlobalTranslator.translator().translate(translatable, getPlayerLocale(player));
+            } catch (Exception ignored) {
+                return Component.text(translatable.key());
+            }
+        }
+        return component;
+    }
+
+    /**
+     * Converts a MiniMessage string to plain text, optionally using the player's client language
+     * for translatable tags such as {@code <lang:item.minecraft.cake>}.
+     */
+    public static String toPlainText(@Nullable String miniMessage, @Nullable Player player) {
+        if (miniMessage == null || miniMessage.isBlank()) {
+            return "";
+        }
+        Component component = AdventureUtils.formatComponent(miniMessage);
+        if (player != null) {
+            component = translateForPlayer(component, player);
+        }
+        return PlainTextComponentSerializer.plainText().serialize(component);
     }
 
     /**
