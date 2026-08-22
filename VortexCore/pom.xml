@@ -247,6 +247,11 @@
             <name>vortex-repo</name>
             <url>https://repo.vortexdevelopment.net/repository</url>
         </repository>
+        <snapshotRepository>
+            <id>vortex-repo</id>
+            <name>vortex-repo</name>
+            <url>https://repo.vortexdevelopment.net/repository</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <repositories>
