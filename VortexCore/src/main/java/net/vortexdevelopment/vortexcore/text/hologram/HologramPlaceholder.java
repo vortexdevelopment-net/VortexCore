@@ -5,20 +5,30 @@ import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 class HologramPlaceholder {
 
     private final HologramPlaceholderProvider provider;
+    private final boolean async;
+    private volatile MiniMessagePlaceholder value;
     private long lastUpdate = 0;
     private long updateIntervalTicks = 0;
 
-    HologramPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks) {
+    HologramPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks, boolean async) {
         this.provider = provider;
         this.updateIntervalTicks = updateIntervalTicks;
+        this.async = async;
+        this.value = provider.getPlaceholder();
     }
 
     MiniMessagePlaceholder getPlaceholder() {
-        return provider.getPlaceholder();
+        return value;
     }
 
-    Object getValue() {
-        return provider.getPlaceholder().getValue();
+    MiniMessagePlaceholder refresh() {
+        MiniMessagePlaceholder next = provider.getPlaceholder();
+        value = next;
+        return next;
+    }
+
+    boolean isAsync() {
+        return async;
     }
 
     boolean shouldUpdate() {

@@ -3,6 +3,7 @@ package net.vortexdevelopment.vortexcore.text.hologram;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
@@ -36,6 +37,12 @@ public class HologramManager {
 
     private static final UUID sessionId = UUID.randomUUID();
 
+    /**
+     * Selects the packet backend when ProtocolLib is installed and supports the
+     * running server. Set this to false to force the Bukkit entity backend.
+     */
+    public static final boolean USE_FAKE_ARMOR_STANDS = true;
+
     /** Comma-separated UUID strings; empty string means no viewers. */
     private static final String VIEWERS_DELIMITER = ",";
 
@@ -44,6 +51,7 @@ public class HologramManager {
     private static final NamespacedKey VIEWERS_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_viewers");
 
     private static final Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
+    private static volatile @Nullable HologramBackend fakeArmorStandManager;
 
     private static final @Nullable Method WORLD_CREATE_ENTITY;
     private static final @Nullable Method WORLD_ADD_ENTITY;
@@ -144,6 +152,11 @@ public class HologramManager {
      * {@code setVisibleByDefault}).
      */
     public static void onPlayerJoin(Player player) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.onPlayerJoin(player);
+            return;
+        }
         Set<Hologram> set = holograms.get(VortexPlugin.getInstance());
         if (set == null) {
             return;
@@ -160,6 +173,20 @@ public class HologramManager {
                     player.hideEntity(VortexPlugin.getInstance(), stand);
                 }
             }
+        }
+    }
+
+    public static void onPlayerQuit(UUID playerId) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.onPlayerQuit(playerId);
+        }
+    }
+
+    public static void onPlayerChangedWorld(Player player) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.onPlayerChangedWorld(player);
         }
     }
 
@@ -207,6 +234,35 @@ public class HologramManager {
 
     public static void init() {
         clear();
+
+        if (USE_FAKE_ARMOR_STANDS && Bukkit.getPluginManager().isPluginEnabled("ProtocolLib")) {
+            try {
+                Class<?> backendClass = Class.forName(
+                        "net.vortexdevelopment.vortexcore.text.hologram.FakeArmorStandManager");
+                var constructor = backendClass.getDeclaredConstructor(Plugin.class);
+                constructor.setAccessible(true);
+                HologramBackend candidate = (HologramBackend) constructor.newInstance(
+                        VortexPlugin.getInstance());
+                if (candidate.isSupported()) {
+                    candidate.init();
+                    fakeArmorStandManager = candidate;
+                    VortexPlugin.getInstance().getLogger().info(
+                            "Using ProtocolLib fake armor stands for holograms.");
+                } else {
+                    VortexPlugin.getInstance().getLogger().warning(
+                            "ProtocolLib is available, but fake hologram packets are unsupported on this server. "
+                                    + "Falling back to Bukkit armor stands.");
+                }
+            } catch (Throwable throwable) {
+                VortexPlugin.getInstance().getLogger().warning(
+                        "Could not initialize ProtocolLib fake holograms. Falling back to Bukkit armor stands: "
+                                + throwable.getMessage());
+            }
+        } else if (USE_FAKE_ARMOR_STANDS) {
+            VortexPlugin.getInstance().getLogger().info(
+                    "ProtocolLib is not enabled; using Bukkit armor stands for holograms.");
+        }
+
         //Create a bukkit scheduler task to tick all holograms
         Bukkit.getScheduler().runTaskTimerAsynchronously(VortexPlugin.getInstance(), () -> {
             for (Set<Hologram> hologramsSet : holograms.values()) {
@@ -215,6 +271,49 @@ public class HologramManager {
                 }
             }
         }, 0, 10L);
+    }
+
+    static void runAsync(Runnable runnable) {
+        SchedulerUtils.runTaskAsynchronously(VortexPlugin.getInstance(), runnable);
+    }
+
+    static boolean isUsingFakeArmorStands() {
+        return fakeArmorStandManager != null;
+    }
+
+    static void updateFake(Hologram hologram, boolean force) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            if (Bukkit.isPrimaryThread()) {
+                SchedulerUtils.runTaskAsynchronously(VortexPlugin.getInstance(), () -> {
+                    if (fakeArmorStandManager == fakeManager
+                            && getHologramSnapshot().contains(hologram)) {
+                        fakeManager.render(hologram, force);
+                    }
+                });
+            } else {
+                fakeManager.render(hologram, force);
+            }
+        }
+    }
+
+    static void removeFake(Hologram hologram) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            if (Bukkit.isPrimaryThread()) {
+                SchedulerUtils.runTaskAsynchronously(VortexPlugin.getInstance(), () -> {
+                    if (fakeArmorStandManager == fakeManager) {
+                        fakeManager.remove(hologram);
+                    }
+                });
+            } else {
+                fakeManager.remove(hologram);
+            }
+        }
+    }
+
+    static Set<Hologram> getHologramSnapshot() {
+        return Set.copyOf(holograms.getOrDefault(VortexPlugin.getInstance(), Set.of()));
     }
 
     public static @Nullable Hologram getHologram(String id) {
@@ -232,6 +331,12 @@ public class HologramManager {
     public static void createHologram(Hologram hologram) {
         Location location = hologram.getLocation();
         holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet()).add(hologram);
+
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            updateFake(hologram, true);
+            return;
+        }
 
         // Do not create hologram if the chunk is not loaded
         if (!WorldUtils.isChunkLoadedAtLocation(location)) return;
@@ -326,6 +431,13 @@ public class HologramManager {
     }
 
     public static void clear() {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.clear();
+            fakeArmorStandManager = null;
+            holograms.clear();
+            return;
+        }
         if (!Bukkit.isPrimaryThread() && !BukkitAdventureBridges.get().isServerStopping()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), HologramManager::clear);
             return;
@@ -343,6 +455,11 @@ public class HologramManager {
     }
 
     public static void loadHologramsInChunk(Chunk chunk) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.onServerChunkLoad(chunk);
+            return;
+        }
         for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
             Location location = hologram.getLocation();
             if (WorldUtils.isLocationAtChunk(location, chunk)) {
@@ -352,6 +469,11 @@ public class HologramManager {
     }
 
     public static void unloadHologramsInChunk(Chunk chunk) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            fakeManager.onServerChunkUnload(chunk);
+            return;
+        }
         for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
             Location location = hologram.getLocation();
             if (WorldUtils.isLocationAtChunk(location, chunk)) {
@@ -361,6 +483,11 @@ public class HologramManager {
     }
 
     public void updateViewers(Hologram hologram) {
+        HologramBackend fakeManager = fakeArmorStandManager;
+        if (fakeManager != null) {
+            updateFake(hologram, true);
+            return;
+        }
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> updateViewers(hologram));
             return;

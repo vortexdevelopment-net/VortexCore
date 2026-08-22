@@ -2,163 +2,224 @@ package net.vortexdevelopment.vortexcore.text.hologram;
 
 import lombok.Getter;
 import lombok.Setter;
+import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
-import net.vortexdevelopment.vortexcore.utils.WorldUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
+import net.vortexdevelopment.vortexcore.utils.WorldUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.ArmorStand;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
 
 /**
- * Text holograms. Line text uses {@link BukkitAdventureBridges} for Paper {@code customName(Component)} vs Spigot
+ * Text holograms. A hologram can be rendered either with Bukkit entities or with
+ * per-player ProtocolLib packets, depending on {@link HologramManager}.
+ *
+ * <p>Calculators passed to {@link #updateAsync(Supplier)} and providers registered
+ * with {@link #registerAsyncPlaceholder(HologramPlaceholderProvider, long)} must
+ * only use thread-safe data. They are deliberately executed away from the server
+ * tick thread.</p>
  */
 public class Hologram {
 
-    @Getter private String id;
-    @Getter private Location location;
-    private List<String> lines = new ArrayList<>();
-    @Getter private List<UUID> viewers = new LinkedList<>(); // List of players who can see the hologram
-    @Setter private boolean useViewers = false; // If true, only players in the viewers list can see the hologram
-    @Getter @Setter private boolean visible = true;
-    @Getter @Setter private List<ArmorStand> armorStands = new ArrayList<>();
-    private Map<String, HologramPlaceholder> placeholders = new HashMap<>();
-    private boolean shouldUpdate = true; //If true, the hologram lines are changed and need to re-render them
-    private int previousSize = 0; // Track previous size to detect size changes
+    @Getter
+    private final String id;
+    private final Location location;
+    private final UUID worldId;
+    private final Object stateLock = new Object();
+    private final List<UUID> viewers = new CopyOnWriteArrayList<>();
+    private final Map<String, HologramPlaceholder> placeholders = new HashMap<>();
+
+    private List<String> lines = List.of();
+    private volatile boolean useViewers;
+    @Getter
+    private volatile boolean visible = true;
+    private volatile boolean shouldUpdate = true;
+    private long asyncUpdateSequence;
+
+    /**
+     * Kept for the Bukkit backend and source compatibility. Packet holograms do
+     * not populate this list because they have no Bukkit entity instances.
+     */
+    @Getter
+    @Setter
+    private List<ArmorStand> armorStands = new CopyOnWriteArrayList<>();
 
     public Hologram(String id, Location location) {
         this.id = id;
-        this.location = location;
-        // new Throwable("DEBUG: Hologram created with id " + id).printStackTrace();
+        this.location = requireLocation(location);
+        this.worldId = this.location.getWorld().getUID();
     }
 
     public Hologram(String id, Location location, String... lines) {
-        this.id = id;
-        this.location = location;
-        this.lines = new ArrayList<>(List.of(lines));
+        this(id, location);
+        setLines(List.of(lines));
     }
 
     public Hologram(String id, Location location, List<String> lines) {
-        this.id = id;
-        this.location = location;
-        this.lines = lines;
+        this(id, location);
+        setLines(lines);
     }
 
-    public void registerPlaceholder(HologramPlaceholderProvider placeholder, long updateIntervalTicks) {
-        placeholders.put("<" + placeholder.getPlaceholder().getPlaceholder() + ">", new HologramPlaceholder(placeholder, updateIntervalTicks));
+    private static Location requireLocation(Location location) {
+        if (location == null || location.getWorld() == null) {
+            throw new IllegalArgumentException("Hologram location and world cannot be null");
+        }
+        return location.clone();
+    }
+
+    public Location getLocation() {
+        return location.clone();
+    }
+
+    public List<UUID> getViewers() {
+        return viewers;
+    }
+
+    public void setUseViewers(boolean useViewers) {
+        this.useViewers = useViewers;
+        this.shouldUpdate = true;
+    }
+
+    public boolean useViewers() {
+        return useViewers;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+        this.shouldUpdate = true;
+    }
+
+    public void registerPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks) {
+        registerPlaceholder(provider, updateIntervalTicks, false);
+    }
+
+    /**
+     * Registers a placeholder whose provider is evaluated by the asynchronous
+     * hologram updater. The provider must not touch Bukkit APIs.
+     */
+    public void registerAsyncPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks) {
+        registerPlaceholder(provider, updateIntervalTicks, true);
+    }
+
+    private void registerPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks, boolean async) {
+        if (provider == null) {
+            throw new IllegalArgumentException("Placeholder provider cannot be null");
+        }
+        MiniMessagePlaceholder initial = provider.getPlaceholder();
+        if (initial == null || initial.getPlaceholder() == null) {
+            throw new IllegalArgumentException("Placeholder provider must return a named placeholder");
+        }
+        synchronized (stateLock) {
+            placeholders.put("<" + initial.getPlaceholder() + ">",
+                    new HologramPlaceholder(provider, updateIntervalTicks, async));
+            shouldUpdate = true;
+        }
     }
 
     public List<MiniMessagePlaceholder> getPlaceholders() {
-        if (placeholders.isEmpty()) {
-            return List.of();
+        synchronized (stateLock) {
+            List<MiniMessagePlaceholder> result = new ArrayList<>(placeholders.size());
+            for (HologramPlaceholder placeholder : placeholders.values()) {
+                result.add(placeholder.getPlaceholder());
+            }
+            return List.copyOf(result);
         }
-        List<MiniMessagePlaceholder> list = new ArrayList<>(placeholders.size());
-        for (HologramPlaceholder placeholder : placeholders.values()) {
-            list.add(placeholder.getPlaceholder());
-        }
-        return list;
     }
 
     private MiniMessagePlaceholder[] resolvePlaceholders() {
-        if (placeholders.isEmpty()) {
-            return new MiniMessagePlaceholder[0];
+        return getPlaceholders().toArray(new MiniMessagePlaceholder[0]);
+    }
+
+    /** Snapshot used by the packet backend. */
+    HologramPacketSnapshot packetSnapshot() {
+        synchronized (stateLock) {
+            List<MiniMessagePlaceholder> resolved = new ArrayList<>(getPlaceholders());
+            resolved.addAll(List.copyOf(Lang.staticPlaceholders));
+
+            List<Component> components = new ArrayList<>(lines.size());
+            for (String line : lines) {
+                components.add(AdventureUtils.formatComponent(line, resolved));
+            }
+
+            return new HologramPacketSnapshot(
+                    id,
+                    worldId,
+                    location.clone(),
+                    List.copyOf(components),
+                    visible,
+                    useViewers,
+                    Set.copyOf(viewers)
+            );
         }
-        MiniMessagePlaceholder[] resolved = new MiniMessagePlaceholder[placeholders.size()];
-        int idx = 0;
-        for (HologramPlaceholder ph : placeholders.values()) {
-            resolved[idx++] = ph.getPlaceholder();
-        }
-        return resolved;
     }
 
     public synchronized void update() {
         update(false);
     }
 
-     /**
-      * Updates the hologram's armor stands to match the current lines.
-      * This method ensures that each armor stand corresponds to the correct line,
-      * adjusting positions and names as necessary.
-      */
+    /**
+     * Renders the hologram. With the packet backend this method may be called
+     * asynchronously and only produces/sends clientbound packets. The Bukkit
+     * backend retains its main-thread entity safety.
+     */
     public synchronized void update(boolean force) {
-        if ((!shouldUpdate && !force) || !WorldUtils.isChunkLoadedAtLocation(getLocation())) return;
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> update(force));
+        if (!force && !shouldUpdate) {
             return;
         }
         shouldUpdate = false;
 
-        // Ensure armorStands size matches lines size
-        // Remove excess armor stands from the end
+        if (HologramManager.isUsingFakeArmorStands()) {
+            HologramManager.updateFake(this, force);
+            return;
+        }
+
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> update(force));
+            return;
+        }
+        if (!WorldUtils.isChunkLoadedAtLocation(location)) {
+            return;
+        }
+
         while (armorStands.size() > lines.size()) {
             ArmorStand armorStand = armorStands.remove(armorStands.size() - 1);
             armorStand.remove();
         }
 
-        // Add missing armor stands if there are fewer than lines
         while (armorStands.size() < lines.size()) {
             double yOffset = (lines.size() - 1 - armorStands.size()) * 0.25;
             Location correctLocation = location.clone().add(0, yOffset, 0);
-            ArmorStand armorStand = HologramManager.createArmorStand(this, correctLocation);
-            armorStands.add(armorStand);
+            armorStands.add(HologramManager.createArmorStand(this, correctLocation));
         }
-        
-        MiniMessagePlaceholder[] resolvedPlaceholders = resolvePlaceholders();
 
-        // Now ensure each armor stand at index i corresponds to line i
-        // This guarantees proper order regardless of previous state
+        MiniMessagePlaceholder[] resolvedPlaceholders = resolvePlaceholders();
         for (int i = 0; i < lines.size(); i++) {
             ArmorStand armorStand = armorStands.get(i);
             String line = lines.get(i);
-            
-            // Calculate correct position for this index (first line at top, subsequent lines below)
-            // Index 0 (first line) should be at the top, so we reverse the Y offset
-            // For N lines: line 0 is at (N-1)*0.25, line 1 is at (N-2)*0.25, etc.
             double yOffset = (lines.size() - 1 - i) * 0.25;
             Location correctLocation = location.clone().add(0, yOffset, 0);
 
             HologramManager.registerArmorStandInWorldIfNeeded(armorStand);
             BukkitAdventureBridges.get().teleportLivingEntity(armorStand, correctLocation);
-            
-            // Update the custom name for this line - ensure it matches the line at this index
             updateArmorStandName(armorStand, line, resolvedPlaceholders);
             armorStand.setCustomNameVisible(true);
         }
-        
-        // Update the tracked size after rendering
-        previousSize = armorStands.size();
     }
 
-    /**
-     * Checks if the size of armor stands has changed compared to the number of lines.
-     * When size changes, all lines need to be re-rendered because positions may have shifted.
-     */
-    private boolean hasSizeChanged() {
-        return armorStands.size() != lines.size() || previousSize != lines.size();
-    }
-
-    /**
-     * Updates armor stand name with placeholder replacement.
-     * This method processes all placeholders in a single pass for efficiency.
-     */
-    private void updateArmorStandName(ArmorStand armorStand, String line) {
-        updateArmorStandName(armorStand, line, resolvePlaceholders());
-    }
-
-    private void updateArmorStandName(ArmorStand armorStand, String line, MiniMessagePlaceholder[] resolvedPlaceholders) {
-        if (resolvedPlaceholders.length == 0) {
-            BukkitAdventureBridges.get().setEntityCustomName(armorStand, AdventureUtils.formatComponent(line));
-            return;
-        }
-
+    private void updateArmorStandName(ArmorStand armorStand, String line,
+                                      MiniMessagePlaceholder[] resolvedPlaceholders) {
         BukkitAdventureBridges.get().setEntityCustomName(armorStand,
                 AdventureUtils.formatComponent(line, resolvedPlaceholders));
     }
@@ -167,91 +228,156 @@ public class Hologram {
         updatePlaceholders(false);
     }
 
-     /**
-      * Updates only the armor stands that have placeholders needing updates.
-      * This method checks each line for placeholders and updates only those lines.
-      */
+    /** Refreshes normal providers while preserving their synchronous contract. */
     public synchronized void updatePlaceholders(boolean force) {
-        //Check if we need to update any placeholder or do we have any at all
-        if (placeholders.isEmpty() || !WorldUtils.isChunkLoadedAtLocation(getLocation())) {
+        if (!hasSynchronousPlaceholders()) {
             return;
         }
         if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> {
-                updatePlaceholders(force);
-            });
+            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> updatePlaceholders(force));
+            return;
+        }
+        if (!HologramManager.isUsingFakeArmorStands() && !WorldUtils.isChunkLoadedAtLocation(location)) {
             return;
         }
 
-        boolean anyUpdate = force;
-        for (HologramPlaceholder placeholder : placeholders.values()) {
-            if (placeholder.shouldUpdate(force)) {
-                anyUpdate = true;
-            }
-        }
-        if (!anyUpdate) {
-            return;
-        }
-
-        MiniMessagePlaceholder[] resolvedPlaceholders = resolvePlaceholders();
-
-        // Only update lines that contain placeholders that need updating
-        for (int i = 0; i < lines.size() && i < armorStands.size(); i++) {
-            String line = lines.get(i);
-            boolean needsUpdate = false;
-
-            // Check if this line has any placeholders
-            for (String placeholderKey : placeholders.keySet()) {
-                if (line.contains(placeholderKey)) {
-                    needsUpdate = true;
-                    break;
+        boolean anyUpdate = false;
+        synchronized (stateLock) {
+            for (HologramPlaceholder placeholder : placeholders.values()) {
+                if (!placeholder.isAsync() && (force || placeholder.shouldUpdate(false))) {
+                    placeholder.refresh();
+                    anyUpdate = true;
                 }
             }
-
-            if (needsUpdate) {
-                ArmorStand armorStand = armorStands.get(i);
-                updateArmorStandName(armorStand, line, resolvedPlaceholders);
+            if (anyUpdate) {
+                shouldUpdate = true;
             }
+        }
+        if (anyUpdate) {
+            update(true);
         }
     }
 
+    /** Refreshes only explicitly async placeholder providers off-thread. */
+    public void updatePlaceholdersAsync(boolean force) {
+        if (!hasAsyncPlaceholders()) {
+            return;
+        }
+        HologramManager.runAsync(() -> {
+            boolean anyUpdate = false;
+            synchronized (stateLock) {
+                for (HologramPlaceholder placeholder : placeholders.values()) {
+                    if (placeholder.isAsync() && (force || placeholder.shouldUpdate(false))) {
+                        placeholder.refresh();
+                        anyUpdate = true;
+                    }
+                }
+                if (anyUpdate) {
+                    shouldUpdate = true;
+                }
+            }
+            if (anyUpdate) {
+                update(true);
+            }
+        });
+    }
+
+    private boolean hasAsyncPlaceholders() {
+        synchronized (stateLock) {
+            return placeholders.values().stream().anyMatch(HologramPlaceholder::isAsync);
+        }
+    }
+
+    private boolean hasSynchronousPlaceholders() {
+        synchronized (stateLock) {
+            return placeholders.values().stream().anyMatch(placeholder -> !placeholder.isAsync());
+        }
+    }
+
+    /**
+     * Calculates new line contents asynchronously, then publishes the result
+     * and renders it. Only the newest outstanding calculation is applied.
+     */
+    public void updateAsync(Supplier<List<String>> calculator) {
+        if (calculator == null) {
+            throw new IllegalArgumentException("Hologram calculator cannot be null");
+        }
+
+        final long sequence;
+        synchronized (stateLock) {
+            sequence = ++asyncUpdateSequence;
+        }
+
+        HologramManager.runAsync(() -> {
+            try {
+                List<String> calculatedLines = calculator.get();
+                if (calculatedLines == null) {
+                    return;
+                }
+                synchronized (stateLock) {
+                    if (sequence != asyncUpdateSequence) {
+                        return;
+                    }
+                    lines = List.copyOf(calculatedLines);
+                    shouldUpdate = true;
+                }
+                update(true);
+            } catch (Throwable throwable) {
+                VortexPlugin.getInstance().getLogger().warning(
+                        "Async hologram update failed for '" + id + "': " + throwable.getMessage());
+            }
+        });
+    }
 
     public List<String> getLines() {
-        return List.copyOf(lines);
+        synchronized (stateLock) {
+            return List.copyOf(lines);
+        }
     }
 
     public void addLine(String line) {
-        lines.add(line);
-        this.shouldUpdate = true;
+        synchronized (stateLock) {
+            List<String> updated = new ArrayList<>(lines);
+            updated.add(line);
+            lines = List.copyOf(updated);
+            shouldUpdate = true;
+        }
     }
 
     public void removeLine(int index) {
-        lines.remove(index);
-        this.shouldUpdate = true;
+        synchronized (stateLock) {
+            List<String> updated = new ArrayList<>(lines);
+            updated.remove(index);
+            lines = List.copyOf(updated);
+            shouldUpdate = true;
+        }
     }
 
     public void setLine(int index, String line) {
-        lines.set(index, line);
-        this.shouldUpdate = true;
+        synchronized (stateLock) {
+            List<String> updated = new ArrayList<>(lines);
+            updated.set(index, line);
+            lines = List.copyOf(updated);
+            shouldUpdate = true;
+        }
     }
 
     public void setLines(List<String> lines) {
-        this.lines = lines;
-        this.shouldUpdate = true;
+        synchronized (stateLock) {
+            this.lines = lines == null ? List.of() : List.copyOf(lines);
+            shouldUpdate = true;
+        }
     }
 
     public boolean canSee(UUID uuid) {
-        if (!useViewers) {
-            return true; // If useViewers is false, everyone can see the hologram
+        return !useViewers || viewers.contains(uuid);
+    }
+
+    public synchronized void remove() {
+        if (HologramManager.isUsingFakeArmorStands()) {
+            HologramManager.removeFake(this);
+            return;
         }
-        return viewers.contains(uuid);
-    }
-
-    public boolean useViewers() {
-        return useViewers;
-    }
-
-    public void remove() {
         if (!Bukkit.isPrimaryThread() && !BukkitAdventureBridges.get().isServerStopping()) {
             Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::remove);
             return;
@@ -264,6 +390,18 @@ public class Hologram {
 
     void tickAsync() {
         update();
-        updatePlaceholders();
+        updatePlaceholdersAsync(false);
+        updatePlaceholders(false);
+    }
+
+    record HologramPacketSnapshot(
+            String id,
+            UUID worldId,
+            Location location,
+            List<Component> lines,
+            boolean visible,
+            boolean useViewers,
+            Set<UUID> viewers
+    ) {
     }
 }
