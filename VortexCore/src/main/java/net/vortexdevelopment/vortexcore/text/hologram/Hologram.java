@@ -17,7 +17,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
@@ -47,6 +46,14 @@ public class Hologram {
     private volatile boolean visible = true;
     private volatile boolean shouldUpdate = true;
     private long asyncUpdateSequence;
+    private long placeholderRevision;
+
+    /** Packet-backend render cache. Guarded by {@link #stateLock}. */
+    private HologramPacketSnapshot cachedPacketSnapshot;
+    private List<String> cachedPacketLines = List.of();
+    private List<Component> cachedPacketComponents = List.of();
+    private long cachedPlaceholderRevision = -1L;
+    private long cachedStaticPlaceholdersRevision = -1L;
 
     /**
      * Kept for the Bukkit backend and source compatibility. Packet holograms do
@@ -83,11 +90,26 @@ public class Hologram {
         return location.clone();
     }
 
+    UUID worldId() {
+        return worldId;
+    }
+
+    int chunkX() {
+        return location.getBlockX() >> 4;
+    }
+
+    int chunkZ() {
+        return location.getBlockZ() >> 4;
+    }
+
     public List<UUID> getViewers() {
         return viewers;
     }
 
     public void setUseViewers(boolean useViewers) {
+        if (this.useViewers == useViewers) {
+            return;
+        }
         this.useViewers = useViewers;
         this.shouldUpdate = true;
     }
@@ -97,8 +119,13 @@ public class Hologram {
     }
 
     public void setVisible(boolean visible) {
-        this.visible = visible;
-        this.shouldUpdate = true;
+        synchronized (stateLock) {
+            if (this.visible == visible) {
+                return;
+            }
+            this.visible = visible;
+            this.shouldUpdate = true;
+        }
     }
 
     public void registerPlaceholder(HologramPlaceholderProvider provider, long updateIntervalTicks) {
@@ -124,6 +151,7 @@ public class Hologram {
         synchronized (stateLock) {
             placeholders.put("<" + initial.getPlaceholder() + ">",
                     new HologramPlaceholder(provider, updateIntervalTicks, async));
+            placeholderRevision++;
             shouldUpdate = true;
         }
     }
@@ -145,23 +173,62 @@ public class Hologram {
     /** Snapshot used by the packet backend. */
     HologramPacketSnapshot packetSnapshot() {
         synchronized (stateLock) {
-            List<MiniMessagePlaceholder> resolved = new ArrayList<>(getPlaceholders());
-            resolved.addAll(List.copyOf(Lang.staticPlaceholders));
-
-            List<Component> components = new ArrayList<>(lines.size());
-            for (String line : lines) {
-                components.add(AdventureUtils.formatComponent(line, resolved));
+            long staticRevision = Lang.getStaticPlaceholdersRevision();
+            if (cachedPacketSnapshot != null
+                    && cachedPacketLines == lines
+                    && cachedPlaceholderRevision == placeholderRevision
+                    && cachedStaticPlaceholdersRevision == staticRevision
+                    && cachedPacketSnapshot.visible() == visible) {
+                return cachedPacketSnapshot;
             }
 
-            return new HologramPacketSnapshot(
-                    id,
+            boolean canReuseComponents = cachedPlaceholderRevision == placeholderRevision
+                    && cachedStaticPlaceholdersRevision == staticRevision;
+            List<Component> components;
+            if (canReuseComponents && cachedPacketLines == lines) {
+                components = cachedPacketComponents;
+            } else if (lines.isEmpty()) {
+                components = List.of();
+            } else {
+                List<Component> updated = new ArrayList<>(lines.size());
+                MiniMessagePlaceholder[] resolved = null;
+                for (int index = 0; index < lines.size(); index++) {
+                    String line = lines.get(index);
+                    if (canReuseComponents
+                            && index < cachedPacketLines.size()
+                            && line.equals(cachedPacketLines.get(index))) {
+                        updated.add(cachedPacketComponents.get(index));
+                        continue;
+                    }
+                    if (resolved == null) {
+                        List<MiniMessagePlaceholder> placeholderSnapshot = new ArrayList<>(placeholders.size());
+                        for (HologramPlaceholder placeholder : placeholders.values()) {
+                            placeholderSnapshot.add(placeholder.getPlaceholder());
+                        }
+                        resolved = placeholderSnapshot.toArray(new MiniMessagePlaceholder[0]);
+                    }
+                    updated.add(AdventureUtils.formatComponent(line, resolved));
+                }
+                components = List.copyOf(updated);
+            }
+
+            cachedPacketLines = lines;
+            cachedPacketComponents = components;
+            cachedPlaceholderRevision = placeholderRevision;
+            cachedStaticPlaceholdersRevision = staticRevision;
+            cachedPacketSnapshot = new HologramPacketSnapshot(
                     worldId,
-                    location.clone(),
-                    List.copyOf(components),
-                    visible,
-                    useViewers,
-                    Set.copyOf(viewers)
+                    location.getX(),
+                    location.getY(),
+                    location.getZ(),
+                    location.getYaw(),
+                    location.getPitch(),
+                    chunkX(),
+                    chunkZ(),
+                    components,
+                    visible
             );
+            return cachedPacketSnapshot;
         }
     }
 
@@ -250,6 +317,7 @@ public class Hologram {
                 }
             }
             if (anyUpdate) {
+                placeholderRevision++;
                 shouldUpdate = true;
             }
         }
@@ -273,6 +341,7 @@ public class Hologram {
                     }
                 }
                 if (anyUpdate) {
+                    placeholderRevision++;
                     shouldUpdate = true;
                 }
             }
@@ -314,14 +383,18 @@ public class Hologram {
                 if (calculatedLines == null) {
                     return;
                 }
+                List<String> updatedLines = List.copyOf(calculatedLines);
                 synchronized (stateLock) {
                     if (sequence != asyncUpdateSequence) {
                         return;
                     }
-                    lines = List.copyOf(calculatedLines);
+                    if (lines.equals(updatedLines)) {
+                        return;
+                    }
+                    lines = updatedLines;
                     shouldUpdate = true;
                 }
-                update(true);
+                update();
             } catch (Throwable throwable) {
                 VortexPlugin.getInstance().getLogger().warning(
                         "Async hologram update failed for '" + id + "': " + throwable.getMessage());
@@ -363,9 +436,23 @@ public class Hologram {
     }
 
     public void setLines(List<String> lines) {
+        setLinesIfChanged(lines);
+    }
+
+    /**
+     * Replaces the source lines only when their contents changed.
+     *
+     * @return true when a new packet render is required
+     */
+    public boolean setLinesIfChanged(List<String> lines) {
         synchronized (stateLock) {
-            this.lines = lines == null ? List.of() : List.copyOf(lines);
+            List<String> updated = lines == null ? List.of() : List.copyOf(lines);
+            if (this.lines.equals(updated)) {
+                return false;
+            }
+            this.lines = updated;
             shouldUpdate = true;
+            return true;
         }
     }
 
@@ -395,13 +482,16 @@ public class Hologram {
     }
 
     record HologramPacketSnapshot(
-            String id,
             UUID worldId,
-            Location location,
+            double x,
+            double y,
+            double z,
+            float yaw,
+            float pitch,
+            int chunkX,
+            int chunkZ,
             List<Component> lines,
-            boolean visible,
-            boolean useViewers,
-            Set<UUID> viewers
+            boolean visible
     ) {
     }
 }

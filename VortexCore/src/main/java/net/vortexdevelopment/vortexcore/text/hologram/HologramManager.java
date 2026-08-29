@@ -51,6 +51,7 @@ public class HologramManager {
     private static final NamespacedKey VIEWERS_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_viewers");
 
     private static final Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
+    private static final Map<HologramChunkKey, Set<Hologram>> hologramsByChunk = new ConcurrentHashMap<>();
     private static volatile @Nullable HologramBackend fakeArmorStandManager;
 
     private static final @Nullable Method WORLD_CREATE_ENTITY;
@@ -287,7 +288,7 @@ public class HologramManager {
             if (Bukkit.isPrimaryThread()) {
                 SchedulerUtils.runTaskAsynchronously(VortexPlugin.getInstance(), () -> {
                     if (fakeArmorStandManager == fakeManager
-                            && getHologramSnapshot().contains(hologram)) {
+                            && getHologramsView().contains(hologram)) {
                         fakeManager.render(hologram, force);
                     }
                 });
@@ -312,8 +313,12 @@ public class HologramManager {
         }
     }
 
-    static Set<Hologram> getHologramSnapshot() {
-        return Set.copyOf(holograms.getOrDefault(VortexPlugin.getInstance(), Set.of()));
+    static Set<Hologram> getHologramsView() {
+        return holograms.getOrDefault(VortexPlugin.getInstance(), Set.of());
+    }
+
+    static Set<Hologram> getHologramsInChunk(UUID worldId, int chunkX, int chunkZ) {
+        return hologramsByChunk.getOrDefault(new HologramChunkKey(worldId, chunkX, chunkZ), Set.of());
     }
 
     public static @Nullable Hologram getHologram(String id) {
@@ -330,7 +335,12 @@ public class HologramManager {
 
     public static void createHologram(Hologram hologram) {
         Location location = hologram.getLocation();
-        holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet()).add(hologram);
+        boolean added = holograms.computeIfAbsent(VortexPlugin.getInstance(), k -> ConcurrentHashMap.newKeySet())
+                .add(hologram);
+        if (added) {
+            hologramsByChunk.computeIfAbsent(HologramChunkKey.of(hologram), ignored -> ConcurrentHashMap.newKeySet())
+                    .add(hologram);
+        }
 
         HologramBackend fakeManager = fakeArmorStandManager;
         if (fakeManager != null) {
@@ -425,7 +435,16 @@ public class HologramManager {
     public static void removeHologram(Hologram hologram) {
         Set<Hologram> hologramsSet = holograms.get(VortexPlugin.getInstance());
         if (hologramsSet != null) {
-            hologramsSet.remove(hologram);
+            if (hologramsSet.remove(hologram)) {
+                HologramChunkKey key = HologramChunkKey.of(hologram);
+                Set<Hologram> chunkHolograms = hologramsByChunk.get(key);
+                if (chunkHolograms != null) {
+                    chunkHolograms.remove(hologram);
+                    if (chunkHolograms.isEmpty()) {
+                        hologramsByChunk.remove(key, chunkHolograms);
+                    }
+                }
+            }
             hologram.remove();
         }
     }
@@ -436,6 +455,7 @@ public class HologramManager {
             fakeManager.clear();
             fakeArmorStandManager = null;
             holograms.clear();
+            hologramsByChunk.clear();
             return;
         }
         if (!Bukkit.isPrimaryThread() && !BukkitAdventureBridges.get().isServerStopping()) {
@@ -452,6 +472,7 @@ public class HologramManager {
             }
         }
         holograms.clear();
+        hologramsByChunk.clear();
     }
 
     public static void loadHologramsInChunk(Chunk chunk) {
@@ -460,11 +481,9 @@ public class HologramManager {
             fakeManager.onServerChunkLoad(chunk);
             return;
         }
-        for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
-            Location location = hologram.getLocation();
-            if (WorldUtils.isLocationAtChunk(location, chunk)) {
-                createHologram(hologram);
-            }
+        for (Hologram hologram : getHologramsInChunk(
+                chunk.getWorld().getUID(), chunk.getX(), chunk.getZ())) {
+            createHologram(hologram);
         }
     }
 
@@ -474,11 +493,9 @@ public class HologramManager {
             fakeManager.onServerChunkUnload(chunk);
             return;
         }
-        for (Hologram hologram : holograms.getOrDefault(VortexPlugin.getInstance(), Set.of())) {
-            Location location = hologram.getLocation();
-            if (WorldUtils.isLocationAtChunk(location, chunk)) {
-                hologram.remove();
-            }
+        for (Hologram hologram : getHologramsInChunk(
+                chunk.getWorld().getUID(), chunk.getX(), chunk.getZ())) {
+            hologram.remove();
         }
     }
 
@@ -522,5 +539,11 @@ public class HologramManager {
 
     public static String getSessionId() {
         return sessionId.toString();
+    }
+
+    private record HologramChunkKey(UUID worldId, int x, int z) {
+        private static HologramChunkKey of(Hologram hologram) {
+            return new HologramChunkKey(hologram.worldId(), hologram.chunkX(), hologram.chunkZ());
+        }
     }
 }

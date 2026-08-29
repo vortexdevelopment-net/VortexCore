@@ -44,6 +44,16 @@ public class Lang implements ReloadHook {
     private static boolean warnedNotInitialized = false;
     private static YamlConfig lang;
     public static List<MiniMessagePlaceholder> staticPlaceholders = new ArrayList<>();
+    private static volatile long staticPlaceholdersRevision;
+
+    /**
+     * Changes whenever the language-level MiniMessage placeholders are rebuilt.
+     * Consumers that cache rendered components can use this to invalidate them
+     * without copying the placeholder list on every read.
+     */
+    public static long getStaticPlaceholdersRevision() {
+        return staticPlaceholdersRevision;
+    }
 
     private Lang() {
         onReload();
@@ -337,6 +347,7 @@ public class Lang implements ReloadHook {
             initialized = true;
             Gui.BACK_BUTTON_NAME = getString("GUI.Back Button Name", "§cBack");
             AdventureUtils.reloadMiniMessage();
+            staticPlaceholdersRevision++;
         } catch (Exception ex) {
             ex.printStackTrace();
         }

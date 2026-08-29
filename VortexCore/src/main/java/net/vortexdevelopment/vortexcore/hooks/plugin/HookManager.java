@@ -8,6 +8,7 @@ import net.vortexdevelopment.vinject.di.DependencyRepository;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
+import net.vortexdevelopment.vortexcore.hooks.internal.types.ItemResolverHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.shop.ShopGUIPlusHook;
 import net.vortexdevelopment.vortexcore.hooks.plugin.stacker.VortexStackerHook;
@@ -49,6 +50,21 @@ public class HookManager implements Listener {
     private static void reloadHooks() {
         reloadHooks(ShopHook.class);
         reloadHooks(StackerHook.class);
+        reloadAllHooks(ItemResolverHook.class);
+    }
+
+    private static <T extends PluginHook> void reloadAllHooks(Class<T> type) {
+        for (T hook : getHookByType(type)) {
+            if (hook.canEnable()) {
+                if (!hook.isEnabled()) {
+                    hook.onEnable();
+                    hook.setEnabled(true);
+                }
+            } else if (hook.isEnabled()) {
+                hook.onDisable();
+                hook.setEnabled(false);
+            }
+        }
     }
 
     private static <T extends PluginHook> void reloadHooks(Class<T> type) {
@@ -92,6 +108,33 @@ public class HookManager implements Listener {
         for (StackerHook stackerHook : getHookByType(StackerHook.class)) {
             if (stackerHook.isEnabled()) {
                 return stackerHook;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolves a namespaced item reference through all enabled item providers.
+     */
+    public static org.bukkit.inventory.ItemStack resolveItem(String reference) {
+        if (reference == null || reference.isBlank()) {
+            return null;
+        }
+        for (ItemResolverHook hook : getHookByType(ItemResolverHook.class)) {
+            if (!hook.isEnabled() || !hook.canResolve(reference)) {
+                continue;
+            }
+            try {
+                org.bukkit.inventory.ItemStack resolved = hook.resolve(reference);
+                if (resolved != null) {
+                    return resolved;
+                }
+            } catch (RuntimeException exception) {
+                if (VortexPlugin.getInstance() != null) {
+                    VortexPlugin.getInstance().getLogger().warning(
+                            "[HookManager] Item resolver " + hook.getClass().getSimpleName()
+                                    + " failed for " + reference + ": " + exception.getMessage());
+                }
             }
         }
         return null;

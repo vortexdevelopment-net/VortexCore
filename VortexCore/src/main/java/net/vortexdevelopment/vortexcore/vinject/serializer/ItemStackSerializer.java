@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.annotation.yaml.YamlSerializer;
 import net.vortexdevelopment.vinject.config.serializer.YamlSerializerBase;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
+import net.vortexdevelopment.vortexcore.hooks.plugin.HookManager;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Material;
@@ -346,6 +347,32 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
     @Override
     public ItemStack deserialize(Map<String, Object> map) {
+        Object itemReference = map.get("Item");
+        if (itemReference instanceof String reference && !reference.isBlank()) {
+            ItemStack resolved = resolveItemReference(reference);
+            if (resolved == null) {
+                return null;
+            }
+            int amount = readAmount(map.get("Amount"), resolved.getAmount());
+            resolved.setAmount(Math.max(1, amount));
+            return resolved;
+        }
+        if (itemReference instanceof Map<?, ?> nestedItem) {
+            Map<String, Object> nestedValues = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : nestedItem.entrySet()) {
+                if (entry.getKey() != null) {
+                    nestedValues.put(String.valueOf(entry.getKey()), entry.getValue());
+                }
+            }
+            ItemStack resolved = deserialize(nestedValues);
+            if (resolved == null) {
+                return null;
+            }
+            int amount = readAmount(map.get("Amount"), resolved.getAmount());
+            resolved.setAmount(Math.max(1, amount));
+            return resolved;
+        }
+
         String materialName = (String) map.get("Material");
         if (materialName == null) {
             return null;
@@ -357,12 +384,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         int amount = 1;
-        if (map.containsKey("Amount")) {
-            Object amountObj = map.get("Amount");
-            if (amountObj instanceof Number) {
-                amount = ((Number) amountObj).intValue();
-            }
-        }
+        amount = readAmount(map.get("Amount"), amount);
 
         ItemStack item = new ItemStack(material, amount);
         ItemMeta meta = item.getItemMeta();
@@ -714,6 +736,32 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         }
 
         return item;
+    }
+
+    private static int readAmount(Object rawAmount, int fallback) {
+        if (rawAmount instanceof Number number) {
+            return number.intValue();
+        }
+        return fallback;
+    }
+
+    private static ItemStack resolveItemReference(String reference) {
+        String trimmed = reference.trim();
+        String materialName = trimmed;
+        int separator = trimmed.indexOf(':');
+        if (separator >= 0) {
+            String namespace = trimmed.substring(0, separator);
+            if (!"minecraft".equalsIgnoreCase(namespace)) {
+                return HookManager.resolveItem(trimmed);
+            }
+            materialName = trimmed.substring(separator + 1);
+        }
+
+        Material material = Material.matchMaterial(materialName);
+        if (material != null && material.isItem()) {
+            return new ItemStack(material);
+        }
+        return HookManager.resolveItem(trimmed);
     }
 
     private Map<String, Object> serializeFireworkEffect(FireworkEffect effect) {

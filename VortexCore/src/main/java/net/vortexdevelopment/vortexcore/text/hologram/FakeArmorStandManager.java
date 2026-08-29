@@ -16,7 +16,6 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Chunk;
-import org.bukkit.Location;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
@@ -166,8 +165,10 @@ final class FakeArmorStandManager extends HologramBackend {
     @Override
     void render(Hologram hologram, boolean force) {
         Hologram.HologramPacketSnapshot snapshot = hologram.packetSnapshot();
+        RenderSnapshot rendered = new RenderSnapshot(snapshot);
+        ChunkPosition position = chunkPosition(snapshot);
         for (Session session : sessions.values()) {
-            render(session, hologram, snapshot);
+            render(session, hologram, rendered, position);
         }
     }
 
@@ -298,8 +299,9 @@ final class FakeArmorStandManager extends HologramBackend {
     }
 
     private void renderPlayer(Session session) {
-        for (Hologram hologram : HologramManager.getHologramSnapshot()) {
-            render(session, hologram, hologram.packetSnapshot());
+        for (Hologram hologram : HologramManager.getHologramsView()) {
+            Hologram.HologramPacketSnapshot snapshot = hologram.packetSnapshot();
+            render(session, hologram, new RenderSnapshot(snapshot), chunkPosition(snapshot));
         }
     }
 
@@ -307,81 +309,87 @@ final class FakeArmorStandManager extends HologramBackend {
         if (!session.loadedChunks.contains(position)) {
             return;
         }
-        for (Hologram hologram : HologramManager.getHologramSnapshot()) {
+        for (Hologram hologram : HologramManager.getHologramsInChunk(
+                position.worldId(), position.x(), position.z())) {
             Hologram.HologramPacketSnapshot snapshot = hologram.packetSnapshot();
-            if (sameChunk(snapshot, position)) {
-                render(session, hologram, snapshot);
-            }
+            render(session, hologram, new RenderSnapshot(snapshot), position);
         }
     }
 
-    private void render(Session session, Hologram hologram, Hologram.HologramPacketSnapshot snapshot) {
+    private void render(Session session, Hologram hologram, RenderSnapshot rendered,
+                        ChunkPosition position) {
+        Hologram.HologramPacketSnapshot snapshot = rendered.snapshot;
         synchronized (session.sendLock) {
             boolean visible = snapshot.visible()
                     && snapshot.worldId().equals(session.worldId)
                     && hologram.canSee(session.playerId)
-                    && session.loadedChunks.contains(chunkPosition(snapshot));
-            ClientHologram state = session.holograms.computeIfAbsent(
-                    hologram.getId(), ignored -> new ClientHologram());
+                    && session.loadedChunks.contains(position);
+            ClientHologram state = session.holograms.get(hologram.getId());
 
             if (!visible) {
-                destroy(session, state);
-                state.chunkPosition = null;
+                if (state != null) {
+                    destroy(session, state);
+                    state.chunkPosition = null;
+                }
                 return;
             }
 
-            ChunkPosition position = chunkPosition(snapshot);
+            if (state == null) {
+                state = new ClientHologram();
+                session.holograms.put(hologram.getId(), state);
+            }
             state.chunkPosition = position;
-            reconcile(session, state, snapshot);
+            reconcile(session, state, rendered);
         }
     }
 
-    private void reconcile(Session session, ClientHologram state,
-                           Hologram.HologramPacketSnapshot snapshot) {
+    private void reconcile(Session session, ClientHologram state, RenderSnapshot rendered) {
+        Hologram.HologramPacketSnapshot snapshot = rendered.snapshot;
         while (state.lines.size() > snapshot.lines().size()) {
-            int index = state.lines.size() - 1;
-            ClientLine line = state.lines.remove(index);
+            ClientLine line = state.lines.remove(0);
             destroy(session, line.entityId);
         }
 
-        for (int index = 0; index < snapshot.lines().size(); index++) {
-            ClientLine line = index < state.lines.size() ? state.lines.get(index) : null;
-            if (line == null) {
-                line = new ClientLine(nextEntityId(), UUID.randomUUID());
-                state.lines.add(line);
-            }
+        while (state.lines.size() < snapshot.lines().size()) {
+            state.lines.add(0, new ClientLine(nextEntityId(), UUID.randomUUID()));
+        }
 
-            Location location = snapshot.location().clone().add(
-                    0,
-                    (snapshot.lines().size() - 1 - index) * 0.25,
-                    0
-            );
+        for (int index = 0; index < snapshot.lines().size(); index++) {
+            ClientLine line = state.lines.get(index);
+
+            double x = snapshot.x();
+            double y = snapshot.y() + (snapshot.lines().size() - 1 - index) * 0.25;
+            double z = snapshot.z();
+            float yaw = snapshot.yaw();
+            float pitch = snapshot.pitch();
             Component name = snapshot.lines().get(index);
             boolean locationChanged = !line.sent
-                    || line.x != location.getX()
-                    || line.y != location.getY()
-                    || line.z != location.getZ()
-                    || line.yaw != location.getYaw()
-                    || line.pitch != location.getPitch();
+                    || line.x != x
+                    || line.y != y
+                    || line.z != z
+                    || line.yaw != yaw
+                    || line.pitch != pitch;
             boolean nameChanged = !line.sent || !name.equals(line.name);
 
             if (!line.sent) {
-                send(session, spawnPacket(line, location), metadataPacket(line, name));
+                send(session,
+                        spawnPacket(line, x, y, z, yaw, pitch),
+                        fullMetadataPacket(line, rendered.nameValue(index)));
                 line.sent = true;
             } else {
                 if (locationChanged) {
-                    send(session, teleportPacket(line, location));
+                    send(session, teleportPacket(line, x, y, z, yaw, pitch));
                 }
                 if (nameChanged) {
-                    send(session, metadataPacket(line, name));
+                    send(session, nameMetadataPacket(line, rendered.nameMetadata(index)));
                 }
             }
 
-            line.x = location.getX();
-            line.y = location.getY();
-            line.z = location.getZ();
-            line.yaw = location.getYaw();
-            line.pitch = location.getPitch();
+            line.x = x;
+            line.y = y;
+            line.z = z;
+            line.yaw = yaw;
+            line.pitch = pitch;
             line.name = name;
         }
     }
@@ -419,20 +427,20 @@ final class FakeArmorStandManager extends HologramBackend {
         send(session, packet);
     }
 
-    private PacketContainer spawnPacket(ClientLine line, Location location) {
+    private PacketContainer spawnPacket(ClientLine line, double x, double y, double z, float yaw, float pitch) {
         PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.SPAWN_ENTITY);
         packet.getModifier().writeDefaults();
         packet.getIntegers().write(0, line.entityId);
         packet.getUUIDs().write(0, line.uuid);
         packet.getEntityTypeModifier().write(0, EntityType.ARMOR_STAND);
-        packet.getDoubles().write(0, location.getX());
-        packet.getDoubles().write(1, location.getY());
-        packet.getDoubles().write(2, location.getZ());
-        writeRotation(packet, location.getYaw(), location.getPitch());
+        packet.getDoubles().write(0, x);
+        packet.getDoubles().write(1, y);
+        packet.getDoubles().write(2, z);
+        writeRotation(packet, yaw, pitch);
         return packet;
     }
 
-    private PacketContainer metadataPacket(ClientLine line, Component name) {
+    private PacketContainer fullMetadataPacket(ClientLine line, WrappedDataValue nameValue) {
         PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
         packet.getModifier().writeDefaults();
         packet.getIntegers().write(0, line.entityId);
@@ -443,11 +451,7 @@ final class FakeArmorStandManager extends HologramBackend {
                 WrappedDataWatcher.Registry.get(Byte.class),
                 ENTITY_INVISIBLE_FLAG
         ));
-        metadata.add(new WrappedDataValue(
-                2,
-                WrappedDataWatcher.Registry.getChatComponentSerializer(true),
-                Optional.of(WrappedChatComponent.fromJson(AdventureUtils.convertToJson(name)).getHandle())
-        ));
+        metadata.add(nameValue);
         metadata.add(new WrappedDataValue(
                 3,
                 WrappedDataWatcher.Registry.get(Boolean.class),
@@ -472,15 +476,23 @@ final class FakeArmorStandManager extends HologramBackend {
         return packet;
     }
 
-    private PacketContainer teleportPacket(ClientLine line, Location location) {
+    private PacketContainer nameMetadataPacket(ClientLine line, List<WrappedDataValue> nameMetadata) {
+        PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_METADATA);
+        packet.getModifier().writeDefaults();
+        packet.getIntegers().write(0, line.entityId);
+        packet.getDataValueCollectionModifier().write(0, nameMetadata);
+        return packet;
+    }
+
+    private PacketContainer teleportPacket(ClientLine line, double x, double y, double z, float yaw, float pitch) {
         PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ENTITY_TELEPORT);
         packet.getModifier().writeDefaults();
         packet.getIntegers().write(0, line.entityId);
         if (packet.getDoubles().size() >= 3) {
-            packet.getDoubles().write(0, location.getX());
-            packet.getDoubles().write(1, location.getY());
-            packet.getDoubles().write(2, location.getZ());
-            writeRotation(packet, location.getYaw(), location.getPitch());
+            packet.getDoubles().write(0, x);
+            packet.getDoubles().write(1, y);
+            packet.getDoubles().write(2, z);
+            writeRotation(packet, yaw, pitch);
             return packet;
         }
 
@@ -490,10 +502,10 @@ final class FakeArmorStandManager extends HologramBackend {
         try {
             Object rotation = positionMoveRotationCreate.invoke(
                     null,
-                    new Vector(location.getX(), location.getY(), location.getZ()),
+                    new Vector(x, y, z),
                     new Vector(0, 0, 0),
-                    location.getYaw(),
-                    location.getPitch()
+                    yaw,
+                    pitch
             );
             Object modifier = positionMoveRotationModifier.invoke(packet);
             Method write = modifier.getClass().getMethod("write", int.class, Object.class);
@@ -518,17 +530,28 @@ final class FakeArmorStandManager extends HologramBackend {
         return positionMoveRotationModifier != null && positionMoveRotationCreate != null;
     }
 
-    private void send(Session session, PacketContainer... packets) {
+    private void send(Session session, PacketContainer packet) {
         try {
-            for (PacketContainer packet : packets) {
-                protocolManager.sendServerPacket(session.player, packet);
-            }
+            protocolManager.sendServerPacket(session.player, packet);
         } catch (Throwable throwable) {
-            if (!warnedSendFailure) {
-                warnedSendFailure = true;
-                VortexPlugin.getInstance().getLogger().warning(
-                        "Could not send a fake hologram packet: " + throwable.getMessage());
-            }
+            warnSendFailure(throwable);
+        }
+    }
+
+    private void send(Session session, PacketContainer first, PacketContainer second) {
+        try {
+            protocolManager.sendServerPacket(session.player, first);
+            protocolManager.sendServerPacket(session.player, second);
+        } catch (Throwable throwable) {
+            warnSendFailure(throwable);
+        }
+    }
+
+    private void warnSendFailure(Throwable throwable) {
+        if (!warnedSendFailure) {
+            warnedSendFailure = true;
+            VortexPlugin.getInstance().getLogger().warning(
+                    "Could not send a fake hologram packet: " + throwable.getMessage());
         }
     }
 
@@ -572,13 +595,9 @@ final class FakeArmorStandManager extends HologramBackend {
     private static ChunkPosition chunkPosition(Hologram.HologramPacketSnapshot snapshot) {
         return new ChunkPosition(
                 snapshot.worldId(),
-                snapshot.location().getBlockX() >> 4,
-                snapshot.location().getBlockZ() >> 4
+                snapshot.chunkX(),
+                snapshot.chunkZ()
         );
-    }
-
-    private static boolean sameChunk(Hologram.HologramPacketSnapshot snapshot, ChunkPosition position) {
-        return chunkPosition(snapshot).equals(position);
     }
 
     private static final class Session {
@@ -613,6 +632,46 @@ final class FakeArmorStandManager extends HologramBackend {
         private ClientLine(int entityId, UUID uuid) {
             this.entityId = entityId;
             this.uuid = uuid;
+        }
+    }
+
+    /**
+     * Packet-ready data shared by every viewer in one render pass. A changed line
+     * is serialized once instead of once per player and per packet container.
+     */
+    private static final class RenderSnapshot {
+        private final Hologram.HologramPacketSnapshot snapshot;
+        private final WrappedDataValue[] nameValues;
+        private final List<?>[] nameMetadata;
+
+        private RenderSnapshot(Hologram.HologramPacketSnapshot snapshot) {
+            this.snapshot = snapshot;
+            this.nameValues = new WrappedDataValue[snapshot.lines().size()];
+            this.nameMetadata = new List<?>[snapshot.lines().size()];
+        }
+
+        private WrappedDataValue nameValue(int index) {
+            WrappedDataValue value = nameValues[index];
+            if (value == null) {
+                Component name = snapshot.lines().get(index);
+                value = new WrappedDataValue(
+                        2,
+                        WrappedDataWatcher.Registry.getChatComponentSerializer(true),
+                        Optional.of(WrappedChatComponent.fromJson(AdventureUtils.convertToJson(name)).getHandle())
+                );
+                nameValues[index] = value;
+            }
+            return value;
+        }
+
+        @SuppressWarnings("unchecked")
+        private List<WrappedDataValue> nameMetadata(int index) {
+            List<WrappedDataValue> metadata = (List<WrappedDataValue>) nameMetadata[index];
+            if (metadata == null) {
+                metadata = List.of(nameValue(index));
+                nameMetadata[index] = metadata;
+            }
+            return metadata;
         }
     }
 

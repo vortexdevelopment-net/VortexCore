@@ -15,5 +15,6 @@ libraries:
   - 'net.kyori:adventure-platform-bukkit:${dep.adventure.platform.bukkit.version}'
 softdepend:
   - ProtocolLib
+  - PlaceholderAPI
   - Essentials
   - ShopGUIPlus

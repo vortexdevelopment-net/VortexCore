@@ -12,6 +12,7 @@ Plugin development guides for VortexCore on top of VInject.
 | [Messaging](messaging.md) | `lang.yml`, `Lang`, `AdventureUtils`, MiniMessage |
 | [GUI System](gui-system.md) | `Gui`, `PaginatedGui`, YAML-driven menus |
 | [Commands & Listeners](commands-and-listeners.md) | Command framework and event listeners |
+| [Packet Scoreboards](scoreboard.md) | Async ProtocolLib scoreboards with long lines |
 | [Code Conventions](code-conventions.md) | Style rules for plugin code |
 | [ItemStack YAML serializer](itemstack-yaml-serializer.md) | ItemStack field keys in YAML |
 

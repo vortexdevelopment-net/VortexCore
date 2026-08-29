@@ -36,7 +36,7 @@
     <repositories>
         <repository>
             <id>vortex-repo</id>
-            <url>https://repo.vortexdevelopment.net/repository</url>
+            <url>https://repo.vortexdevelopment.net/repository/maven-public/</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -90,12 +90,12 @@
         <repository>
             <id>vortex-repo</id>
             <name>vortex-repo</name>
-            <url>https://repo.vortexdevelopment.net/repository</url>
+            <url>https://repo.vortexdevelopment.net/repository/maven-public/</url>
         </repository>
         <snapshotRepository>
             <id>vortex-repo</id>
             <name>vortex-repo</name>
-            <url>https://repo.vortexdevelopment.net/repository</url>
+            <url>https://repo.vortexdevelopment.net/repository/maven-public/</url>
         </snapshotRepository>
     </distributionManagement>
 </project>

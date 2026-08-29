@@ -22,6 +22,7 @@ import net.vortexdevelopment.vortexcore.spi.CommandMaps;
 import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.hologram.HologramManager;
+import net.vortexdevelopment.vortexcore.scoreboard.ScoreboardService;
 import net.vortexdevelopment.vortexcore.utils.PluginInitState;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 import org.bstats.bukkit.Metrics;
@@ -233,6 +234,11 @@ public abstract class VortexPlugin extends JavaPlugin {
         Bukkit.getScheduler().cancelTasks(this); // Make sure all tasks are canceled
         if (!emergencyStop) {
             onPluginDisable();
+        }
+        try {
+            ScoreboardService.shutdown();
+        } catch (NoClassDefFoundError ignored) {
+            // ProtocolLib is optional until a plugin opts into ScoreboardService.
         }
         if (dependencyContainer != null) {
             dependencyContainer.release();
