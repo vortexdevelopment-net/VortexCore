@@ -57,6 +57,10 @@ public class AdvancementUtil {
     private static boolean isInitialized = false;
     private static final boolean IS_1_20_2_PLUS = ServerVersion.isAtLeastVersion("1.20.2");
 
+    public static boolean isAvailable() {
+        return isInitialized;
+    }
+
     static {
         List<String> missingClasses = new ArrayList<>();
         try {
@@ -94,7 +98,12 @@ public class AdvancementUtil {
             Class<?> itemStackClass = getNMSClass("net.minecraft.world.item.ItemStack", "world.item.ItemStack");
             if (itemStackClass == null) missingClasses.add("ItemStack");
 
-            Class<?> resourceLocationClass = getNMSClass("net.minecraft.resources.ResourceLocation", "resources.ResourceLocation");
+            Class<?> resourceLocationClass = getNMSClass(
+                    "net.minecraft.resources.ResourceLocation",
+                    "resources.ResourceLocation",
+                    "net.minecraft.resources.Identifier",
+                    "resources.Identifier"
+            );
             if (resourceLocationClass == null) missingClasses.add("ResourceLocation");
 
             Class<?> advancementRewardsClass = getNMSClass("net.minecraft.advancements.AdvancementRewards", "advancements.AdvancementRewards");
@@ -432,14 +441,12 @@ public class AdvancementUtil {
             Object advancement;
 
             if (IS_1_20_2_PLUS) {
-                logInvokeDebug("DisplayInfo", displayInfoConstructor, nmsIcon, nmsTitle, nmsDesc, Optional.empty(), nmsFrameType, true, false, false);
                 try {
                     displayInfo = displayInfoConstructor.newInstance(
                             nmsIcon, nmsTitle, nmsDesc, Optional.empty(), nmsFrameType, true, false, false
                     );
                 } catch (IllegalArgumentException e) {
                     // Try without Optional for background (some versions/mappings might vary)
-                     logInvokeDebug("DisplayInfo (fallback)", displayInfoConstructor, nmsIcon, nmsTitle, nmsDesc, null, nmsFrameType, true, false, false);
                      displayInfo = displayInfoConstructor.newInstance(
                             nmsIcon, nmsTitle, nmsDesc, null, nmsFrameType, true, false, false
                     );
@@ -480,12 +487,10 @@ public class AdvancementUtil {
                 }
                 
                 if (advancementConstructor.getParameterCount() == 6) {
-                    logInvokeDebug("Advancement (6-params)", advancementConstructor, Optional.empty(), Optional.of(displayInfo), emptyRewards, criteriaMap, requirements, false);
                     advancement = advancementConstructor.newInstance(
                             Optional.empty(), Optional.of(displayInfo), emptyRewards, criteriaMap, requirements, false
                     );
                 } else {
-                    logInvokeDebug("Advancement (7-params)", advancementConstructor, Optional.empty(), Optional.of(displayInfo), emptyRewards, criteriaMap, requirements, false, Optional.empty());
                     advancement = advancementConstructor.newInstance(
                             Optional.empty(), Optional.of(displayInfo), emptyRewards, criteriaMap, requirements, false, Optional.empty()
                     );
@@ -495,6 +500,9 @@ public class AdvancementUtil {
 
                 PacketContainer packet = protocolManager.createPacket(PacketType.Play.Server.ADVANCEMENTS);
                 packet.getBooleans().write(0, false); // reset
+                if (packet.getBooleans().size() > 1) {
+                    packet.getBooleans().write(1, true); // show toast (1.21.11+)
+                }
                 
                 // 1.20.2+ Fields: List<AdvancementHolder> added, Set<ResourceLocation> removed, Map<ResourceLocation, AdvancementProgress> progress
                 packet.getModifier().withType(List.class).write(0, Collections.singletonList(advancementHolder));
@@ -516,12 +524,10 @@ public class AdvancementUtil {
                                 progressCriteria.put("c", cp);
                             }
                         } else {
-                            logDebug("[AdvancementUtil] Could not find criteria Map accessor for AdvancementProgress");
                         }
                         
                         progressMap.put(key, progress);
                     } catch (Exception e) {
-                        logDebug("[AdvancementUtil] Failed to set progress: " + e.getMessage());
                         // Fallback: minimal progress
                         try {
                             progressMap.put(key, advancementProgressConstructor.newInstance());
@@ -531,15 +537,12 @@ public class AdvancementUtil {
                 packet.getModifier().withType(Map.class).write(0, progressMap);
                 
                 protocolManager.sendServerPacket(player, packet);
-                logDebug("[AdvancementUtil] Packet sent to " + player.getName() + " with progress map size: " + progressMap.size());
 
             } else {
-                logInvokeDebug("Legacy DisplayInfo", displayInfoConstructor, nmsIcon, nmsTitle, nmsDesc, null, nmsFrameType, true, false, false);
                 displayInfo = displayInfoConstructor.newInstance(
                         nmsIcon, nmsTitle, nmsDesc, null, nmsFrameType, true, false, false
                 );
 
-                logInvokeDebug("Legacy Advancement", advancementConstructor, key, null, displayInfo, null, new HashMap<>(), new String[0][0]);
                 advancement = advancementConstructor.newInstance(
                         key, null, displayInfo, null, new HashMap<>(), new String[0][0]
                 );
@@ -557,7 +560,6 @@ public class AdvancementUtil {
                 packet.getModifier().withType(Map.class).write(1, progressMap); // Progress is usually the second Map
 
                 protocolManager.sendServerPacket(player, packet);
-                logDebug("[AdvancementUtil] Legacy packet sent to " + player.getName());
             }
 
             // Remove after 10 seconds to keep the advancement tab clean
@@ -585,26 +587,6 @@ public class AdvancementUtil {
         logger.severe("Exception: " + e.getClass().getName() + " - " + e.getMessage());
         if (e.getCause() != null) {
             logger.severe("Cause: " + e.getCause().getClass().getName() + " - " + e.getCause().getMessage());
-        }
-    }
-
-    private static void logInvokeDebug(String name, Constructor<?> constructor, Object... args) {
-        if (VortexPlugin.getInstance() == null) return;
-        var logger = VortexPlugin.getInstance().getLogger();
-        logger.info("[AdvancementUtil] DEBUG: Invoking " + name);
-        Class<?>[] params = constructor.getParameterTypes();
-        logger.info("Constructor: " + constructor.toString());
-        for (int i = 0; i < params.length; i++) {
-            Object val = i < args.length ? args[i] : "MISSING";
-            String valType = val != null ? val.getClass().getName() : "null";
-            logger.info(String.format(" Param %d: Expected %s | Got %s (Value: %s)", 
-                i, params[i].getName(), valType, val));
-        }
-    }
-
-    private static void logDebug(String msg) {
-        if (VortexPlugin.getInstance() != null) {
-            VortexPlugin.getInstance().getLogger().info(msg);
         }
     }
 
