@@ -14,8 +14,8 @@ import java.lang.annotation.Target;
  * Example:
  * <pre>{@code
  * @TabComplete(command = "give {player} {item}")
- * public List<String> completeGiveItem(@Sender CommandSender sender, 
- *                                      @TabIndex int index, 
+ * public List<String> completeGiveItem(@Sender CommandSender sender,
+ *                                      @TabIndex int index,
  *                                      @Current String current) {
  *     // index is 0 for {player}, 1 for {item}
  *     // current is the string being completed

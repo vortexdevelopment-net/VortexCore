@@ -30,7 +30,7 @@ public class EntityTypeResolver implements ParameterResolver<EntityType> {
     public boolean supports(Class<?> type) {
         return EntityType.class.isAssignableFrom(type);
     }
-    
+
     @Override
     public Set<Class<?>> getSupportedTypes() {
         return Set.of(EntityType.class);

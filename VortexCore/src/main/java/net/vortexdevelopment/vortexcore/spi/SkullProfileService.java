@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Paper and Spigot use different {@code PlayerProfile} types on {@link SkullMeta}; this SPI hides that split.
+ * Paper-compatible player-profile operations on {@link SkullMeta}.
  */
 public interface SkullProfileService {
 

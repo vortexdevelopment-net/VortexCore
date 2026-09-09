@@ -12,9 +12,12 @@ public class GuiItem {
     private ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> clickConsumer;
     private Consumer<ItemStackBuilder> constructItem;
     private State state = State.STANDBY;
-    @Getter private ItemStack item;
-    @Getter private int x;
-    @Getter private int y;
+    @Getter
+    private ItemStack item;
+    @Getter
+    private int x;
+    @Getter
+    private int y;
     //Add some placeholders that can be refreshed whem the gui is shown to the player
 
 

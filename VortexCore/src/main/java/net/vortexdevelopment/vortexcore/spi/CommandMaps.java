@@ -17,12 +17,11 @@ public final class CommandMaps {
     }
 
     public static void install(CommandMapBridge commandMapBridge) {
-        boolean expectPaper = ServerProject.isServer(ServerProject.PAPER);
-        if (!isCompatiblePlatform(commandMapBridge, expectPaper)) {
+        if (!isCompatiblePlatform(commandMapBridge)) {
             throw new IllegalStateException("Incorrect CommandMapBridge for runtime: expected "
-                    + expectedPlatform(expectPaper) + " but got " + commandMapBridge.getClass().getName());
+                    + "paper-compatible but got " + commandMapBridge.getClass().getName());
         }
-        if (bridge != null && !isCompatiblePlatform(bridge, expectPaper)) {
+        if (bridge != null && !isCompatiblePlatform(bridge)) {
             throw new IllegalStateException("An incompatible CommandMapBridge was already installed: "
                     + bridge.getClass().getName());
         }
@@ -34,13 +33,8 @@ public final class CommandMaps {
                 && commandMapBridge.getClass().getName().contains(".platform.paper.");
     }
 
-    private static boolean isSpigotBridge(CommandMapBridge commandMapBridge) {
-        return commandMapBridge != null
-                && commandMapBridge.getClass().getName().contains(".platform.spigot.");
-    }
-
     /**
-     * Installs the Paper/Spigot {@link CommandMapBridge} before Vinject runs {@code @PostConstruct}, so dynamic
+     * Installs the Paper {@link CommandMapBridge} before Vinject runs {@code @PostConstruct}, so dynamic
      * command registration works while the {@code DependencyContainer} is still being built (ordering-safe for the
      * core plugin). Child plugins that shade this API into their own JAR should still use {@link #register}'s fallback
      * or depend on VortexCore with {@code provided} scope so only one {@code CommandMaps} class exists.
@@ -49,13 +43,16 @@ public final class CommandMaps {
      * @return {@code true} if a bridge is installed after this call (including if it was already installed)
      */
     public static boolean installEarlyIfAbsent(Class<?> pluginMainClass) {
+        return installEarlyIfAbsent(pluginMainClass, "net.vortexdevelopment.vortexcore");
+    }
+
+    public static boolean installEarlyIfAbsent(Class<?> pluginMainClass, String vortexCorePackage) {
         if (bridge != null) {
             return true;
         }
         String base = pluginMainClass.getPackageName();
         ClassLoader loader = pluginMainClass.getClassLoader();
-        boolean preferPaper = ServerProject.isServer(ServerProject.PAPER);
-        String[] candidates = bridgeCandidates(base, preferPaper);
+        String[] candidates = bridgeCandidates(base, vortexCorePackage);
         for (String name : candidates) {
             try {
                 Class<?> c = Class.forName(name, false, loader);
@@ -71,23 +68,14 @@ public final class CommandMaps {
             } catch (Throwable ignored) {
             }
         }
-        throw new IllegalStateException("Could not install a compatible CommandMapBridge for runtime "
-                + expectedPlatform(preferPaper));
+        throw new IllegalStateException("Could not install a compatible Paper CommandMapBridge for runtime "
+                + ServerProject.getServerProject());
     }
 
-    private static String[] bridgeCandidates(String base, boolean preferPaper) {
-        if (preferPaper) {
-            return new String[] {
-                    base + ".core.platform.paper.PaperCommandMapBridge",
-                    base + ".core.platform.spigot.SpigotCommandMapBridge",
-                    "net.vortexdevelopment.vortexcore.platform.paper.PaperCommandMapBridge",
-                    "net.vortexdevelopment.vortexcore.platform.spigot.SpigotCommandMapBridge"
-            };
-        }
-        return new String[] {
-                base + ".core.platform.spigot.SpigotCommandMapBridge",
+    private static String[] bridgeCandidates(String base, String vortexCorePackage) {
+        return new String[]{
+                vortexCorePackage + ".platform.paper.PaperCommandMapBridge",
                 base + ".core.platform.paper.PaperCommandMapBridge",
-                "net.vortexdevelopment.vortexcore.platform.spigot.SpigotCommandMapBridge",
                 "net.vortexdevelopment.vortexcore.platform.paper.PaperCommandMapBridge"
         };
     }
@@ -100,10 +88,9 @@ public final class CommandMaps {
             b = bridge;
         }
         if (b != null) {
-            boolean expectPaper = ServerProject.isServer(ServerProject.PAPER);
-            if (!isCompatiblePlatform(b, expectPaper)) {
+            if (!isCompatiblePlatform(b)) {
                 throw new IllegalStateException("Incorrect CommandMapBridge installed for runtime: expected "
-                        + expectedPlatform(expectPaper) + " but got " + b.getClass().getName());
+                        + "paper-compatible but got " + b.getClass().getName());
             }
             b.register(plugin, command);
             return;
@@ -165,11 +152,7 @@ public final class CommandMaps {
         return null;
     }
 
-    private static boolean isCompatiblePlatform(CommandMapBridge commandMapBridge, boolean expectPaper) {
-        return expectPaper ? isPaperBridge(commandMapBridge) : isSpigotBridge(commandMapBridge);
-    }
-
-    private static String expectedPlatform(boolean expectPaper) {
-        return expectPaper ? "paper" : "spigot";
+    private static boolean isCompatiblePlatform(CommandMapBridge commandMapBridge) {
+        return ServerProject.isPaperCompatible() && isPaperBridge(commandMapBridge);
     }
 }

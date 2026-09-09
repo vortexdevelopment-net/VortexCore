@@ -18,7 +18,7 @@ public class PaperCommandMapBridge implements CommandMapBridge {
 
     @PostConstruct
     public void registerBridge() {
-        if (!ServerProject.isServer(ServerProject.PAPER)) {
+        if (!ServerProject.isPaperCompatible()) {
             return;
         }
         CommandMaps.install(this);

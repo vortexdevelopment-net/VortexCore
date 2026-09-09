@@ -4,7 +4,6 @@ import org.bukkit.scheduler.BukkitTask;
 
 public class SchedulerTask {
 
-    private final Object task;
     private static Class<?> scheduledTaskClass;
 
     static {
@@ -14,6 +13,8 @@ public class SchedulerTask {
             scheduledTaskClass = null;
         }
     }
+
+    private final Object task;
 
     public SchedulerTask(Object task) {
         if (task == null) {

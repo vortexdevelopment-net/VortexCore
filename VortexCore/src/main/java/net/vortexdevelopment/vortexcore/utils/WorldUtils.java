@@ -3,7 +3,6 @@ package net.vortexdevelopment.vortexcore.utils;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import net.vortexdevelopment.vortexcore.config.Global;
-import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -30,8 +29,8 @@ public class WorldUtils {
      */
     public static boolean isLocationAtChunk(Location location, Chunk chunk) {
         return location.getWorld().equals(chunk.getWorld()) &&
-               location.getBlockX() >> 4 == chunk.getX() &&
-               location.getBlockZ() >> 4 == chunk.getZ();
+                location.getBlockX() >> 4 == chunk.getX() &&
+                location.getBlockZ() >> 4 == chunk.getZ();
     }
 
     /**
@@ -118,7 +117,7 @@ public class WorldUtils {
                 });
             }
         } else {
-            // Standard Spigot/Paper
+            // Standard Paper-compatible server
             Queue<BlockPlacement> queue = new LinkedList<>(placements);
 
             SchedulerUtils.runTask(plugin, new Runnable() {

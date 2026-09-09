@@ -14,7 +14,7 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 
 ## Features
 
-- Unified Paper and Spigot runtime support
+- Paper runtime support with automatic detection for Paper, Purpur, Leaf, Pufferfish, Folia, and future forks
 - Comprehensive plugin management system
 - Advanced configuration handling
 - Built-in command framework
@@ -29,7 +29,7 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 ## Requirements
 
 - Java 17 or higher
-- Java 17-compatible Paper or Spigot server
+- Java 17-compatible Paper server or supported Paper fork (Minecraft 1.18.2+)
 - Maven 3.6.0 or higher
 
 ## Installation
@@ -44,9 +44,18 @@ mvn clean install
 
 The build publishes one unified `VortexCore` artifact:
 
-- **`VortexCore`**: unified runtime artifact for both Paper and Spigot. It bundles both platform bridges and prefers Paper implementations when Paper APIs are available.
+- **`VortexCore`**: the runtime artifact for Paper-compatible servers. Bukkit and Spigot are detected and disabled with a clear startup message; unknown projects are allowed to use the Paper path so new forks can work before explicit detection is added.
 
-**Adventure on items and GUIs:** In code you still author with MiniMessage / `Component` via `AdventureUtils`. On Paper, names, lore, inventory titles, and `Component` messages use native Adventure Bukkit APIs. On Spigot, the same APIs are backed by **legacy section strings** (`§`); behavior should match for typical text.
+**Adventure on items and GUIs:** In code you author with MiniMessage / `Component` via `AdventureUtils`. Paper and supported Paper forks use the native Adventure Bukkit APIs.
+
+Every plugin extending `VortexPlugin` must declare its minimum supported Minecraft version. It must be `1.18.2` or newer:
+
+```java
+@Override
+protected KnownServerVersions getMinimumServerVersion() {
+    return KnownServerVersions.V1_18_2;
+}
+```
 
 Add the Vortexdevelopment repository to your `pom.xml`:
 
@@ -117,6 +126,7 @@ package org.example.myplugin;
 import net.vortexdevelopment.vinject.annotation.Root;
 import net.vortexdevelopment.vinject.annotation.TemplateDependency;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
 
 @Root(
         packageName = "org.example.myplugin",
@@ -127,6 +137,11 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
         }
 )
 public final class MyPlugin extends VortexPlugin {
+
+    @Override
+    protected KnownServerVersions getMinimumServerVersion() {
+        return KnownServerVersions.V1_18_2;
+    }
 
     @Override
     public void onPreComponentLoad() {

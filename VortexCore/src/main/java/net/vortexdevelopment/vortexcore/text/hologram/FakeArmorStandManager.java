@@ -46,12 +46,10 @@ final class FakeArmorStandManager extends HologramBackend {
     private final Plugin plugin;
     private final ProtocolManager protocolManager;
     private final Map<UUID, Session> sessions = new ConcurrentHashMap<>();
-    private int nextEntityId;
-    private int entityIdFloor;
-
     private final Method positionMoveRotationModifier;
     private final Method positionMoveRotationCreate;
-
+    private int nextEntityId;
+    private int entityIdFloor;
     private volatile boolean warnedSendFailure;
     private PacketAdapter packetListener;
 
@@ -72,6 +70,18 @@ final class FakeArmorStandManager extends HologramBackend {
         }
         this.positionMoveRotationModifier = modifier;
         this.positionMoveRotationCreate = create;
+    }
+
+    private static byte angle(float degrees) {
+        return (byte) Math.floor(degrees * 256.0f / 360.0f);
+    }
+
+    private static ChunkPosition chunkPosition(Hologram.HologramPacketSnapshot snapshot) {
+        return new ChunkPosition(
+                snapshot.worldId(),
+                snapshot.chunkX(),
+                snapshot.chunkZ()
+        );
     }
 
     @Override
@@ -231,7 +241,7 @@ final class FakeArmorStandManager extends HologramBackend {
             session.loadedChunks.add(new ChunkPosition(
                     session.worldId,
                     player.getLocation().getChunk().getX(),
-                player.getLocation().getChunk().getZ()
+                    player.getLocation().getChunk().getZ()
             ));
         }
         SchedulerUtils.runTaskLaterAsynchronously(plugin, () -> {
@@ -586,18 +596,6 @@ final class FakeArmorStandManager extends HologramBackend {
             entityIdFloor = (int) floor;
             System.setProperty(ENTITY_ID_CURSOR_PROPERTY, Integer.toString(entityIdFloor));
         }
-    }
-
-    private static byte angle(float degrees) {
-        return (byte) Math.floor(degrees * 256.0f / 360.0f);
-    }
-
-    private static ChunkPosition chunkPosition(Hologram.HologramPacketSnapshot snapshot) {
-        return new ChunkPosition(
-                snapshot.worldId(),
-                snapshot.chunkX(),
-                snapshot.chunkZ()
-        );
     }
 
     private static final class Session {

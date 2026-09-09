@@ -1,7 +1,7 @@
 package net.vortexdevelopment.vortexcore.compatibility.folia;
 
-import org.junit.Test;
 import io.papermc.paper.threadedregions.scheduler.ScheduledTask;
+import org.junit.Test;
 
 public class PrintExecutionStatesTest {
     @Test

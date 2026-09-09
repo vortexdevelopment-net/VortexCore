@@ -27,6 +27,18 @@ public enum CompatibleItemFlags {
         this.minimumVersion = minimumVersion;
     }
 
+    public static void applyAll(ItemMeta meta, CompatibleItemFlags... flags) {
+        for (CompatibleItemFlags flag : flags) {
+            flag.apply(meta);
+        }
+    }
+
+    public static void applyAll(ItemStack item, CompatibleItemFlags... flags) {
+        for (CompatibleItemFlags flag : flags) {
+            flag.apply(item);
+        }
+    }
+
     public boolean isSupported() {
         return ServerVersion.isAtLeastVersion(minimumVersion);
     }
@@ -39,17 +51,5 @@ public enum CompatibleItemFlags {
     public void apply(ItemStack item) {
         if (!isSupported()) return;
         item.addItemFlags(ItemFlag.valueOf(this.name()));
-    }
-
-    public static void applyAll(ItemMeta meta, CompatibleItemFlags... flags) {
-        for (CompatibleItemFlags flag : flags) {
-            flag.apply(meta);
-        }
-    }
-
-    public static void applyAll(ItemStack item, CompatibleItemFlags... flags) {
-        for (CompatibleItemFlags flag : flags) {
-            flag.apply(item);
-        }
     }
 }

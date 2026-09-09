@@ -25,34 +25,34 @@ import java.util.function.Consumer;
 
 /**
  * Inventory GUI. Titles and item names/lore go through {@link net.vortexdevelopment.vortexcore.text.AdventureUtils},
- * which uses {@link net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges} (Paper Component APIs vs Spigot legacy).
+ * which uses {@link net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges}.
  */
 public class Gui implements GuiHolder {
 
+    public static String BACK_BUTTON_NAME = "§cBack";
     @Getter
     private final UUID uuid = java.util.UUID.randomUUID();
-    @Getter private final int rows;
-
+    @Getter
+    private final int rows;
     private final Inventory inventory;
     private final List<GuiItem> items = new ArrayList<>();
-
-    @Getter private Consumer<InventoryClickEvent> onGlobalClick;
-    @Getter private Consumer<InventoryClickEvent> onTopClick;
-    @Getter private Consumer<InventoryClickEvent> onBottomClick;
-
-    @Getter private Consumer<InventoryDragEvent> onGlobalDrag;
-    @Getter private Consumer<InventoryDragEvent> onTopDrag;
-    @Getter private Consumer<InventoryDragEvent> onBottomDrag;
-
-    @Getter private Consumer<InventoryCloseEvent> onClose;
-
     private final List<Player> openers = new ArrayList<>();
-
+    @Getter
+    private Consumer<InventoryClickEvent> onGlobalClick;
+    @Getter
+    private Consumer<InventoryClickEvent> onTopClick;
+    @Getter
+    private Consumer<InventoryClickEvent> onBottomClick;
+    @Getter
+    private Consumer<InventoryDragEvent> onGlobalDrag;
+    @Getter
+    private Consumer<InventoryDragEvent> onTopDrag;
+    @Getter
+    private Consumer<InventoryDragEvent> onBottomDrag;
+    @Getter
+    private Consumer<InventoryCloseEvent> onClose;
     private boolean cancelClick = true;
-
     private Gui previusGui = null;
-
-    public static String BACK_BUTTON_NAME = "§cBack";
 
     public Gui(String name, int rows) {
         this.rows = rows;
@@ -116,10 +116,10 @@ public class Gui implements GuiHolder {
     /**
      * Adds an item to the gui
      *
-     * @param item the item to add
+     * @param item  the item to add
      * @param event the event to run when the item is clicked
-     * @param x the x coordinate starting from 0
-     * @param y the y coordinate starting from 0
+     * @param x     the x coordinate starting from 0
+     * @param y     the y coordinate starting from 0
      * @return the gui
      */
     public Gui addItem(ItemStack item, ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> event, int x, int y) {
@@ -130,8 +130,8 @@ public class Gui implements GuiHolder {
      * Adds a static item to the gui
      *
      * @param item the item to add
-     * @param x the x coordinate starting from 0
-     * @param y the y coordinate starting from 0
+     * @param x    the x coordinate starting from 0
+     * @param y    the y coordinate starting from 0
      * @return the gui
      */
     public Gui addItem(ItemStack item, int x, int y) {
@@ -142,9 +142,9 @@ public class Gui implements GuiHolder {
      * Adds a dynamic item to the gui
      *
      * @param itemStackBuilder the item builder, type must be changed to non-air
-     * @param event the event to run when the item is clicked
-     * @param x the x coordinate starting from 0
-     * @param y the y coordinate starting from 0
+     * @param event            the event to run when the item is clicked
+     * @param x                the x coordinate starting from 0
+     * @param y                the y coordinate starting from 0
      * @return the gui
      */
     public Gui addItem(Consumer<ItemStackBuilder> itemStackBuilder, ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> event, int x, int y) {

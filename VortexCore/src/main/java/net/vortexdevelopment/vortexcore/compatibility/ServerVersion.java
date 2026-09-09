@@ -1,8 +1,9 @@
 package net.vortexdevelopment.vortexcore.compatibility;
 
+import org.bukkit.Bukkit;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.bukkit.Bukkit;
 
 public class ServerVersion {
 
@@ -17,24 +18,23 @@ public class ServerVersion {
     }
 
     /**
-     * Paper exposes {@code Bukkit.getMinecraftVersion()}; Spigot does not. Using the method
-     * directly causes {@link NoSuchMethodError} on Spigot at class-init time when compiled
-     * against the Paper API, so we resolve via reflection with fallbacks.
+     * Resolves the Minecraft version without directly linking to Paper-only API
+     * methods, keeping the version check safe during early plugin startup.
      */
     private static String resolveMinecraftVersion() {
         try {
             return (String) Bukkit.class.getMethod("getMinecraftVersion").invoke(null);
         } catch (ReflectiveOperationException ignored) {
-            // Spigot and older Paper
+            // Older Paper implementations do not expose this method.
         }
         String bukkitVersion = Bukkit.getBukkitVersion();
-        int r = bukkitVersion.indexOf("-R");
-        if (r > 0) {
-            return bukkitVersion.substring(0, r);
+        int releaseMarker = bukkitVersion.indexOf("-R");
+        if (releaseMarker > 0) {
+            return bukkitVersion.substring(0, releaseMarker);
         }
-        Matcher m = MC_VERSION_IN_PARENS.matcher(Bukkit.getVersion());
-        if (m.find()) {
-            return m.group(1);
+        Matcher matcher = MC_VERSION_IN_PARENS.matcher(Bukkit.getVersion());
+        if (matcher.find()) {
+            return matcher.group(1);
         }
         return bukkitVersion;
     }
@@ -45,25 +45,39 @@ public class ServerVersion {
                 return version;
             }
         }
-        return null; // Unknown version
+        return null;
     }
 
     public static boolean isAtLeastVersion(String version) {
-        String[] currentParts = SERVER_VERSION.split("\\.");
-        String[] targetParts = version.split("\\.");
+        return isVersionAtLeast(SERVER_VERSION, version);
+    }
 
-        int length = Math.max(currentParts.length, targetParts.length);
+    public static boolean isVersionAtLeast(String version, String minimumVersion) {
+        return compareVersions(version, minimumVersion) >= 0;
+    }
+
+    public static boolean isVersionAtLeast(
+            KnownServerVersions version,
+            KnownServerVersions minimumVersion) {
+        return isVersionAtLeast(version.getVersionString(), minimumVersion.getVersionString());
+    }
+
+    private static int compareVersions(String first, String second) {
+        if (first == null || second == null || !first.matches("[0-9]+(?:\\.[0-9]+)*")
+                || !second.matches("[0-9]+(?:\\.[0-9]+)*")) {
+            throw new IllegalArgumentException("Invalid Minecraft version: " + first + " / " + second);
+        }
+        String[] firstParts = first.split("\\.");
+        String[] secondParts = second.split("\\.");
+        int length = Math.max(firstParts.length, secondParts.length);
         for (int i = 0; i < length; i++) {
-            int currentPart = i < currentParts.length ? Integer.parseInt(currentParts[i]) : 0;
-            int targetPart = i < targetParts.length ? Integer.parseInt(targetParts[i]) : 0;
-
-            if (currentPart < targetPart) {
-                return false;
-            } else if (currentPart > targetPart) {
-                return true;
+            int firstPart = i < firstParts.length ? Integer.parseInt(firstParts[i]) : 0;
+            int secondPart = i < secondParts.length ? Integer.parseInt(secondParts[i]) : 0;
+            if (firstPart != secondPart) {
+                return Integer.compare(firstPart, secondPart);
             }
         }
-        return true; // Versions are equal
+        return 0;
     }
 
     public static boolean isAtLeastVersion(KnownServerVersions version) {
@@ -71,12 +85,7 @@ public class ServerVersion {
     }
 
     public static boolean isCurrentVersionFullySupported() {
-        for (KnownServerVersions version : KnownServerVersions.values()) {
-            if (SERVER_VERSION.equals(version.getVersionString())) {
-                return true;
-            }
-        }
-        return false;
+        return CURRENT_VERSION != null;
     }
 
     public static boolean isItemComponentsAvailable() {
@@ -84,7 +93,7 @@ public class ServerVersion {
     }
 
     /**
-     * {@code minecraft:tooltip_style} data component (Paper item stacks) is available from 1.21.2+.
+     * {@code minecraft:tooltip_style} data component is available from 1.21.2+.
      */
     public static boolean isTooltipStyleSupported() {
         return isAtLeastVersion("1.21.2");
@@ -92,5 +101,9 @@ public class ServerVersion {
 
     public static KnownServerVersions getCurrentVersion() {
         return CURRENT_VERSION;
+    }
+
+    public static String getVersionString() {
+        return SERVER_VERSION;
     }
 }

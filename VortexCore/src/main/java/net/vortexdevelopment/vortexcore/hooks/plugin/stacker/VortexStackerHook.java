@@ -2,7 +2,7 @@ package net.vortexdevelopment.vortexcore.hooks.plugin.stacker;
 
 import net.vortexdevelopment.vinject.annotation.DependsOn;
 import net.vortexdevelopment.vinject.annotation.component.Element;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
+import net.vortexdevelopment.vortexcore.hooks.types.StackerHook;
 import net.vortexdevelopment.vortexstacker.api.VortexStackerApi;
 import net.vortexdevelopment.vortexstacker.api.modules.stack.item.StackedItem;
 import net.vortexdevelopment.vortexstacker.api.modules.stack.item.StackedItemManager;

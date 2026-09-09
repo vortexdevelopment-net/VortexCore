@@ -8,9 +8,9 @@ import java.util.List;
 /**
  * Configuration for one displayed scoreboard line.
  *
- * @param text line text, optionally containing an animation token
- * @param frames inline animation frames for legacy configuration layouts
- * @param animation named animation to play
+ * @param text        line text, optionally containing an animation token
+ * @param frames      inline animation frames for legacy configuration layouts
+ * @param animation   named animation to play
  * @param updateTicks line refresh interval, or zero for initial render only
  */
 public record ScoreboardLineDefinition(

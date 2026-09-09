@@ -1,6 +1,5 @@
 package net.vortexdevelopment.vortexcore.config;
 
-import net.vortexdevelopment.vinject.annotation.component.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
@@ -17,6 +16,14 @@ public class Global implements ReloadHook {
         onReload();
     }
 
+    public static <T> T isFeatureEnabled(String feature, boolean defaultValue, Class<T> type) {
+        return (T) config.get(feature, false);
+    }
+
+    public static int getMaxBlocksPerTick() {
+        return config != null ? config.getInt("Settings.Max Blocks Per Tick", 100) : 100;
+    }
+
     @Override
     public void onReload() {
         File file = new File(VortexPlugin.getInstance().getDataFolder(), "global.yml");
@@ -25,13 +32,5 @@ public class Global implements ReloadHook {
         }
 
         config = YamlConfiguration.loadConfiguration(file);
-    }
-
-    public static <T> T isFeatureEnabled(String feature, boolean defaultValue, Class<T> type) {
-        return (T) config.get(feature, false);
-    }
-
-    public static int getMaxBlocksPerTick() {
-        return config != null ? config.getInt("Settings.Max Blocks Per Tick", 100) : 100;
     }
 }

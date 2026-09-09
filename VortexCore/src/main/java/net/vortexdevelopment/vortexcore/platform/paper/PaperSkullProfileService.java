@@ -21,7 +21,7 @@ public class PaperSkullProfileService implements SkullProfileService {
 
     @PostConstruct
     public void registerSkullProfile() {
-        if (!ServerProject.isServer(ServerProject.PAPER)) {
+        if (!ServerProject.isPaperCompatible()) {
             return;
         }
         SkullProfiles.install(this);

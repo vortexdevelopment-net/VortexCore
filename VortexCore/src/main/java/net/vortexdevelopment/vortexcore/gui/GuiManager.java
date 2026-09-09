@@ -1,6 +1,5 @@
 package net.vortexdevelopment.vortexcore.gui;
 
-import net.vortexdevelopment.vortexcore.VortexPlugin;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -66,6 +65,7 @@ public class GuiManager {
 
     /**
      * For compatibility with older servers, we need to use reflection to get the top inventory because they changed the inventory view class to an interface.
+     *
      * @param player The player to get the top inventory of.
      * @return The top inventory of the player, or null if the player is not open.
      */

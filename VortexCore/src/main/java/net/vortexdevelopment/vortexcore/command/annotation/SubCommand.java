@@ -20,9 +20,9 @@ import java.lang.annotation.Target;
  * Examples:
  * <pre>{@code
  * @SubCommand("give {player} {item} {amount=1}")
- * public void giveItem(@Sender CommandSender sender, 
- *                      @Param("player") Player target, 
- *                      @Param("item") String item, 
+ * public void giveItem(@Sender CommandSender sender,
+ *                      @Param("player") Player target,
+ *                      @Param("item") String item,
  *                      @Param("amount") int amount) {
  *     // Handles: /command give PlayerName diamond 5
  *     // or: /command give PlayerName diamond (amount defaults to 1)
@@ -49,7 +49,7 @@ public @interface SubCommand {
      * @return The command pattern string
      */
     String value();
-    
+
     /**
      * Aliases for the command pattern.
      * Each alias follows the same pattern format as the main command.

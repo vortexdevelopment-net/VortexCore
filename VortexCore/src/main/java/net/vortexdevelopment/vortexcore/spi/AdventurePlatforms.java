@@ -1,7 +1,7 @@
 package net.vortexdevelopment.vortexcore.spi;
 
 /**
- * Holds the active {@link AdventurePlatform}; defaults to reflection-based bridging for Paper and Spigot.
+ * Holds the active {@link AdventurePlatform}; defaults to reflection-based Paper bridging.
  */
 public final class AdventurePlatforms {
 

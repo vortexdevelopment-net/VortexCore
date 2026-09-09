@@ -5,7 +5,6 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.reflect.accessors.Accessors;
-import com.comphenix.protocol.reflect.accessors.ConstructorAccessor;
 import com.comphenix.protocol.reflect.accessors.FieldAccessor;
 import com.comphenix.protocol.utility.MinecraftReflection;
 import com.comphenix.protocol.wrappers.BukkitConverters;
@@ -16,15 +15,21 @@ import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Utility class for sending fake advancement toasts to players via ProtocolLib.
@@ -34,7 +39,7 @@ import java.util.*;
 public class AdvancementUtil {
 
     private static final ProtocolManager protocolManager = ProtocolLibrary.getProtocolManager();
-
+    private static final boolean IS_1_20_2_PLUS = ServerVersion.isAtLeastVersion("1.20.2");
     private static Constructor<?> displayInfoConstructor;
     private static Constructor<?> advancementConstructor;
     private static Constructor<?> advancementHolderConstructor;
@@ -47,19 +52,11 @@ public class AdvancementUtil {
     private static Class<?> criterionProgressClass;
     private static Method criterionProgressGrantMethod;
     private static Object impossibleCriterion;
-    
     private static FieldAccessor criteriaFieldAccessor;
-    
     private static Object frameTypeTask;
     private static Object frameTypeGoal;
     private static Object frameTypeChallenge;
-
     private static boolean isInitialized = false;
-    private static final boolean IS_1_20_2_PLUS = ServerVersion.isAtLeastVersion("1.20.2");
-
-    public static boolean isAvailable() {
-        return isInitialized;
-    }
 
     static {
         List<String> missingClasses = new ArrayList<>();
@@ -118,10 +115,10 @@ public class AdvancementUtil {
                 // In 1.21+, ResourceLocation is a record and uses static factory methods
                 for (Method m : resourceLocationClass.getDeclaredMethods()) {
                     if (java.lang.reflect.Modifier.isStatic(m.getModifiers()) &&
-                        m.getReturnType() == resourceLocationClass &&
-                        m.getParameterCount() == 2 &&
-                        m.getParameterTypes()[0] == String.class &&
-                        m.getParameterTypes()[1] == String.class) {
+                            m.getReturnType() == resourceLocationClass &&
+                            m.getParameterCount() == 2 &&
+                            m.getParameterTypes()[0] == String.class &&
+                            m.getParameterTypes()[1] == String.class) {
                         resourceLocationFactory = m;
                         break;
                     }
@@ -148,9 +145,9 @@ public class AdvancementUtil {
                 } else {
                     missingClasses.add("AdvancementRequirements");
                 }
-                
+
                 if (!missingClasses.isEmpty()) {
-                   throw new ClassNotFoundException("Failed to find 1.20.2+ NMS classes: " + String.join(", ", missingClasses));
+                    throw new ClassNotFoundException("Failed to find 1.20.2+ NMS classes: " + String.join(", ", missingClasses));
                 }
 
                 // DisplayInfo Record (1.20.2+): background is Optional
@@ -187,7 +184,8 @@ public class AdvancementUtil {
                 } catch (Exception e) {
                     try {
                         emptyRewards = advancementRewardsClass.getField("a").get(null);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
 
                 Class<?> progressClass = getNMSClass("net.minecraft.advancements.AdvancementProgress", "advancements.AdvancementProgress");
@@ -195,7 +193,8 @@ public class AdvancementUtil {
                     try {
                         advancementProgressConstructor = progressClass.getConstructor();
                         criteriaFieldAccessor = Accessors.getFieldAccessor(progressClass, Map.class, true);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
 
                 criterionClass = getNMSClass("net.minecraft.advancements.Criterion", "advancements.Criterion");
@@ -206,7 +205,8 @@ public class AdvancementUtil {
                     } catch (NoSuchMethodException e) {
                         try {
                             criterionProgressGrantMethod = criterionProgressClass.getMethod("b"); // Possible obfuscated name
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
 
@@ -215,16 +215,19 @@ public class AdvancementUtil {
                     try {
                         Class<?> triggersClass = getNMSClass("net.minecraft.advancements.CriteriaTriggers", "advancements.CriteriaTriggers");
                         Class<?> impossibleTriggerClass = getNMSClass("net.minecraft.advancements.critereon.ImpossibleTrigger", "advancements.critereon.ImpossibleTrigger");
-                        
+
                         if (triggersClass != null && impossibleTriggerClass != null) {
                             // Find IMPOSSIBLE field
                             Object trig = null;
-                            try { trig = triggersClass.getField("IMPOSSIBLE").get(null); }
-                            catch (Exception e) {
-                                try { trig = triggersClass.getField("a").get(null); }
-                                catch (Exception ignored) {}
+                            try {
+                                trig = triggersClass.getField("IMPOSSIBLE").get(null);
+                            } catch (Exception e) {
+                                try {
+                                    trig = triggersClass.getField("a").get(null);
+                                } catch (Exception ignored) {
+                                }
                             }
-                            
+
                             if (trig != null) {
                                 Constructor<?> critCons = null;
                                 for (Constructor<?> c : criterionClass.getConstructors()) {
@@ -233,7 +236,7 @@ public class AdvancementUtil {
                                         break;
                                     }
                                 }
-                                
+
                                 if (critCons != null) {
                                     // Need an instance of ImpossibleTrigger.TriggerInstance
                                     // In many versions it's a nested class 'a' or similar.
@@ -243,17 +246,19 @@ public class AdvancementUtil {
                                             try {
                                                 inst = inner.getConstructor().newInstance();
                                                 break;
-                                            } catch (Exception ignored) {}
+                                            } catch (Exception ignored) {
+                                            }
                                         }
                                     }
-                                    
+
                                     if (inst != null) {
                                         impossibleCriterion = critCons.newInstance(trig, inst);
                                     }
                                 }
                             }
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
             } else {
                 // Legacy DisplayInfo
@@ -307,6 +312,10 @@ public class AdvancementUtil {
         }
     }
 
+    public static boolean isAvailable() {
+        return isInitialized;
+    }
+
     private static void logDebugInfo(Class<?> clazz, String context) {
         if (VortexPlugin.getInstance() == null) return;
         var logger = VortexPlugin.getInstance().getLogger();
@@ -330,7 +339,8 @@ public class AdvancementUtil {
                 if (clazz != null) return clazz;
                 // Fallback to manual Class.forName
                 return Class.forName(name);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
         return null;
     }
@@ -447,14 +457,14 @@ public class AdvancementUtil {
                     );
                 } catch (IllegalArgumentException e) {
                     // Try without Optional for background (some versions/mappings might vary)
-                     displayInfo = displayInfoConstructor.newInstance(
+                    displayInfo = displayInfoConstructor.newInstance(
                             nmsIcon, nmsTitle, nmsDesc, null, nmsFrameType, true, false, false
                     );
                 }
 
                 Object requirements = null;
                 Map<String, Object> criteriaMap = new HashMap<>();
-                
+
                 // Add a dummy criterion to make it "earnable"
                 if (impossibleCriterion != null) {
                     criteriaMap.put("c", impossibleCriterion);
@@ -471,7 +481,8 @@ public class AdvancementUtil {
                         if (critCons != null) {
                             criteriaMap.put("c", critCons.newInstance(null, null));
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
 
                 if (advancementRequirementsConstructor != null) {
@@ -482,10 +493,11 @@ public class AdvancementUtil {
                     } catch (Exception e) {
                         try {
                             requirements = advancementRequirementsConstructor.newInstance(Collections.emptyList());
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
-                
+
                 if (advancementConstructor.getParameterCount() == 6) {
                     advancement = advancementConstructor.newInstance(
                             Optional.empty(), Optional.of(displayInfo), emptyRewards, criteriaMap, requirements, false
@@ -503,19 +515,19 @@ public class AdvancementUtil {
                 if (packet.getBooleans().size() > 1) {
                     packet.getBooleans().write(1, true); // show toast (1.21.11+)
                 }
-                
+
                 // 1.20.2+ Fields: List<AdvancementHolder> added, Set<ResourceLocation> removed, Map<ResourceLocation, AdvancementProgress> progress
                 packet.getModifier().withType(List.class).write(0, Collections.singletonList(advancementHolder));
                 packet.getModifier().withType(Set.class).write(0, new HashSet<>());
-                
+
                 Map<Object, Object> progressMap = new HashMap<>();
                 if (advancementProgressConstructor != null) {
                     try {
                         Object progress = advancementProgressConstructor.newInstance();
-                        
+
                         if (criteriaFieldAccessor != null) {
                             Map<String, Object> progressCriteria = (Map<String, Object>) criteriaFieldAccessor.get(progress);
-                            
+
                             if (criterionProgressClass != null) {
                                 Object cp = criterionProgressClass.getConstructor().newInstance();
                                 if (criterionProgressGrantMethod != null) {
@@ -525,17 +537,18 @@ public class AdvancementUtil {
                             }
                         } else {
                         }
-                        
+
                         progressMap.put(key, progress);
                     } catch (Exception e) {
                         // Fallback: minimal progress
                         try {
                             progressMap.put(key, advancementProgressConstructor.newInstance());
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
                 packet.getModifier().withType(Map.class).write(0, progressMap);
-                
+
                 protocolManager.sendServerPacket(player, packet);
 
             } else {
@@ -553,7 +566,7 @@ public class AdvancementUtil {
                 Map<Object, Object> advancementMap = new HashMap<>();
                 advancementMap.put(key, advancement);
                 packet.getModifier().withType(Map.class).write(0, advancementMap);
-                
+
                 // Also need to send progress in legacy versions to show toast
                 Map<Object, Object> progressMap = new HashMap<>();
                 // Simplified legacy progress could be added here if needed

@@ -2,9 +2,9 @@ package net.vortexdevelopment.vortexcore.scoreboard;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Collections;
 
 /**
  * Parsed scoreboard configuration containing placeholder intervals, animations, and layouts.

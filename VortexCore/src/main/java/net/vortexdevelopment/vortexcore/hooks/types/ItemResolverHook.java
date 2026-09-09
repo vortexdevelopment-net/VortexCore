@@ -1,4 +1,4 @@
-package net.vortexdevelopment.vortexcore.hooks.internal.types;
+package net.vortexdevelopment.vortexcore.hooks.types;
 
 import net.vortexdevelopment.vortexcore.hooks.plugin.PluginHook;
 import org.bukkit.inventory.ItemStack;

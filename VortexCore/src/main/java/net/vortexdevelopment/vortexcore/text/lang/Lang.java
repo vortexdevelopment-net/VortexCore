@@ -4,12 +4,9 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TranslatableComponent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.md_5.bungee.api.chat.ComponentBuilder;
 import net.md_5.bungee.api.chat.TextComponent;
-import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vinject.config.yaml.YamlConfig;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
-import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
 import net.vortexdevelopment.vortexcore.gui.Gui;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
@@ -26,7 +23,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,11 +36,15 @@ import java.util.stream.Stream;
 @RegisterReloadHook
 public class Lang implements ReloadHook {
 
+    public static List<MiniMessagePlaceholder> staticPlaceholders = new ArrayList<>();
     private static boolean initialized = false;
     private static boolean warnedNotInitialized = false;
     private static YamlConfig lang;
-    public static List<MiniMessagePlaceholder> staticPlaceholders = new ArrayList<>();
     private static volatile long staticPlaceholdersRevision;
+
+    private Lang() {
+        onReload();
+    }
 
     /**
      * Changes whenever the language-level MiniMessage placeholders are rebuilt.
@@ -53,10 +53,6 @@ public class Lang implements ReloadHook {
      */
     public static long getStaticPlaceholdersRevision() {
         return staticPlaceholdersRevision;
-    }
-
-    private Lang() {
-        onReload();
     }
 
     public static boolean isInitialized() {
@@ -73,6 +69,7 @@ public class Lang implements ReloadHook {
 
     /**
      * Adds static placeholders to the list of placeholders.
+     *
      * @param placeholders The placeholders to expand.
      * @return A list of placeholders including the static ones.
      */
@@ -293,11 +290,6 @@ public class Lang implements ReloadHook {
         return new MiniMessagePlaceholder[0];
     }
 
-    @Override
-    public void onReload() {
-        loadLanguageFile();
-    }
-
     private static void loadLanguageFile() {
         try {
             staticPlaceholders.clear();
@@ -407,6 +399,7 @@ public class Lang implements ReloadHook {
 
     /**
      * Translates a client key (e.g., item.minecraft.diamond_sword) to a Component for the client's language.
+     *
      * @param key The client key to translate.
      * @return The translated Component.
      */
@@ -416,6 +409,7 @@ public class Lang implements ReloadHook {
 
     /**
      * Translates a client key (e.g., item.minecraft.diamond_sword) to a MiniMessage formatted string for the client's language.
+     *
      * @param key The client key to translate.
      * @return The translated MiniMessage string.
      */
@@ -425,15 +419,13 @@ public class Lang implements ReloadHook {
 
     /**
      * Translates a Material to its item name in the client's language.
+     *
      * @param material The Material to translate.
      * @return The translated item name.
      */
     public static String translateItemName(Material material) {
         if (material == null) {
             return "Unknown";
-        }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKeyTo(material.getTranslationKey());
         }
         return translateClientKeyTo(material.translationKey());
     }
@@ -442,14 +434,12 @@ public class Lang implements ReloadHook {
         if (material == null) {
             return Component.text("Unknown");
         }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKey(material.getTranslationKey());
-        }
         return translateClientKey(material.translationKey());
     }
 
     /**
      * Translates an EntityType to its mob name in the client's language.
+     *
      * @param entityType The EntityType to translate.
      * @return The translated mob name.
      */
@@ -457,34 +447,25 @@ public class Lang implements ReloadHook {
         if (entityType == null) {
             return "Unknown";
         }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKeyTo(entityType.getTranslationKey());
-        } else {
-            return translateClientKeyTo(entityType.translationKey());
-        }
+        return translateClientKeyTo(entityType.translationKey());
     }
 
     public static Component translateMobNameComponent(EntityType entityType) {
         if (entityType == null) {
             return Component.text("Unknown");
         }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKey(entityType.getTranslationKey());
-        }
         return translateClientKey(entityType.translationKey());
     }
 
     /**
      * Translates a Material to its block name in the client's language.
+     *
      * @param material The Material to translate.
      * @return The translated block name.
      */
     public static String translateBlockName(Material material) {
         if (material == null) {
             return "Unknown";
-        }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKeyTo(material.getTranslationKey());
         }
         return translateClientKeyTo(material.translationKey());
     }
@@ -493,9 +474,6 @@ public class Lang implements ReloadHook {
         if (material == null) {
             return Component.text("Unknown");
         }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return translateClientKey(material.getTranslationKey());
-        }
         return translateClientKey(material.translationKey());
     }
 
@@ -503,9 +481,11 @@ public class Lang implements ReloadHook {
         if (material == null) {
             return new TextComponent("Unknown");
         }
-        if (ServerProject.isServer(ServerProject.SPIGOT)) {
-            return new TextComponent(translateClientKeyTo(material.getTranslationKey()));
-        }
         return new TextComponent(translateClientKeyTo(material.translationKey()));
+    }
+
+    @Override
+    public void onReload() {
+        loadLanguageFile();
     }
 }

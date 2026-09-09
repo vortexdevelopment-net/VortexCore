@@ -35,32 +35,24 @@ public class PaginatedGui implements GuiHolder {
     private final int rows;
     private final Inventory inventory;
     private final List<Player> openers = new ArrayList<>();
-
+    private final Map<Integer, List<GuiItem>> pages = new LinkedHashMap<>();
+    // Static items that don't change with pagination
+    private final List<GuiItem> staticItems = new ArrayList<>();
+    private final Component baseTitle;
     private @Getter Consumer<InventoryClickEvent> onGlobalClick;
     private @Getter Consumer<InventoryClickEvent> onTopClick;
     private @Getter Consumer<InventoryClickEvent> onBottomClick;
-
     private @Getter Consumer<InventoryDragEvent> onGlobalDrag;
     private @Getter Consumer<InventoryDragEvent> onTopDrag;
     private @Getter Consumer<InventoryDragEvent> onBottomDrag;
-
     private @Getter Consumer<InventoryCloseEvent> onClose;
-
     private boolean cancelClick = true;
     private Gui previousGui = null;
-
-    private final Map<Integer, List<GuiItem>> pages = new LinkedHashMap<>();
     private int currentPage = 0;
     private int itemsPerPage;
-
-    // Static items that don't change with pagination
-    private final List<GuiItem> staticItems = new ArrayList<>();
-
     // Button customization
     private Supplier<ItemStack> previousButtonSupplier;
     private Supplier<ItemStack> nextButtonSupplier;
-    private final Component baseTitle;
-
     // Page indicator
     private Supplier<ItemStack> pageIndicatorSupplier;
     private int pageIndicatorSlot = -1;
@@ -168,10 +160,10 @@ public class PaginatedGui implements GuiHolder {
     /**
      * Adds a static item at specific coordinates that won't be affected by pagination
      *
-     * @param item the item to add
+     * @param item  the item to add
      * @param event the click handler
-     * @param x the x position (0-8)
-     * @param y the y position (0-rows)
+     * @param x     the x position (0-8)
+     * @param y     the y position (0-rows)
      * @return this PaginatedGui instance
      */
     public PaginatedGui addStaticItem(ItemStack item, ClickConsumer<InventoryClickEvent, GuiHolder, GuiItem> event, int x, int y) {
@@ -182,8 +174,8 @@ public class PaginatedGui implements GuiHolder {
      * Adds a static item at specific coordinates that won't be affected by pagination
      *
      * @param item the item to add
-     * @param x the x position (0-8)
-     * @param y the y position (0-rows)
+     * @param x    the x position (0-8)
+     * @param y    the y position (0-rows)
      * @return this PaginatedGui instance
      */
     public PaginatedGui addStaticItem(ItemStack item, int x, int y) {

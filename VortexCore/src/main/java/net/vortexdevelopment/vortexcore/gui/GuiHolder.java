@@ -18,35 +18,36 @@ public interface GuiHolder extends InventoryHolder {
 
     Consumer<InventoryDragEvent> getOnGlobalDrag();
 
-    Consumer<InventoryDragEvent> getOnTopDrag();
-
-    Consumer<InventoryDragEvent> getOnBottomDrag();
-
-    Consumer<InventoryClickEvent> getOnGlobalClick();
-
-    Consumer<InventoryClickEvent> getOnTopClick();
-
-    Consumer<InventoryClickEvent> getOnBottomClick();
-
-    Consumer<InventoryCloseEvent> getOnClose();
-
     GuiHolder setOnGlobalDrag(Consumer<InventoryDragEvent> onGlobalDrag);
+
+    Consumer<InventoryDragEvent> getOnTopDrag();
 
     GuiHolder setOnTopDrag(Consumer<InventoryDragEvent> onTopDrag);
 
+    Consumer<InventoryDragEvent> getOnBottomDrag();
+
     GuiHolder setOnBottomDrag(Consumer<InventoryDragEvent> onBottomDrag);
+
+    Consumer<InventoryClickEvent> getOnGlobalClick();
 
     GuiHolder setOnGlobalClick(Consumer<InventoryClickEvent> onGlobalClick);
 
+    Consumer<InventoryClickEvent> getOnTopClick();
+
     GuiHolder setOnTopClick(Consumer<InventoryClickEvent> onTopClick);
 
+    Consumer<InventoryClickEvent> getOnBottomClick();
+
     GuiHolder setOnBottomClick(Consumer<InventoryClickEvent> onBottomClick);
+
+    Consumer<InventoryCloseEvent> getOnClose();
 
     GuiHolder setOnClose(Consumer<InventoryCloseEvent> onClose);
 
     boolean cancelClick();
 
-    @Nullable GuiItem getItem(int slot);
+    @Nullable
+    GuiItem getItem(int slot);
 
     @NotNull List<GuiItem> getItems();
 

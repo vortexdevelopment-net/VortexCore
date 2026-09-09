@@ -5,7 +5,7 @@ import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
 import java.lang.reflect.Method;
 
 /**
- * Active {@link SkullProfileService} for the current artifact (Paper or Spigot).
+ * Active {@link SkullProfileService} for the Paper-compatible runtime.
  */
 public final class SkullProfiles {
 
@@ -15,12 +15,11 @@ public final class SkullProfiles {
     }
 
     public static void install(SkullProfileService skullProfileService) {
-        boolean expectPaper = ServerProject.isServer(ServerProject.PAPER);
-        if (!isCompatiblePlatform(skullProfileService, expectPaper)) {
+        if (!isCompatiblePlatform(skullProfileService)) {
             throw new IllegalStateException("Incorrect SkullProfileService for runtime: expected "
-                    + expectedPlatform(expectPaper) + " but got " + skullProfileService.getClass().getName());
+                    + "paper-compatible but got " + skullProfileService.getClass().getName());
         }
-        if (service != null && !isCompatiblePlatform(service, expectPaper)) {
+        if (service != null && !isCompatiblePlatform(service)) {
             throw new IllegalStateException("An incompatible SkullProfileService was already installed: "
                     + service.getClass().getName());
         }
@@ -32,30 +31,27 @@ public final class SkullProfiles {
                 && skullProfileService.getClass().getName().contains(".platform.paper.");
     }
 
-    private static boolean isSpigotService(SkullProfileService skullProfileService) {
-        return skullProfileService != null
-                && skullProfileService.getClass().getName().contains(".platform.spigot.");
-    }
-
     /**
-     * Installs the Paper/Spigot {@link SkullProfileService} before Vinject runs {@code @PostConstruct}, so YAML
+     * Installs the Paper {@link SkullProfileService} before Vinject runs {@code @PostConstruct}, so YAML
      * config mapping (e.g. {@code ItemStack} / skull deserialization in {@code ItemStackSerializer}) can use
      * {@link #get()} while the {@code DependencyContainer} is still being constructed.
      * <p>
-     * Tries, in order: {@code {pluginMainPackage}.core.platform.spigot.SpigotSkullProfileService},
-     * {@code {pluginMainPackage}.core.platform.paper.PaperSkullProfileService} (shaded core), then unshaded
-     * {@code net.vortexdevelopment.vortexcore} platform classes.
+     * Tries the relocated VortexCore package, the conventional plugin core
+     * package, and finally the unshaded VortexCore package.
      *
      * @return {@code true} if a service is installed after this call (including if already installed)
      */
     public static boolean installEarlyIfAbsent(Class<?> pluginMainClass) {
+        return installEarlyIfAbsent(pluginMainClass, "net.vortexdevelopment.vortexcore");
+    }
+
+    public static boolean installEarlyIfAbsent(Class<?> pluginMainClass, String vortexCorePackage) {
         if (service != null) {
             return true;
         }
         String base = pluginMainClass.getPackageName();
         ClassLoader loader = pluginMainClass.getClassLoader();
-        boolean preferPaper = ServerProject.isServer(ServerProject.PAPER);
-        String[] candidates = serviceCandidates(base, preferPaper);
+        String[] candidates = serviceCandidates(base, vortexCorePackage);
         for (String name : candidates) {
             try {
                 Class<?> c = Class.forName(name, false, loader);
@@ -71,23 +67,14 @@ public final class SkullProfiles {
             } catch (Throwable ignored) {
             }
         }
-        throw new IllegalStateException("Could not install a compatible SkullProfileService for runtime "
-                + expectedPlatform(preferPaper));
+        throw new IllegalStateException("Could not install a compatible Paper SkullProfileService for runtime "
+                + ServerProject.getServerProject());
     }
 
-    private static String[] serviceCandidates(String base, boolean preferPaper) {
-        if (preferPaper) {
-            return new String[] {
-                    base + ".core.platform.paper.PaperSkullProfileService",
-                    base + ".core.platform.spigot.SpigotSkullProfileService",
-                    "net.vortexdevelopment.vortexcore.platform.paper.PaperSkullProfileService",
-                    "net.vortexdevelopment.vortexcore.platform.spigot.SpigotSkullProfileService"
-            };
-        }
-        return new String[] {
-                base + ".core.platform.spigot.SpigotSkullProfileService",
+    private static String[] serviceCandidates(String base, String vortexCorePackage) {
+        return new String[]{
+                vortexCorePackage + ".platform.paper.PaperSkullProfileService",
                 base + ".core.platform.paper.PaperSkullProfileService",
-                "net.vortexdevelopment.vortexcore.platform.spigot.SpigotSkullProfileService",
                 "net.vortexdevelopment.vortexcore.platform.paper.PaperSkullProfileService"
         };
     }
@@ -98,19 +85,14 @@ public final class SkullProfiles {
             throw new IllegalStateException(
                     "SkullProfileService not installed (use the unified VortexCore runtime artifact)");
         }
-        boolean expectPaper = ServerProject.isServer(ServerProject.PAPER);
-        if (!isCompatiblePlatform(s, expectPaper)) {
+        if (!isCompatiblePlatform(s)) {
             throw new IllegalStateException("Incorrect SkullProfileService installed for runtime: expected "
-                    + expectedPlatform(expectPaper) + " but got " + s.getClass().getName());
+                    + "paper-compatible but got " + s.getClass().getName());
         }
         return s;
     }
 
-    private static boolean isCompatiblePlatform(SkullProfileService skullProfileService, boolean expectPaper) {
-        return expectPaper ? isPaperService(skullProfileService) : isSpigotService(skullProfileService);
-    }
-
-    private static String expectedPlatform(boolean expectPaper) {
-        return expectPaper ? "paper" : "spigot";
+    private static boolean isCompatiblePlatform(SkullProfileService skullProfileService) {
+        return ServerProject.isPaperCompatible() && isPaperService(skullProfileService);
     }
 }

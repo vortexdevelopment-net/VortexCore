@@ -2,7 +2,7 @@ package net.vortexdevelopment.vortexcore.vinject.database;
 
 import net.vortexdevelopment.vinject.annotation.database.EnableCaching;
 import net.vortexdevelopment.vinject.database.cache.CachePolicy;
-import net.vortexdevelopment.vinject.database.repository.CrudRepository;
+import net.vortexdevelopment.vinject.database.repository.CachedCrudRepository;
 
 /**
  * A CRUD repository with preloaded static caching enabled.
@@ -13,8 +13,8 @@ import net.vortexdevelopment.vinject.database.repository.CrudRepository;
  */
 @EnableCaching(
         preload = true,
-        policy = CachePolicy.STATIC,
+        policy = CachePolicy.TTL,
         maxSize = Integer.MAX_VALUE
 )
-public interface PreloadedCrudRepository<T, ID> extends CrudRepository<T, ID> {
+public interface PreloadedCrudRepository<T, ID> extends CachedCrudRepository<T, ID> {
 }

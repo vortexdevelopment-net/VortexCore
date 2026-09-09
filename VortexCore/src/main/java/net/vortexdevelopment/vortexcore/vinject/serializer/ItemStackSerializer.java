@@ -1,5 +1,6 @@
 package net.vortexdevelopment.vortexcore.vinject.serializer;
 
+import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.annotation.yaml.YamlSerializer;
@@ -7,57 +8,46 @@ import net.vortexdevelopment.vinject.config.serializer.YamlSerializerBase;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.hooks.plugin.HookManager;
 import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
+import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.DyeColor;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.block.BlockState;
+import org.bukkit.block.ShulkerBox;
+import org.bukkit.block.banner.PatternType;
 import org.bukkit.enchantments.Enchantment;
+import org.bukkit.entity.Axolotl;
 import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.AxolotlBucketMeta;
+import org.bukkit.inventory.meta.BannerMeta;
+import org.bukkit.inventory.meta.BlockStateMeta;
+import org.bukkit.inventory.meta.BundleMeta;
 import org.bukkit.inventory.meta.Damageable;
+import org.bukkit.inventory.meta.EnchantmentStorageMeta;
+import org.bukkit.inventory.meta.FireworkEffectMeta;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.inventory.meta.MapMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.inventory.meta.SkullMeta;
+import org.bukkit.map.MapRenderer;
+import org.bukkit.map.MapView;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionType;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.persistence.PersistentDataContainer;
-
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.inventory.meta.LeatherArmorMeta;
-import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.inventory.meta.EnchantmentStorageMeta;
-import org.bukkit.inventory.meta.FireworkMeta;
-import org.bukkit.inventory.meta.FireworkEffectMeta;
-import org.bukkit.inventory.meta.BannerMeta;
-import org.bukkit.block.banner.PatternType;
-import org.bukkit.DyeColor;
-import org.bukkit.FireworkEffect;
-import org.bukkit.inventory.meta.MapMeta;
-import org.bukkit.map.MapView;
-import org.bukkit.map.MapRenderer;
-import org.bukkit.inventory.meta.AxolotlBucketMeta;
-import org.bukkit.entity.Axolotl;
-import org.bukkit.inventory.meta.BundleMeta;
-import org.bukkit.inventory.meta.BlockStateMeta;
-import org.bukkit.block.BlockState;
-import org.bukkit.block.ShulkerBox;
-import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
-
-import io.papermc.paper.datacomponent.DataComponentTypes;
 
 import java.lang.reflect.Method;
-
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.Base64;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -65,6 +55,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * YAML keys and examples for {@link ItemStack} fields are documented in the repo at
@@ -78,8 +70,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
     private static final Pattern PDC_PATTERN = Pattern.compile("^([a-z0-9._/:-]+):([A-Z_]+):(.*)$");
 
     /**
-     * Paper adds {@link Attribute#key()}; Spigot does not. Calling it directly causes
-     * {@link NoSuchMethodError} on Spigot when this module is compiled against Paper.
+     * {@link Attribute#key()} is resolved reflectively for compatibility with
+     * older Paper APIs.
      */
     private static final Method ATTRIBUTE_KEY_METHOD = resolveAttributeKeyMethod();
 
@@ -88,6 +80,78 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             return Attribute.class.getMethod("key");
         } catch (NoSuchMethodException ignored) {
             return null;
+        }
+    }
+
+    private static int readAmount(Object rawAmount, int fallback) {
+        if (rawAmount instanceof Number number) {
+            return number.intValue();
+        }
+        return fallback;
+    }
+
+    private static ItemStack resolveItemReference(String reference) {
+        String trimmed = reference.trim();
+        String materialName = trimmed;
+        int separator = trimmed.indexOf(':');
+        if (separator >= 0) {
+            String namespace = trimmed.substring(0, separator);
+            if (!"minecraft".equalsIgnoreCase(namespace)) {
+                return HookManager.resolveItem(trimmed);
+            }
+            materialName = trimmed.substring(separator + 1);
+        }
+
+        Material material = Material.matchMaterial(materialName);
+        if (material != null && material.isItem()) {
+            return new ItemStack(material);
+        }
+        return HookManager.resolveItem(trimmed);
+    }
+
+    /**
+     * Uses {@link Attribute#key()} when available and falls back to the Bukkit
+     * attribute registry on older Paper APIs.
+     */
+    private static String resolveAttributeRegistryKey(Attribute attribute) {
+        if (ATTRIBUTE_KEY_METHOD != null) {
+            try {
+                Object key = ATTRIBUTE_KEY_METHOD.invoke(attribute);
+                if (key instanceof Key adventureKey) {
+                    return adventureKey.value();
+                }
+            } catch (ReflectiveOperationException ignored) {
+            }
+        }
+        NamespacedKey namespacedKey = Registry.ATTRIBUTE.getKey(attribute);
+        return namespacedKey != null ? namespacedKey.getKey() : null;
+    }
+
+    /**
+     * 1.20.5+ exposes {@code getBasePotionType}; 1.18.x uses {@link PotionMeta#getBasePotionData()} only.
+     * Reflection avoids {@link NoSuchMethodError} when this module is compiled against a newer Paper API.
+     */
+    private static PotionType readBasePotionType(PotionMeta meta) {
+        try {
+            Method getter = PotionMeta.class.getMethod("getBasePotionType");
+            Object r = getter.invoke(meta);
+            return r instanceof PotionType ? (PotionType) r : null;
+        } catch (ReflectiveOperationException ignored) {
+            try {
+                PotionData data = meta.getBasePotionData();
+                return data != null ? data.getType() : null;
+            } catch (Throwable ignored2) {
+                return null;
+            }
+        }
+    }
+
+    private static void applyBasePotionType(PotionMeta meta, PotionType type) throws Exception {
+        try {
+            Method setter = PotionMeta.class.getMethod("setBasePotionType", PotionType.class);
+            setter.invoke(meta, type);
+        } catch (NoSuchMethodError | NoSuchMethodException e) {
+            meta.setBasePotionData(new PotionData(type, false, false));
         }
     }
 
@@ -242,7 +306,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     if (view != null) {
                         map.put("Map ID", view.getId());
                         map.put("Map Locked", view.isLocked());
-                        
+
                         List<String> renderers = new ArrayList<>();
                         for (MapRenderer renderer : view.getRenderers()) {
                             renderers.add(renderer.getClass().getName());
@@ -252,15 +316,15 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                         }
                     }
                 }
-                
+
                 if (mapMeta.isScaling()) {
                     map.put("Map Scaling", true);
                 }
-                
+
                 if (mapMeta.hasLocationName()) {
                     map.put("Location Name", mapMeta.getLocationName());
                 }
-                
+
                 if (mapMeta.hasColor()) {
                     Color color = mapMeta.getColor();
                     map.put("Map Color", String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue()));
@@ -415,7 +479,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                             if (ench != null) {
                                 meta.addEnchant(ench, Integer.parseInt(parts[1]), true);
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -433,7 +498,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                             if (ench != null) {
                                 esm.addStoredEnchant(ench, Integer.parseInt(parts[1]), true);
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -445,7 +511,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                 for (Object o : (List<?>) flagsObj) {
                     try {
                         meta.addItemFlags(ItemFlag.valueOf(o.toString().toUpperCase()));
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }
@@ -496,7 +563,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                                     slot
                             );
                             meta.addAttributeModifier(attribute, modifier);
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -508,7 +576,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             try {
                 PotionType potionType = PotionType.valueOf(potionTypeName.toUpperCase());
                 applyBasePotionType(potionMeta, potionType);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
         }
 
         if (map.containsKey("Color") && meta instanceof LeatherArmorMeta leatherMeta) {
@@ -541,13 +610,14 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                         return k1.compareTo(k2);
                     }
                 });
-                
+
                 for (String key : keys) {
                     Object obj = effectsMap.get(key);
                     if (obj instanceof Map) {
                         try {
                             fireworkMeta.addEffect(deserializeFireworkEffect((Map<String, Object>) obj));
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -557,7 +627,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (map.containsKey("Firework Effect") && map.get("Firework Effect") instanceof Map) {
                 try {
                     effectMeta.setEffect(deserializeFireworkEffect((Map<String, Object>) map.get("Firework Effect")));
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         }
 
@@ -576,7 +647,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                                 if (type != null) {
                                     patterns.add(new org.bukkit.block.banner.Pattern(color, type));
                                 }
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                            }
                         }
                     }
                     bannerMeta.setPatterns(patterns);
@@ -586,13 +658,13 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
         if (meta instanceof MapMeta mapMeta) {
             if (map.containsKey("Map Scaling")) {
-                 mapMeta.setScaling(Boolean.TRUE.equals(map.get("Map Scaling")));
+                mapMeta.setScaling(Boolean.TRUE.equals(map.get("Map Scaling")));
             }
-            
+
             if (map.containsKey("Location Name")) {
                 mapMeta.setLocationName((String) map.get("Location Name"));
             }
-            
+
             if (map.containsKey("Map Color")) {
                 mapMeta.setColor(parseColor((String) map.get("Map Color")));
             }
@@ -604,11 +676,11 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     MapView view = Bukkit.getMap(id);
                     if (view != null) {
                         mapMeta.setMapView(view);
-                        
+
                         if (map.containsKey("Map Locked")) {
                             view.setLocked(Boolean.TRUE.equals(map.get("Map Locked")));
                         }
-                        
+
                         if (map.containsKey("Map Renderers") && map.get("Map Renderers") instanceof List) {
                             for (Object o : (List<?>) map.get("Map Renderers")) {
                                 String className = o.toString();
@@ -618,7 +690,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                                         MapRenderer renderer = (MapRenderer) clazz.getDeclaredConstructor().newInstance();
                                         view.addRenderer(renderer);
                                     }
-                                } catch (Exception ignored) {}
+                                } catch (Exception ignored) {
+                                }
                             }
                         }
                     }
@@ -630,7 +703,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             if (map.containsKey("Axolotl Variant")) {
                 try {
                     axolotlMeta.setVariant(Axolotl.Variant.valueOf(((String) map.get("Axolotl Variant")).toUpperCase()));
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         }
 
@@ -651,7 +725,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     if (obj instanceof Map) {
                         try {
                             bundleMeta.addItem(deserialize((Map<String, Object>) obj));
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                 }
             }
@@ -671,7 +746,8 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                                     shulkerBox.getInventory().setItem(slot, itemStack);
                                 }
                             }
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                     blockStateMeta.setBlockState(shulkerBox);
                 }
@@ -738,32 +814,6 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         return item;
     }
 
-    private static int readAmount(Object rawAmount, int fallback) {
-        if (rawAmount instanceof Number number) {
-            return number.intValue();
-        }
-        return fallback;
-    }
-
-    private static ItemStack resolveItemReference(String reference) {
-        String trimmed = reference.trim();
-        String materialName = trimmed;
-        int separator = trimmed.indexOf(':');
-        if (separator >= 0) {
-            String namespace = trimmed.substring(0, separator);
-            if (!"minecraft".equalsIgnoreCase(namespace)) {
-                return HookManager.resolveItem(trimmed);
-            }
-            materialName = trimmed.substring(separator + 1);
-        }
-
-        Material material = Material.matchMaterial(materialName);
-        if (material != null && material.isItem()) {
-            return new ItemStack(material);
-        }
-        return HookManager.resolveItem(trimmed);
-    }
-
     private Map<String, Object> serializeFireworkEffect(FireworkEffect effect) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("Type", effect.getType().name());
@@ -820,51 +870,5 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             colorStr = colorStr.substring(1);
         }
         return Color.fromRGB(Integer.parseInt(colorStr, 16));
-    }
-
-    /**
-     * Paper: {@link Attribute#key()} via reflection (method exists at runtime).
-     * Spigot: {@link Registry#ATTRIBUTE} reverse lookup.
-     */
-    private static String resolveAttributeRegistryKey(Attribute attribute) {
-        if (ATTRIBUTE_KEY_METHOD != null) {
-            try {
-                Object key = ATTRIBUTE_KEY_METHOD.invoke(attribute);
-                if (key instanceof Key adventureKey) {
-                    return adventureKey.value();
-                }
-            } catch (ReflectiveOperationException ignored) {
-            }
-        }
-        NamespacedKey namespacedKey = Registry.ATTRIBUTE.getKey(attribute);
-        return namespacedKey != null ? namespacedKey.getKey() : null;
-    }
-
-    /**
-     * 1.20.5+ exposes {@code getBasePotionType}; 1.18.x uses {@link PotionMeta#getBasePotionData()} only.
-     * Reflection avoids {@link NoSuchMethodError} when this module is compiled against a newer Paper API.
-     */
-    private static PotionType readBasePotionType(PotionMeta meta) {
-        try {
-            Method getter = PotionMeta.class.getMethod("getBasePotionType");
-            Object r = getter.invoke(meta);
-            return r instanceof PotionType ? (PotionType) r : null;
-        } catch (ReflectiveOperationException ignored) {
-            try {
-                PotionData data = meta.getBasePotionData();
-                return data != null ? data.getType() : null;
-            } catch (Throwable ignored2) {
-                return null;
-            }
-        }
-    }
-
-    private static void applyBasePotionType(PotionMeta meta, PotionType type) throws Exception {
-        try {
-            Method setter = PotionMeta.class.getMethod("setBasePotionType", PotionType.class);
-            setter.invoke(meta, type);
-        } catch (NoSuchMethodError | NoSuchMethodException e) {
-            meta.setBasePotionData(new PotionData(type, false, false));
-        }
     }
 }

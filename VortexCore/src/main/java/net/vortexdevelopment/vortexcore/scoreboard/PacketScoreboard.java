@@ -52,6 +52,109 @@ public final class PacketScoreboard {
         this.objectiveName = nextObjectiveName();
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private static void writeEntries(@NotNull PacketContainer packet, @NotNull List<String> entries) {
+        if (packet.getStringArrays().size() > 0) {
+            packet.getStringArrays().writeSafely(0, entries.toArray(new String[0]));
+            return;
+        }
+        com.comphenix.protocol.reflect.StructureModifier modifier = packet.getModifier().withType(Collection.class);
+        if (modifier.size() > 0) {
+            modifier.writeSafely(0, entries);
+        }
+    }
+
+    private static WrappedChatComponent chat(@NotNull Component component) {
+        return WrappedChatComponent.fromJson(AdventureUtils.convertToJson(component));
+    }
+
+    private static List<String> splitLegacy(@NotNull String value, int maxVisibleCharacters) {
+        if (value.isEmpty()) {
+            return List.of("");
+        }
+
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        String activeFormatting = "";
+        int visibleCharacters = 0;
+        for (int index = 0; index < value.length(); ) {
+            char character = value.charAt(index);
+            if (character == '§' && index + 1 < value.length()) {
+                if (Character.toLowerCase(value.charAt(index + 1)) == 'x'
+                        && index + 13 < value.length()
+                        && isHexSequence(value, index + 2)) {
+                    String token = value.substring(index, index + 14);
+                    current.append(token);
+                    activeFormatting = token;
+                    index += 14;
+                    continue;
+                }
+                char code = value.charAt(index + 1);
+                String token = value.substring(index, index + 2);
+                current.append(token);
+                activeFormatting = updateFormatting(activeFormatting, token, code);
+                index += 2;
+                continue;
+            }
+
+            int codePoint = value.codePointAt(index);
+            if (visibleCharacters >= maxVisibleCharacters) {
+                parts.add(current.toString());
+                current = new StringBuilder(activeFormatting);
+                visibleCharacters = 0;
+            }
+            current.appendCodePoint(codePoint);
+            visibleCharacters++;
+            index += Character.charCount(codePoint);
+        }
+        parts.add(current.toString());
+        return parts;
+    }
+
+    private static boolean isHexSequence(@NotNull String value, int start) {
+        for (int offset = 0; offset < 12; offset += 2) {
+            if (value.charAt(start + offset) != '§'
+                    || Character.digit(value.charAt(start + offset + 1), 16) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String updateFormatting(@NotNull String active, @NotNull String token, char code) {
+        char normalized = Character.toLowerCase(code);
+        if ("0123456789abcdef".indexOf(normalized) >= 0) {
+            return token;
+        }
+        if (normalized == 'r') {
+            return "";
+        }
+        return active + token;
+    }
+
+    private static String uniqueEntry(int index) {
+        StringBuilder entry = new StringBuilder("§0");
+        int value = index;
+        while (value > 0) {
+            entry.append("§").append(Integer.toHexString(value & 0xF));
+            value >>>= 4;
+        }
+        return entry.toString();
+    }
+
+    private static List<Component> immutableLines(@NotNull List<Component> lines) {
+        List<Component> copy = new ArrayList<>(lines.size());
+        for (Component line : lines) {
+            copy.add(line == null ? Component.empty() : line);
+        }
+        return Collections.unmodifiableList(copy);
+    }
+
+    private static String nextObjectiveName() {
+        int value = OBJECTIVE_COUNTER.incrementAndGet();
+        return "vtxsb" + Integer.toString(value, 36);
+    }
+
     /**
      * Shows this scoreboard to a player using its current lines.
      *
@@ -75,7 +178,7 @@ public final class PacketScoreboard {
      * The first line in the list is displayed at the top.
      *
      * @param player player to update
-     * @param lines lines to display
+     * @param lines  lines to display
      * @return completion stage for the packet update
      */
     public @NotNull CompletableFuture<Void> setLines(@NotNull Player player, @NotNull List<Component> lines) {
@@ -96,7 +199,7 @@ public final class PacketScoreboard {
      * Replaces a player's lines from MiniMessage/legacy strings.
      *
      * @param player player to update
-     * @param lines lines to display
+     * @param lines  lines to display
      * @return completion stage for the packet update
      */
     public @NotNull CompletableFuture<Void> setLines(@NotNull Player player, @NotNull String... lines) {
@@ -111,7 +214,7 @@ public final class PacketScoreboard {
      * Resolves and applies lines off the server thread. A newer request for the same player supersedes an older one.
      * This is intended for PlaceholderAPI/database-backed scoreboard content.
      *
-     * @param player player to update
+     * @param player   player to update
      * @param provider asynchronous line provider
      * @return completion stage for the complete resolve-and-send operation
      */
@@ -130,7 +233,7 @@ public final class PacketScoreboard {
     /**
      * Convenience overload for providers returning a completed or asynchronous list.
      *
-     * @param player player to update
+     * @param player   player to update
      * @param provider asynchronous list provider
      * @return completion stage for the complete resolve-and-send operation
      */
@@ -161,7 +264,7 @@ public final class PacketScoreboard {
      * Changes the title for one viewer without changing other viewers.
      *
      * @param player player receiving the title
-     * @param title new title
+     * @param title  new title
      * @return completion stage for the packet update
      */
     public @NotNull CompletableFuture<Void> setTitle(
@@ -336,26 +439,10 @@ public final class PacketScoreboard {
         return packet;
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    private static void writeEntries(@NotNull PacketContainer packet, @NotNull List<String> entries) {
-        if (packet.getStringArrays().size() > 0) {
-            packet.getStringArrays().writeSafely(0, entries.toArray(new String[0]));
-            return;
-        }
-        com.comphenix.protocol.reflect.StructureModifier modifier = packet.getModifier().withType(Collection.class);
-        if (modifier.size() > 0) {
-            modifier.writeSafely(0, entries);
-        }
-    }
-
     private void hideNumberFormat(@NotNull PacketContainer packet) {
         if (service.blankNumberFormat() && packet.getNumberFormats().size() > 0) {
             packet.getNumberFormats().writeSafely(0, WrappedNumberFormat.blank());
         }
-    }
-
-    private static WrappedChatComponent chat(@NotNull Component component) {
-        return WrappedChatComponent.fromJson(AdventureUtils.convertToJson(component));
     }
 
     private RenderedLine renderLine(int index, @NotNull Component line) {
@@ -368,93 +455,6 @@ public final class PacketScoreboard {
         // cannot be represented by a single sidebar line and is intentionally truncated.
         String suffix = parts.size() > 1 ? parts.get(1) : "";
         return new RenderedLine(team, entry, prefix, suffix);
-    }
-
-    private static List<String> splitLegacy(@NotNull String value, int maxVisibleCharacters) {
-        if (value.isEmpty()) {
-            return List.of("");
-        }
-
-        List<String> parts = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        String activeFormatting = "";
-        int visibleCharacters = 0;
-        for (int index = 0; index < value.length();) {
-            char character = value.charAt(index);
-            if (character == '§' && index + 1 < value.length()) {
-                if (Character.toLowerCase(value.charAt(index + 1)) == 'x'
-                        && index + 13 < value.length()
-                        && isHexSequence(value, index + 2)) {
-                    String token = value.substring(index, index + 14);
-                    current.append(token);
-                    activeFormatting = token;
-                    index += 14;
-                    continue;
-                }
-                char code = value.charAt(index + 1);
-                String token = value.substring(index, index + 2);
-                current.append(token);
-                activeFormatting = updateFormatting(activeFormatting, token, code);
-                index += 2;
-                continue;
-            }
-
-            int codePoint = value.codePointAt(index);
-            if (visibleCharacters >= maxVisibleCharacters) {
-                parts.add(current.toString());
-                current = new StringBuilder(activeFormatting);
-                visibleCharacters = 0;
-            }
-            current.appendCodePoint(codePoint);
-            visibleCharacters++;
-            index += Character.charCount(codePoint);
-        }
-        parts.add(current.toString());
-        return parts;
-    }
-
-    private static boolean isHexSequence(@NotNull String value, int start) {
-        for (int offset = 0; offset < 12; offset += 2) {
-            if (value.charAt(start + offset) != '§'
-                    || Character.digit(value.charAt(start + offset + 1), 16) < 0) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static String updateFormatting(@NotNull String active, @NotNull String token, char code) {
-        char normalized = Character.toLowerCase(code);
-        if ("0123456789abcdef".indexOf(normalized) >= 0) {
-            return token;
-        }
-        if (normalized == 'r') {
-            return "";
-        }
-        return active + token;
-    }
-
-    private static String uniqueEntry(int index) {
-        StringBuilder entry = new StringBuilder("§0");
-        int value = index;
-        while (value > 0) {
-            entry.append("§").append(Integer.toHexString(value & 0xF));
-            value >>>= 4;
-        }
-        return entry.toString();
-    }
-
-    private static List<Component> immutableLines(@NotNull List<Component> lines) {
-        List<Component> copy = new ArrayList<>(lines.size());
-        for (Component line : lines) {
-            copy.add(line == null ? Component.empty() : line);
-        }
-        return Collections.unmodifiableList(copy);
-    }
-
-    private static String nextObjectiveName() {
-        int value = OBJECTIVE_COUNTER.incrementAndGet();
-        return "vtxsb" + Integer.toString(value, 36);
     }
 
     private void send(@NotNull PacketContainer packet, @NotNull Player player) {

@@ -4,5 +4,7 @@ import org.bukkit.event.Listener;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 
 @RegisterListener
-public class ${NAME} implements Listener {
+public class ${NAME} implements
+
+Listener {
 }

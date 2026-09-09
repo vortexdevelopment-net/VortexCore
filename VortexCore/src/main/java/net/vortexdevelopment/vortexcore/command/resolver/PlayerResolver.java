@@ -18,7 +18,7 @@ public class PlayerResolver implements ParameterResolver<Player> {
     public boolean supports(Class<?> type) {
         return Player.class.isAssignableFrom(type);
     }
-    
+
     @Override
     public Set<Class<?>> getSupportedTypes() {
         return Set.of(Player.class);

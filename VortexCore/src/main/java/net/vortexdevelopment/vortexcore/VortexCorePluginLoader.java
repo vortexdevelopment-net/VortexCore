@@ -13,29 +13,13 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Paper {@link PluginLoader}; Spigot uses {@code plugin.yml} {@code libraries}. Versions from filtered {@code META-INF/vortexcore-paper-loader-libs.properties}.
+ * Paper {@link PluginLoader} for the runtime libraries in the filtered
+ * {@code META-INF/vortexcore-paper-loader-libs.properties} resource.
  * Never probe server classes via {@code Class.forName} here - during bootstrap the plugin loader cannot load {@code io.papermc.paper.Paper}.
  */
 public class VortexCorePluginLoader implements PluginLoader {
 
     private static final String LIBS_RESOURCE = "/META-INF/vortexcore-paper-loader-libs.properties";
-
-    @Override
-    public void classloader(@NotNull PluginClasspathBuilder classpathBuilder) {
-        MavenLibraryResolver resolver = new MavenLibraryResolver();
-
-        resolver.addRepository(new RemoteRepository.Builder(
-                "central",
-                "default",
-                MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR
-        ).build());
-
-        for (String coordinate : readMavenCoordinates()) {
-            resolver.addDependency(new Dependency(new DefaultArtifact(coordinate), null));
-        }
-
-        classpathBuilder.addLibrary(resolver);
-    }
 
     private static Iterable<String> readMavenCoordinates() {
         try (InputStream in = VortexCorePluginLoader.class.getResourceAsStream(LIBS_RESOURCE)) {
@@ -59,5 +43,22 @@ public class VortexCorePluginLoader implements PluginLoader {
         } catch (IOException e) {
             throw new IllegalStateException("Could not read " + LIBS_RESOURCE, e);
         }
+    }
+
+    @Override
+    public void classloader(@NotNull PluginClasspathBuilder classpathBuilder) {
+        MavenLibraryResolver resolver = new MavenLibraryResolver();
+
+        resolver.addRepository(new RemoteRepository.Builder(
+                "central",
+                "default",
+                MavenLibraryResolver.MAVEN_CENTRAL_DEFAULT_MIRROR
+        ).build());
+
+        for (String coordinate : readMavenCoordinates()) {
+            resolver.addDependency(new Dependency(new DefaultArtifact(coordinate), null));
+        }
+
+        classpathBuilder.addLibrary(resolver);
     }
 }

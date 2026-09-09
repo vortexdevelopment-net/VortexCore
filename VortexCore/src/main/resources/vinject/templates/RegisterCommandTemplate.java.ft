@@ -7,15 +7,20 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 @RegisterCommand(commandName = "COMMAND_NAME_HERE")
-public class ${NAME} implements VortexCommandExecutor {
+public class ${NAME} implements
+
+VortexCommandExecutor {
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public boolean onCommand (@NotNull CommandSender sender, @NotNull Command command, @NotNull String
+    label, @NotNull String[]args){
         return false;
     }
 
     @Override
-    public @Nullable List#[[<String>]]# onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
+    public @Nullable List#[[<String >]]#
+    onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[]args)
+    {
         return null;
     }
 }

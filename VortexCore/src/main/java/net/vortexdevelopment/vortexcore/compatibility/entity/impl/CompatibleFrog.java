@@ -2,7 +2,6 @@ package net.vortexdevelopment.vortexcore.compatibility.entity.impl;
 
 import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
 import net.vortexdevelopment.vortexcore.compatibility.VersionDependent;
-import net.vortexdevelopment.vortexcore.compatibility.entity.CompatibleEntity;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Frog;
 import org.jetbrains.annotations.NotNull;
@@ -48,10 +47,6 @@ public class CompatibleFrog extends VersionDependent {
             this.name = name;
         }
 
-        public String getName() {
-            return name;
-        }
-
         private static CompatibleFrogVariant fromApiVariant(Frog.Variant apiVariant) {
             for (CompatibleFrogVariant variant : values()) {
                 if (variant.getName().equalsIgnoreCase(apiVariant.getKey().getKey())) {
@@ -67,6 +62,10 @@ public class CompatibleFrog extends VersionDependent {
                 case WARM -> Frog.Variant.WARM;
                 case COLD -> Frog.Variant.COLD;
             };
+        }
+
+        public String getName() {
+            return name;
         }
     }
 }

@@ -8,8 +8,7 @@ import java.util.UUID;
 
 /**
  * Custom skull textures. Delegates to {@link net.vortexdevelopment.vortexcore.spi.SkullProfiles}: Paper uses
- * {@code PlayerProfile} / {@code PlayerTextures}; Spigot uses Mojang {@code GameProfile} on {@code SkullMeta}
- * (see {@code SpigotSkullProfileService}).
+ * {@code PlayerProfile} / {@code PlayerTextures} on Paper and supported Paper forks.
  */
 public class HeadUtils {
 

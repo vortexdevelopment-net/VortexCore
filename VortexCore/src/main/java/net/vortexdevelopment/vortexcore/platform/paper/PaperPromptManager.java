@@ -1,9 +1,9 @@
 package net.vortexdevelopment.vortexcore.platform.paper;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.annotation.DependsOn;
 import net.vortexdevelopment.vinject.annotation.lifecycle.PostConstruct;
-import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.spi.ChatPromptService;
 import net.vortexdevelopment.vortexcore.spi.ChatPrompts;
@@ -54,7 +54,8 @@ public class PaperPromptManager implements Listener, ChatPromptService {
                 Component shaded = AdventureUtils.convertToShadedComponent(response);
                 Bukkit.getServer().getScheduler().callSyncMethod(VortexPlugin.getInstance(), () -> {
                     consumer.accept(PaperBukkitAdventureBridge.LEGACY_SECTION.serialize(shaded));
-                    return CompletableFuture.runAsync(() -> {}); //Return empty future, can't return null
+                    return CompletableFuture.runAsync(() -> {
+                    }); //Return empty future, can't return null
                 });
             }
         }
@@ -70,7 +71,8 @@ public class PaperPromptManager implements Listener, ChatPromptService {
 
     /**
      * Prompt a player for a response
-     * @param player The player to prompt
+     *
+     * @param player   The player to prompt
      * @param consumer The consumer to handle the response. Response value can be null if the player leaves the server before responding
      */
     @Override

@@ -11,9 +11,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -43,6 +43,28 @@ public final class ConfiguredScoreboard {
         // The title may contain player-specific placeholders, so it is resolved on the first viewer render.
         this.scoreboard = service.create(Component.empty());
         this.placeholderApiAvailable = service.placeholderApiAvailable();
+    }
+
+    private static long minPositive(long current, long candidate) {
+        if (candidate <= 0) {
+            return current;
+        }
+        return current <= 0 ? candidate : Math.min(current, candidate);
+    }
+
+    private static String frame(@NotNull List<String> frames, long intervalTicks, long elapsedTicks) {
+        int index = (int) ((elapsedTicks / Math.max(1L, intervalTicks)) % frames.size());
+        return frames.get(index);
+    }
+
+    private static String animationToken(@NotNull String text) {
+        if (text.startsWith("<animation:") && text.endsWith(">")) {
+            return text.substring("<animation:".length(), text.length() - 1);
+        }
+        if (text.startsWith("<") && text.endsWith(">") && text.indexOf(' ', 1) < 0) {
+            return text.substring(1, text.length() - 1);
+        }
+        return null;
     }
 
     /**
@@ -279,28 +301,6 @@ public final class ConfiguredScoreboard {
             value = configuration.placeholderUpdates().get(placeholder.toLowerCase());
         }
         return value == null ? 0L : Math.max(0L, value);
-    }
-
-    private static long minPositive(long current, long candidate) {
-        if (candidate <= 0) {
-            return current;
-        }
-        return current <= 0 ? candidate : Math.min(current, candidate);
-    }
-
-    private static String frame(@NotNull List<String> frames, long intervalTicks, long elapsedTicks) {
-        int index = (int) ((elapsedTicks / Math.max(1L, intervalTicks)) % frames.size());
-        return frames.get(index);
-    }
-
-    private static String animationToken(@NotNull String text) {
-        if (text.startsWith("<animation:") && text.endsWith(">")) {
-            return text.substring("<animation:".length(), text.length() - 1);
-        }
-        if (text.startsWith("<") && text.endsWith(">") && text.indexOf(' ', 1) < 0) {
-            return text.substring(1, text.length() - 1);
-        }
-        return null;
     }
 
     private static final class Viewer {

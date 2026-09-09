@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * A named scoreboard animation.
  *
- * @param frames animation frames, displayed in order
+ * @param frames      animation frames, displayed in order
  * @param updateTicks number of server-tick durations between frames
  */
 public record ScoreboardAnimation(@NotNull List<String> frames, long updateTicks) {

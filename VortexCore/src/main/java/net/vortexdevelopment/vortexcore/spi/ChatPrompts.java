@@ -5,7 +5,7 @@ import org.bukkit.entity.Player;
 import java.util.function.Consumer;
 
 /**
- * Static entry for chat prompts; implementation is registered by the platform module (Paper or Spigot).
+ * Static entry for chat prompts; the implementation is registered by the Paper platform module.
  */
 public final class ChatPrompts {
 
@@ -15,18 +15,7 @@ public final class ChatPrompts {
     }
 
     public static void setService(ChatPromptService service) {
-        if (isPaperService(ChatPrompts.service) && isSpigotService(service)) {
-            return;
-        }
         ChatPrompts.service = service;
-    }
-
-    private static boolean isPaperService(ChatPromptService service) {
-        return service != null && service.getClass().getName().contains(".platform.paper.");
-    }
-
-    private static boolean isSpigotService(ChatPromptService service) {
-        return service != null && service.getClass().getName().contains(".platform.spigot.");
     }
 
     public static void promptPlayer(Player player, Consumer<String> consumer) {

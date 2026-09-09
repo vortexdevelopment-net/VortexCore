@@ -41,7 +41,7 @@ public @interface Command {
      * @return The command name
      */
     String value();
-    
+
     /**
      * Aliases for the command.
      * These will be registered as alternative command names.

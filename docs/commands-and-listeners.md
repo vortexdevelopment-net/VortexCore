@@ -43,7 +43,7 @@ Reference: `VortexStacker-Plugin/.../command/StackerCommand.java`
 
 ### Dynamic Command Registration
 
-If `plugin.yml` does not declare the command, `CommandManager` creates and registers it via `CommandMaps` (Paper/Spigot bridge).
+If `plugin.yml` does not declare the command, `CommandManager` creates and registers it via the Paper-compatible `CommandMaps` bridge.
 
 ---
 
@@ -64,6 +64,30 @@ public class MyListener implements Listener {
 - Must implement `org.bukkit.event.Listener`.
 - **`@RegisterListener` alone is sufficient** for `@Inject` - do not add `@Component`.
 - Add `@Component` only if other classes need to `@Inject` this listener.
+
+### Event handlers on managed components
+
+A VInject-managed manager or service can declare occasional Bukkit event handlers
+directly without implementing `Listener` or adding `@RegisterListener`:
+
+```java
+@Component
+public final class GameplayManager {
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    private void onCustomEvent(SomePluginApiEvent event) {
+        // handle event using the manager's injected dependencies
+    }
+}
+```
+
+VortexCore registers these methods through Bukkit's runtime event API. Managed event
+handlers must be non-static, return `void`, and declare exactly one parameter extending
+`org.bukkit.event.Event`. Private methods are supported. Bukkit priority,
+`ignoreCancelled`, and event-thread behavior are preserved.
+
+Use `@RegisterListener` for dedicated listener classes. When a class implements
+`Listener` and has `@RegisterListener`, the managed-component wrapper ignores it to
+prevent duplicate event delivery.
 
 Reference: `VortexSellWands-Plugin/.../listener/SellWandListener.java` (with `@Component` - redundant pattern to avoid).
 

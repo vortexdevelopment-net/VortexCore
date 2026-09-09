@@ -14,7 +14,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 
 /**
- * Paper vs Spigot differences for Adventure on Bukkit: items, inventories, messaging, entity names.
+ * Paper Adventure integration for items, inventories, messaging, and entity names.
  */
 public interface BukkitAdventureBridge {
 
@@ -39,8 +39,7 @@ public interface BukkitAdventureBridge {
     void sendComponentMessage(CommandSender sender, Component message);
 
     /**
-     * Custom name for any Bukkit entity (e.g. {@link org.bukkit.entity.Item}, armor stands, mobs). On Spigot this must
-     * use JSON chat when the component includes translatables; Paper uses native Adventure on the entity.
+     * Custom name for any Bukkit entity (e.g. {@link org.bukkit.entity.Item}, armor stands, mobs).
      */
     void setCustomName(Entity entity, Component name);
 
@@ -49,12 +48,12 @@ public interface BukkitAdventureBridge {
     }
 
     /**
-     * Move an entity for holograms / GUIs. Paper may use async teleport; Spigot uses synchronous {@code teleport}.
+     * Move an entity for holograms / GUIs.
      */
     void teleportLivingEntity(LivingEntity entity, Location destination);
 
     /**
-     * True while the server is shutting down (Paper). On Spigot without {@code Bukkit.isStopping()}, returns false.
+     * True while the server is shutting down.
      */
     boolean isServerStopping();
 }

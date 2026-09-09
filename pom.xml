@@ -18,7 +18,8 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <adventure.version>4.25.0</adventure.version>
+        <!-- Align with Paper 1.21.11 adventure-bom; stay on 4.x (5.x is a separate major). -->
+        <adventure.version>4.26.1</adventure.version>
     </properties>
 
     <dependencyManagement>
@@ -40,10 +41,6 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
-        </repository>
-        <repository>
-            <id>spigot-repo</id>
-            <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
         </repository>
         <repository>
             <id>PaperMC</id>

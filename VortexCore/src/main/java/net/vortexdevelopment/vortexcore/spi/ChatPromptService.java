@@ -5,7 +5,7 @@ import org.bukkit.entity.Player;
 import java.util.function.Consumer;
 
 /**
- * Platform-specific chat prompt handling (Paper {@code AsyncChatEvent} vs Spigot {@code AsyncPlayerChatEvent}).
+ * Paper chat prompt handling.
  */
 public interface ChatPromptService {
 

@@ -47,7 +47,7 @@ public @interface TabComplete {
      * @return The command pattern string, or empty string for parameter-based completion
      */
     String command() default "";
-    
+
     /**
      * The parameter name to complete.
      * If specified, will provide completions for the parameter with this name in any matching command.
@@ -56,7 +56,7 @@ public @interface TabComplete {
      * @return The parameter name, or empty string for pattern-based completion
      */
     String param() default "";
-    
+
     /**
      * The argument index to complete (0-based).
      * If -1 (default), will complete the last argument.

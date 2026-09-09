@@ -1,17 +1,12 @@
 package net.vortexdevelopment.vortexcore.hooks.plugin;
 
 
-import net.vortexdevelopment.vinject.annotation.component.Component;
 import net.vortexdevelopment.vinject.annotation.component.Element;
-import net.vortexdevelopment.vinject.annotation.lifecycle.OnEvent;
 import net.vortexdevelopment.vinject.di.DependencyRepository;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.StackerHook;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.ItemResolverHook;
-import net.vortexdevelopment.vortexcore.hooks.plugin.shop.EssentialsShopHook;
-import net.vortexdevelopment.vortexcore.hooks.plugin.shop.ShopGUIPlusHook;
-import net.vortexdevelopment.vortexcore.hooks.plugin.stacker.VortexStackerHook;
+import net.vortexdevelopment.vortexcore.hooks.types.ItemResolverHook;
+import net.vortexdevelopment.vortexcore.hooks.types.ShopHook;
+import net.vortexdevelopment.vortexcore.hooks.types.StackerHook;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterListener;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -104,6 +99,19 @@ public class HookManager implements Listener {
         return null;
     }
 
+    public static void setEnabledShopHook(String pluginName) {
+        //Disable all hooks
+        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
+            if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
+                shopHook.onEnable();
+                shopHook.setEnabled(true);
+            } else if (shopHook.isEnabled()) {
+                shopHook.onDisable();
+                shopHook.setEnabled(false);
+            }
+        }
+    }
+
     public static StackerHook getEnabledStackerHook() {
         for (StackerHook stackerHook : getHookByType(StackerHook.class)) {
             if (stackerHook.isEnabled()) {
@@ -138,19 +146,6 @@ public class HookManager implements Listener {
             }
         }
         return null;
-    }
-
-    public static void setEnabledShopHook(String pluginName) {
-        //Disable all hooks
-        for (ShopHook shopHook : getHookByType(ShopHook.class)) {
-            if (shopHook.getRequiredPlugin().equalsIgnoreCase(pluginName)) {
-                shopHook.onEnable();
-                shopHook.setEnabled(true);
-            } else if (shopHook.isEnabled()) {
-                shopHook.onDisable();
-                shopHook.setEnabled(false);
-            }
-        }
     }
 
     public static boolean hasShopHook(String pluginName) {

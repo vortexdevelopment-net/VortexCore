@@ -16,6 +16,17 @@ public class SchedulerUtils {
     private static boolean isFolia;
     private static FoliaDelegate foliaDelegate;
 
+    static {
+        try {
+            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
+            isFolia = true;
+            foliaDelegate = (FoliaDelegate) Class.forName("net.vortexdevelopment.vortexcore.compatibility.folia.FoliaDelegateImpl").getConstructor().newInstance();
+        } catch (Throwable e) {
+            isFolia = false;
+            foliaDelegate = null;
+        }
+    }
+
     public static boolean isFolia() {
         return isFolia;
     }
@@ -30,17 +41,6 @@ public class SchedulerUtils {
 
     public static boolean isOwnedByCurrentRegion(Entity entity) {
         return Bukkit.isOwnedByCurrentRegion(entity);
-    }
-
-    static {
-        try {
-            Class.forName("io.papermc.paper.threadedregions.RegionizedServer");
-            isFolia = true;
-            foliaDelegate = (FoliaDelegate) Class.forName("net.vortexdevelopment.vortexcore.compatibility.folia.FoliaDelegateImpl").getConstructor().newInstance();
-        } catch (Throwable e) {
-            isFolia = false;
-            foliaDelegate = null;
-        }
     }
 
     //Entity

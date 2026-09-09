@@ -14,6 +14,76 @@ import java.util.function.Consumer;
 
 public class GuiListener implements Listener {
 
+    /**
+     * Returns the top inventory size safely across multiple versions.
+     */
+    public static int getTopInventorySize(InventoryClickEvent event) {
+        try {
+            return event.getView().getTopInventory().getSize();
+        } catch (Throwable e) {
+            // likely a version where getView() or getTopInventory() is not available
+            // fallback to reflection below
+        }
+
+        try {
+            // Use declared methods and set accessible to handle non-public methods across versions
+            Method getView = event.getClass().getMethod("getView");
+            getView.setAccessible(true);
+            Object view = getView.invoke(event);
+
+            Method getTopInventory = view.getClass().getMethod("getTopInventory");
+            getTopInventory.setAccessible(true);
+            Object topInventory = getTopInventory.invoke(view);
+
+            Method getSize = topInventory.getClass().getMethod("getSize");
+            getSize.setAccessible(true);
+            Object sizeObj = getSize.invoke(topInventory);
+
+            if (sizeObj instanceof Number) {
+                return ((Number) sizeObj).intValue();
+            }
+            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // fallback: return the clicked inventory size
+            Inventory inv = event.getInventory();
+            return inv != null ? inv.getSize() : 0;
+        }
+    }
+
+    /**
+     * Returns the top inventory size safely across multiple versions for drag events.
+     */
+    public static int getTopInventorySize(InventoryDragEvent event) {
+        try {
+            return event.getView().getTopInventory().getSize();
+        } catch (Throwable e) {
+            // likely a version where getView() or getTopInventory() is not available
+            // fallback to reflection below
+        }
+        try {
+            // Use declared methods and set accessible to handle non-public methods across versions
+            Method getView = event.getClass().getMethod("getView");
+            getView.setAccessible(true);
+            Object view = getView.invoke(event);
+            Method getTopInventory = view.getClass().getMethod("getTopInventory");
+            getTopInventory.setAccessible(true);
+            Object topInventory = getTopInventory.invoke(view);
+            Method getSize = topInventory.getClass().getMethod("getSize");
+            getSize.setAccessible(true);
+            Object sizeObj = getSize.invoke(topInventory);
+            if (sizeObj instanceof Number) {
+                return ((Number) sizeObj).intValue();
+            }
+            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
+        } catch (Exception e) {
+            e.printStackTrace();
+            // fallback: return the clicked inventory size
+            Inventory inv = event.getInventory();
+            return inv != null ? inv.getSize() : 0;
+        }
+    }
+
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
 
@@ -108,76 +178,6 @@ public class GuiListener implements Listener {
             }
 
             gui.onClose((Player) event.getPlayer());
-        }
-    }
-
-    /**
-     * Returns the top inventory size safely across multiple versions.
-     */
-    public static int getTopInventorySize(InventoryClickEvent event) {
-        try {
-            return event.getView().getTopInventory().getSize();
-        } catch (Throwable e) {
-            // likely a version where getView() or getTopInventory() is not available
-            // fallback to reflection below
-        }
-
-        try {
-            // Use declared methods and set accessible to handle non-public methods across versions
-            Method getView = event.getClass().getMethod("getView");
-            getView.setAccessible(true);
-            Object view = getView.invoke(event);
-
-            Method getTopInventory = view.getClass().getMethod("getTopInventory");
-            getTopInventory.setAccessible(true);
-            Object topInventory = getTopInventory.invoke(view);
-
-            Method getSize = topInventory.getClass().getMethod("getSize");
-            getSize.setAccessible(true);
-            Object sizeObj = getSize.invoke(topInventory);
-
-            if (sizeObj instanceof Number) {
-                return ((Number) sizeObj).intValue();
-            }
-            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            // fallback: return the clicked inventory size
-            Inventory inv = event.getInventory();
-            return inv != null ? inv.getSize() : 0;
-        }
-    }
-
-    /**
-     * Returns the top inventory size safely across multiple versions for drag events.
-     */
-    public static int getTopInventorySize(InventoryDragEvent event) {
-        try {
-            return event.getView().getTopInventory().getSize();
-        } catch (Throwable e) {
-            // likely a version where getView() or getTopInventory() is not available
-            // fallback to reflection below
-        }
-        try {
-            // Use declared methods and set accessible to handle non-public methods across versions
-            Method getView = event.getClass().getMethod("getView");
-            getView.setAccessible(true);
-            Object view = getView.invoke(event);
-            Method getTopInventory = view.getClass().getMethod("getTopInventory");
-            getTopInventory.setAccessible(true);
-            Object topInventory = getTopInventory.invoke(view);
-            Method getSize = topInventory.getClass().getMethod("getSize");
-            getSize.setAccessible(true);
-            Object sizeObj = getSize.invoke(topInventory);
-            if (sizeObj instanceof Number) {
-                return ((Number) sizeObj).intValue();
-            }
-            return sizeObj != null ? Integer.parseInt(sizeObj.toString()) : 0;
-        } catch (Exception e) {
-            e.printStackTrace();
-            // fallback: return the clicked inventory size
-            Inventory inv = event.getInventory();
-            return inv != null ? inv.getSize() : 0;
         }
     }
 }

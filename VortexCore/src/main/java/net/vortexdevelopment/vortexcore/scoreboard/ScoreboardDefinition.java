@@ -7,8 +7,8 @@ import java.util.List;
 /**
  * A named scoreboard layout loaded from YAML.
  *
- * @param title scoreboard title
- * @param lines ordered lines, top to bottom
+ * @param title       scoreboard title
+ * @param lines       ordered lines, top to bottom
  * @param updateTicks default line refresh interval
  */
 public record ScoreboardDefinition(

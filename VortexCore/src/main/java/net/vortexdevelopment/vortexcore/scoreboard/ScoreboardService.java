@@ -1,18 +1,17 @@
 package net.vortexdevelopment.vortexcore.scoreboard;
 
-import net.kyori.adventure.text.Component;
-import net.vortexdevelopment.vortexcore.VortexCore;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.Plugin;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
 import com.comphenix.protocol.wrappers.WrappedNumberFormat;
 import com.comphenix.protocol.wrappers.WrappedTeamParameters;
+import net.kyori.adventure.text.Component;
+import net.vortexdevelopment.vortexcore.VortexCore;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.Plugin;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -139,7 +138,7 @@ public final class ScoreboardService {
      * Creates a scoreboard whose title, lines, animations, and refresh intervals come from a parsed configuration.
      *
      * @param configuration parsed scoreboard configuration
-     * @param name configured scoreboard name
+     * @param name          configured scoreboard name
      * @return configured scoreboard
      * @throws IllegalArgumentException if the configured name does not exist
      */

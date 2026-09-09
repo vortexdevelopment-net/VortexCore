@@ -9,7 +9,7 @@ import java.util.List;
 
 /**
  * Uses Gson round-trip between the server's Adventure serializer and the plugin classpath {@link Component}.
- * Initialized whenever Bukkit exposes ItemMeta methods referencing Adventure (Paper and modern Spigot).
+ * Initialized whenever Bukkit exposes ItemMeta methods referencing Adventure.
  */
 public enum ReflectionAdventurePlatform implements AdventurePlatform {
     INSTANCE;

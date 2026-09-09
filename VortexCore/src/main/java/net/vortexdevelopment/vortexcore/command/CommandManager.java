@@ -60,23 +60,23 @@ public class CommandManager {
             plugin.getLogger().warning("Attempted to register null resolver - ignoring");
             return;
         }
-        
+
         Set<Class<?>> supportedTypes = resolver.getSupportedTypes();
-        
+
         if (supportedTypes.isEmpty()) {
-            plugin.getLogger().warning("Resolver " + resolver.getClass().getSimpleName() + 
-                                      " did not register any types - it may not work correctly");
+            plugin.getLogger().warning("Resolver " + resolver.getClass().getSimpleName() +
+                    " did not register any types - it may not work correctly");
         }
-        
+
         // Register all explicitly supported types
         for (Class<?> type : supportedTypes) {
             if (type != null) {
                 resolvers.put(type, resolver);
-                plugin.getLogger().info("Registered " + resolver.getClass().getSimpleName() + 
-                                       " for type " + type.getSimpleName());
+                plugin.getLogger().info("Registered " + resolver.getClass().getSimpleName() +
+                        " for type " + type.getSimpleName());
             } else {
-                plugin.getLogger().warning("Resolver " + resolver.getClass().getSimpleName() + 
-                                          " tried to register null type - ignoring");
+                plugin.getLogger().warning("Resolver " + resolver.getClass().getSimpleName() +
+                        " tried to register null type - ignoring");
             }
         }
     }
@@ -112,8 +112,8 @@ public class CommandManager {
         String[] aliases = commandAnnotation.aliases();
         if (aliases.length > 0) {
             command.setAliases(Arrays.asList(aliases));
-            plugin.getLogger().info("Registered aliases for command " + commandName + ": " + 
-                                   String.join(", ", aliases));
+            plugin.getLogger().info("Registered aliases for command " + commandName + ": " +
+                    String.join(", ", aliases));
         }
 
         if (dynamic) {
@@ -156,7 +156,7 @@ public class CommandManager {
             if (instance == null) {
                 return false;
             }
-            
+
             Method baseCommand = null;
             Map<Method, List<String>> subCommandPatterns = new HashMap<>();
 
@@ -168,12 +168,12 @@ public class CommandManager {
                     SubCommand subCommand = method.getAnnotation(SubCommand.class);
                     List<String> patterns = new ArrayList<>();
                     patterns.add(subCommand.value());
-                    
+
                     // Add aliases if they exist
                     if (subCommand.aliases() != null && subCommand.aliases().length > 0) {
                         patterns.addAll(Arrays.asList(subCommand.aliases()));
                     }
-                    
+
                     subCommandPatterns.put(method, patterns);
                 }
             }
@@ -217,7 +217,7 @@ public class CommandManager {
     private void registerTabCompletion(String commandName, Object instance) {
         PluginCommand command = plugin.getServer().getPluginCommand(commandName);
         if (command == null) return;
-        
+
         // Use the shared tab completer for all commands
         command.setTabCompleter(sharedTabCompleter);
     }
@@ -232,17 +232,17 @@ public class CommandManager {
             if (instance == null) {
                 return Collections.emptyList();
             }
-            
+
             List<String> completions = new ArrayList<>();
-            
+
             Map<String, Method> tabCompleteMethods = new HashMap<>();
             Map<String, Method> paramTabCompleteMethods = new HashMap<>();
-            
+
             // Find all tab complete methods for this command instance
             for (Method method : instance.getClass().getDeclaredMethods()) {
                 if (method.isAnnotationPresent(TabComplete.class)) {
                     TabComplete tabComplete = method.getAnnotation(TabComplete.class);
-                    
+
                     if (!tabComplete.param().isEmpty()) {
                         // Parameter-based tab completion
                         paramTabCompleteMethods.put(tabComplete.param(), method);
@@ -252,18 +252,18 @@ public class CommandManager {
                     }
                 }
             }
-            
+
             if (tabCompleteMethods.isEmpty() && paramTabCompleteMethods.isEmpty()) {
                 return Collections.emptyList();
             }
-            
+
             // Get all subcommands for this command
             Map<String, Method> subCommands = new HashMap<>();
             for (Method method : instance.getClass().getDeclaredMethods()) {
                 if (method.isAnnotationPresent(SubCommand.class)) {
                     SubCommand subCommand = method.getAnnotation(SubCommand.class);
                     subCommands.put(subCommand.value(), method);
-                    
+
                     // Also register aliases if they exist
                     if (subCommand.aliases() != null && subCommand.aliases().length > 0) {
                         for (String al : subCommand.aliases()) {
@@ -272,17 +272,17 @@ public class CommandManager {
                     }
                 }
             }
-            
+
             // First try parameter-based completions
             if (!paramTabCompleteMethods.isEmpty()) {
                 handleParameterBasedTabCompletions(sender, args, paramTabCompleteMethods, subCommands, instance, completions);
             }
-            
+
             // Then try command pattern-based completions
             if (!tabCompleteMethods.isEmpty()) {
                 handlePatternBasedTabCompletions(sender, args, tabCompleteMethods, instance, completions);
             }
-            
+
             // Filter completions based on current input
             String currentArg = args.length > 0 ? args[args.length - 1] : "";
             return filterCompletions(completions, currentArg);
@@ -292,39 +292,39 @@ public class CommandManager {
     /**
      * Handles parameter-based tab completions
      */
-    private void handleParameterBasedTabCompletions(CommandSender sender, String[] args, 
-                                                   Map<String, Method> paramTabCompleteMethods,
-                                                   Map<String, Method> subCommands, Object instance,
-                                                   List<String> completions) {
+    private void handleParameterBasedTabCompletions(CommandSender sender, String[] args,
+                                                    Map<String, Method> paramTabCompleteMethods,
+                                                    Map<String, Method> subCommands, Object instance,
+                                                    List<String> completions) {
         for (Map.Entry<String, Method> entry : subCommands.entrySet()) {
             String pattern = entry.getKey();
             Method method = entry.getValue();
             String[] patternParts = pattern.split(" ");
-            
+
             // Skip if no permission
             if (!hasPermission(sender, instance.getClass(), method, true)) {
                 continue;
             }
-            
+
             // Skip patterns that don't match the current args
             if (!matchesPartialPattern(patternParts, args)) {
                 continue;
             }
-            
+
             // Find the parameter at the current arg index
             int argIndex = args.length - 1;
-            
+
             // Make sure we don't go out of bounds
             if (argIndex < patternParts.length) {
                 String patternPart = patternParts[argIndex];
-                
+
                 if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
                     String paramName = patternPart.substring(1, patternPart.length() - 1);
                     //make sure we send the real parameter name for tab completion
                     if (paramName.contains("=")) {
                         paramName = paramName.split("=")[0];
                     }
-                    
+
                     // Check if we have a tab completer for this parameter
                     Method tabMethod = paramTabCompleteMethods.get(paramName);
                     if (tabMethod != null) {
@@ -357,28 +357,31 @@ public class CommandManager {
      * Handles pattern-based tab completions
      */
     private void handlePatternBasedTabCompletions(CommandSender sender, String[] args,
-                                                 Map<String, Method> tabCompleteMethods,
-                                                 Object instance, List<String> completions) {
+                                                  Map<String, Method> tabCompleteMethods,
+                                                  Object instance, List<String> completions) {
         for (Map.Entry<String, Method> entry : tabCompleteMethods.entrySet()) {
             String pattern = entry.getKey();
             Method method = entry.getValue();
-            
+
             // Skip if no permission
             if (!hasPermission(sender, instance.getClass(), method, true)) {
                 continue;
             }
-            
+
             if (pattern.isEmpty() || matchesTabCompletePattern(pattern, args)) {
                 TabComplete tabComplete = method.getAnnotation(TabComplete.class);
                 int argIndex = tabComplete.argIndex();
-                
+
                 // If argIndex is -1, use the last argument (or the first slot when none typed yet)
                 if (argIndex == -1) {
                     argIndex = Math.max(0, args.length - 1);
                 }
-                
-                // Base tab completion has no pattern parts, so invoke whenever it matches
-                boolean shouldInvoke = pattern.isEmpty() || (argIndex >= 0 && argIndex < args.length);
+
+                // An empty pattern belongs to the command root and must not leak
+                // suggestions into an already selected subcommand.
+                boolean shouldInvoke = pattern.isEmpty()
+                        ? args.length <= 1
+                        : argIndex >= 0 && argIndex < args.length;
                 if (shouldInvoke) {
                     try {
                         // Create an array with only the parameters the method expects
@@ -435,25 +438,25 @@ public class CommandManager {
     private boolean matchesPartialPattern(String[] patternParts, String[] args) {
         // For partial matching, we need to check all args except the last one
         int argsToCheck = args.length - 1;
-        
+
         if (argsToCheck > patternParts.length) {
             return false;
         }
-        
+
         for (int i = 0; i < argsToCheck; i++) {
             String patternPart = patternParts[i];
-            
+
             // If it's a parameter placeholder, it matches anything
             if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
                 continue;
             }
-            
+
             // For static parts, they must match exactly
             if (!patternPart.equalsIgnoreCase(args[i])) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -462,28 +465,28 @@ public class CommandManager {
      */
     private boolean matchesTabCompletePattern(String pattern, String[] args) {
         String[] patternParts = pattern.split(" ");
-        
+
         // If we have more args than pattern parts, only match if the pattern ends with a parameter
-        if (args.length > patternParts.length && 
-            (patternParts.length == 0 || !patternParts[patternParts.length - 1].startsWith("{"))) {
+        if (args.length > patternParts.length &&
+                (patternParts.length == 0 || !patternParts[patternParts.length - 1].startsWith("{"))) {
             return false;
         }
-        
+
         // Check each part of the pattern
         for (int i = 0; i < Math.min(patternParts.length, args.length); i++) {
             String patternPart = patternParts[i];
-            
+
             // If it's a parameter, it matches anything
             if (patternPart.startsWith("{") && patternPart.endsWith("}")) {
                 continue;
             }
-            
+
             // Otherwise, it must match exactly
             if (!patternPart.equalsIgnoreCase(args[i])) {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -602,14 +605,14 @@ public class CommandManager {
             if (!hasPermission(sender, instance.getClass(), method, false)) {
                 return true; // Return true to indicate we handled the command
             }
-            
+
             // Check if the sender type is compatible with the first parameter
             Parameter[] parameters = method.getParameters();
             if (parameters.length > 0) {
                 Parameter firstParam = parameters[0];
                 if (firstParam.getAnnotation(Param.class) == null) {
                     Class<?> requiredType = firstParam.getType();
-                    
+
                     // Check sender type compatibility
                     if (!requiredType.isAssignableFrom(sender.getClass())) {
                         if (Player.class.isAssignableFrom(requiredType)) {
@@ -623,10 +626,10 @@ public class CommandManager {
                     }
                 }
             }
-            
+
             Object[] resolvedParameters = resolveParameters(sender, method, args);
             if (resolvedParameters == null) return false;
-            
+
             method.invoke(instance, resolvedParameters);
             return true;
         } catch (Exception e) {
@@ -658,7 +661,7 @@ public class CommandManager {
                 return false;
             }
         }
-        
+
         // Then check class-level permission
         if (commandClass.isAnnotationPresent(Permission.class)) {
             Permission permission = commandClass.getAnnotation(Permission.class);
@@ -673,7 +676,7 @@ public class CommandManager {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -686,14 +689,14 @@ public class CommandManager {
 
         // Create a map to store default values from the pattern
         Map<String, String> defaultValues = extractDefaultValuesFromPattern(method);
-        
+
         // Track which args have been used
         boolean[] usedArgs = new boolean[args.length];
-        
+
         // First pass: handle @Sender and other special annotations
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            
+
             if (parameter.isAnnotationPresent(Sender.class)) {
                 // Handle @Sender annotation
                 if (parameter.getType().isAssignableFrom(sender.getClass())) {
@@ -706,7 +709,7 @@ public class CommandManager {
                 }
             }
         }
-        
+
         // Mark static text positions in the pattern as used so the ** wildcard doesn't consume them
         if (method.isAnnotationPresent(SubCommand.class)) {
             SubCommand subCommand = method.getAnnotation(SubCommand.class);
@@ -733,11 +736,11 @@ public class CommandManager {
         // Second pass: handle @Param annotations
         for (int i = 0; i < parameters.length; i++) {
             Parameter parameter = parameters[i];
-            
+
             if (parameter.isAnnotationPresent(Param.class)) {
                 Param paramAnnotation = parameter.getAnnotation(Param.class);
                 String paramName = paramAnnotation.value();
-                
+
                 // Handle wildcard parameter (captures all remaining args)
                 if (paramName.equals("**")) {
                     StringBuilder sb = new StringBuilder();
@@ -748,11 +751,11 @@ public class CommandManager {
                             usedArgs[j] = true;
                         }
                     }
-                    
+
                     resolvedParams[i] = resolveParameter(parameter.getType(), sb.toString());
                     continue;
                 }
-                
+
                 // Find the parameter in the command pattern
                 int paramIndex = findParamIndex(method, paramName, args);
                 if (paramIndex >= 0 && paramIndex < args.length && !usedArgs[paramIndex]) {
@@ -776,7 +779,7 @@ public class CommandManager {
                         break;
                     }
                 }
-                
+
                 // If still null, try to use default values or null
                 if (resolvedParams[i] == null) {
                     if (parameter.getType().isPrimitive()) {
@@ -787,13 +790,13 @@ public class CommandManager {
                         else if (parameter.getType() == float.class) resolvedParams[i] = 0.0f;
                         else if (parameter.getType() == boolean.class) resolvedParams[i] = false;
                         else if (parameter.getType() == char.class) resolvedParams[i] = '\0';
-                        else if (parameter.getType() == byte.class) resolvedParams[i] = (byte)0;
-                        else if (parameter.getType() == short.class) resolvedParams[i] = (short)0;
+                        else if (parameter.getType() == byte.class) resolvedParams[i] = (byte) 0;
+                        else if (parameter.getType() == short.class) resolvedParams[i] = (short) 0;
                     }
                 }
             }
         }
-        
+
         return resolvedParams;
     }
 
@@ -834,7 +837,7 @@ public class CommandManager {
             }
         }
     }
-    
+
     /**
      * Finds the index of a parameter in the command args
      */
@@ -849,7 +852,7 @@ public class CommandManager {
             int argIndex = 0;
             for (int i = 0; i < patternParts.length; i++) {
                 String part = patternParts[i];
-                
+
                 if (part.startsWith("{") && part.endsWith("}")) {
                     // This is a parameter placeholder
                     String name = part.substring(1, part.length() - 1);
@@ -869,7 +872,7 @@ public class CommandManager {
                             return -1;
                         }
                     }
-                    
+
                     // Increment argument index for each parameter we encounter
                     argIndex++;
                 } else {
@@ -883,11 +886,11 @@ public class CommandManager {
                 }
             }
         }
-        
+
         // If not found or no SubCommand annotation, return -1
         return -1;
     }
-    
+
     /**
      * Resolves a parameter value from a string
      */
@@ -902,18 +905,18 @@ public class CommandManager {
                 if (type == float.class) return 0.0f;
                 if (type == boolean.class) return false;
                 if (type == char.class) return '\0';
-                if (type == byte.class) return (byte)0;
-                if (type == short.class) return (short)0;
+                if (type == byte.class) return (byte) 0;
+                if (type == short.class) return (short) 0;
             }
             return null;
         }
-        
+
         // Try to find a resolver for this type
         ParameterResolver<?> resolver = resolvers.get(type);
         if (resolver != null && resolver.supports(type)) {
             return resolver.resolve(value);
         }
-        
+
         // Built-in conversions for common types
         if (type == String.class) {
             return value;
@@ -946,7 +949,7 @@ public class CommandManager {
         } else if (type == Player.class) {
             return plugin.getServer().getPlayer(value);
         }
-        
+
         // For other types, return null
         return null;
     }

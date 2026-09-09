@@ -35,15 +35,15 @@ import java.util.function.Consumer;
 
 public class HologramManager {
 
-    private static final UUID sessionId = UUID.randomUUID();
-
     /**
      * Selects the packet backend when ProtocolLib is installed and supports the
      * running server. Set this to false to force the Bukkit entity backend.
      */
     public static final boolean USE_FAKE_ARMOR_STANDS = true;
-
-    /** Comma-separated UUID strings; empty string means no viewers. */
+    private static final UUID sessionId = UUID.randomUUID();
+    /**
+     * Comma-separated UUID strings; empty string means no viewers.
+     */
     private static final String VIEWERS_DELIMITER = ",";
 
     private static final NamespacedKey SESSION_ID_KEY = new NamespacedKey(VortexPlugin.getInstance(), "hologram_session_id");
@@ -52,12 +52,11 @@ public class HologramManager {
 
     private static final Map<Plugin, Set<Hologram>> holograms = new ConcurrentHashMap<>();
     private static final Map<HologramChunkKey, Set<Hologram>> hologramsByChunk = new ConcurrentHashMap<>();
-    private static volatile @Nullable HologramBackend fakeArmorStandManager;
-
     private static final @Nullable Method WORLD_CREATE_ENTITY;
     private static final @Nullable Method WORLD_ADD_ENTITY;
     private static final @Nullable Method ENTITY_IS_IN_WORLD;
     private static final @Nullable Method ENTITY_SET_VISIBLE_BY_DEFAULT;
+    private static volatile @Nullable HologramBackend fakeArmorStandManager;
 
     static {
         WORLD_CREATE_ENTITY = resolveMethod(World.class, "createEntity", Location.class, Class.class);
@@ -399,6 +398,7 @@ public class HologramManager {
 
     /**
      * Create an armor stand for the hologram at the given location without adding it to the world
+     *
      * @param hologram The hologram to create the armor stand for
      * @param location The location to create the armor stand at
      * @return The created armor stand
@@ -499,6 +499,18 @@ public class HologramManager {
         }
     }
 
+    public static NamespacedKey getHologramKey() {
+        return HOLOGRAM_KEY;
+    }
+
+    public static NamespacedKey getSessionIdKey() {
+        return SESSION_ID_KEY;
+    }
+
+    public static String getSessionId() {
+        return sessionId.toString();
+    }
+
     public void updateViewers(Hologram hologram) {
         HologramBackend fakeManager = fakeArmorStandManager;
         if (fakeManager != null) {
@@ -527,18 +539,6 @@ public class HologramManager {
             }
             applyHologramViewerVisibility(armorStand, hologram);
         }
-    }
-
-    public static NamespacedKey getHologramKey() {
-        return HOLOGRAM_KEY;
-    }
-
-    public static NamespacedKey getSessionIdKey() {
-        return SESSION_ID_KEY;
-    }
-
-    public static String getSessionId() {
-        return sessionId.toString();
     }
 
     private record HologramChunkKey(UUID worldId, int x, int z) {

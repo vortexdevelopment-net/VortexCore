@@ -2,7 +2,6 @@ package net.vortexdevelopment.vortexcore.hooks.plugin;
 
 import lombok.Getter;
 import lombok.Setter;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 

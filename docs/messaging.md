@@ -67,7 +67,7 @@ AdventureUtils.formatItemLore(lines);
 ```
 
 - Paper: native Adventure components.
-- Spigot: legacy `§` bridge via `BukkitAdventureBridges`.
+- Paper and supported Paper forks: native Adventure components via `BukkitAdventureBridges`.
 - Legacy `&` / `§` in strings auto-converted via `replaceLegacy()`.
 
 ---

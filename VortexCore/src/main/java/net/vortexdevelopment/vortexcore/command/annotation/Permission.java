@@ -14,13 +14,15 @@ import java.lang.annotation.Target;
 public @interface Permission {
     /**
      * The permission node required to execute this command or subcommand.
+     *
      * @return The permission node string
      */
     String value();
-    
+
     /**
      * Message to display when permission is denied.
      * If empty, a default message will be used.
+     *
      * @return The permission denied message
      */
     String message() default "";

@@ -10,7 +10,6 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.reflect.StructureModifier;
 import com.comphenix.protocol.wrappers.nbt.NbtBase;
 import com.comphenix.protocol.wrappers.nbt.NbtCompound;
-import com.comphenix.protocol.wrappers.nbt.NbtFactory;
 import com.comphenix.protocol.wrappers.nbt.NbtList;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -19,9 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import lombok.Getter;
 import lombok.Setter;
-import net.vortexdevelopment.vinject.annotation.component.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -32,7 +29,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -40,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages the generation and verification of a custom Datapack for skies.
- * 
+ * <p>
  * Instead of hacking packets, this system generates native biomes and dimensions.
  * Once the server is restarted, these can be used reliably without performance overhead.
  */
@@ -73,7 +69,7 @@ public class SkyColorManager {
         // Target the primary world's datapack folder
         String worldName = Bukkit.getWorlds().isEmpty() ? "world" : Bukkit.getWorlds().get(0).getName();
         this.datapackRoot = new File(Bukkit.getWorldContainer(), worldName + "/datapacks/vortex_sky");
-        
+
         loadConfig();
         if (ensureDatapack()) {
             plugin.getLogger().info("--------------------------------------------------");
@@ -94,16 +90,19 @@ public class SkyColorManager {
         if (!configFile.exists()) {
             plugin.saveResource("sky.yml", false);
         }
-        
+
         FileConfiguration config = YamlConfiguration.loadConfiguration(configFile);
         presets.clear();
-        
+
         if (config.getConfigurationSection("presets") == null) {
             // Add defaults if empty
             addDefaultPresets(config);
-            try { config.save(configFile); } catch (IOException ignored) {}
+            try {
+                config.save(configFile);
+            } catch (IOException ignored) {
+            }
         }
-        
+
         for (String key : config.getConfigurationSection("presets").getKeys(false)) {
             SkyPreset preset = new SkyPreset();
             preset.setId(key);
@@ -121,7 +120,7 @@ public class SkyColorManager {
         config.set("presets.blood_moon.fog_color", "#200000");
         config.set("presets.blood_moon.water_color", "#550000");
         config.set("presets.blood_moon.ambient_light", 0.2);
-        
+
         config.set("presets.toxic_storm.sky_color", "#223300");
         config.set("presets.toxic_storm.fog_color", "#112200");
         config.set("presets.toxic_storm.ambient_light", 0.5);
@@ -129,17 +128,18 @@ public class SkyColorManager {
 
     /**
      * Generates the datapack files if they don't exist or are outdated.
+     *
      * @return true if a restart is needed.
      */
     public boolean ensureDatapack() {
         boolean changed = false;
-        
+
         // 1. Root and Meta
         if (!datapackRoot.exists()) {
             datapackRoot.mkdirs();
             changed = true;
         }
-        
+
         File mcmeta = new File(datapackRoot, "pack.mcmeta");
         if (!mcmeta.exists()) {
             writeJson(mcmeta, createPackMeta());
@@ -185,7 +185,7 @@ public class SkyColorManager {
         root.addProperty("has_precipitation", false);
         root.addProperty("temperature", 0.5f);
         root.addProperty("downfall", 0.5f);
-        
+
         // 1. Mandatory Root Fields (Legacy/Universal Fallback)
         JsonObject spawners = new JsonObject();
         spawners.add("monster", new com.google.gson.JsonArray());
@@ -196,10 +196,10 @@ public class SkyColorManager {
         spawners.add("underground_water_creature", new com.google.gson.JsonArray());
         spawners.add("axolotls", new com.google.gson.JsonArray());
         spawners.add("misc", new com.google.gson.JsonArray());
-        
+
         root.add("spawners", spawners);
         root.add("spawn_costs", new JsonObject());
-        
+
         com.google.gson.JsonArray features = new com.google.gson.JsonArray();
         for (int i = 0; i < 11; i++) {
             features.add(new com.google.gson.JsonArray());
@@ -225,14 +225,14 @@ public class SkyColorManager {
         effects.addProperty("fog_color", preset.getFogColor());
         effects.addProperty("water_color", preset.getWaterColor());
         effects.addProperty("water_fog_color", 0x050533);
-        
+
         JsonObject mood = new JsonObject();
         mood.addProperty("sound", "minecraft:ambient.cave");
         mood.addProperty("tick_delay", 6000);
         mood.addProperty("offset", 2.0);
         mood.addProperty("block_search_extent", 8);
         effects.add("mood_sound", mood);
-        
+
         root.add("effects", effects);
         return root;
     }
@@ -251,11 +251,11 @@ public class SkyColorManager {
         root.addProperty("piglin_safe", false);
         root.addProperty("respawn_anchor_works", false);
         root.addProperty("bed_works", true);
-        
+
         if (preset.getFixedTime() != null) {
             root.addProperty("fixed_time", preset.getFixedTime());
         }
-        
+
         root.addProperty("monster_spawn_light_level", 0);
         root.addProperty("monster_spawn_block_light_limit", 0);
         root.addProperty("infiniburn", "#minecraft:infiniburn_overworld");
@@ -263,7 +263,7 @@ public class SkyColorManager {
         root.addProperty("min_y", -64);
         root.addProperty("height", 384);
         root.addProperty("logical_height", 384);
-        
+
         return root;
     }
 
@@ -273,9 +273,10 @@ public class SkyColorManager {
             try {
                 String oldContent = Files.readString(file.toPath());
                 if (oldContent.equals(newContent)) return false;
-            } catch (IOException ignored) {}
+            } catch (IOException ignored) {
+            }
         }
-        
+
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(newContent);
             return true;
@@ -288,30 +289,9 @@ public class SkyColorManager {
     private void writeJson(File file, JsonObject json) {
         try (FileWriter writer = new FileWriter(file)) {
             writer.write(gson.toJson(json));
-        } catch (IOException ignored) {}
-    }
-
-    @Getter
-    @Setter
-    public static class SkyPreset {
-        private String id;
-        private int skyColor;
-        private int fogColor;
-        private int waterColor;
-        private float ambientLight;
-        private Long fixedTime;
-
-        public String getBiomeKey() {
-            return "vortex:" + id;
-        }
-
-        public String getDimensionTypeKey() {
-            return "vortex:" + id;
+        } catch (IOException ignored) {
         }
     }
-
-    // ------------------------------------------------------------------
-    // Switching Logic
 
     /**
      * Applies a sky preset to a player.
@@ -321,7 +301,7 @@ public class SkyColorManager {
         if (preset == null) return;
 
         activePlayers.put(player.getUniqueId(), preset);
-        
+
         // If the preset has dimension-level overrides (light/time), we MUST send a respawn packet
         if (preset.getFixedTime() != null || preset.getAmbientLight() != 0.0f) {
             sendDimensionTypeChange(player, preset);
@@ -329,6 +309,9 @@ public class SkyColorManager {
 
         refreshChunks(player);
     }
+
+    // ------------------------------------------------------------------
+    // Switching Logic
 
     public void disable(Player player) {
         SkyPreset previous = activePlayers.remove(player.getUniqueId());
@@ -353,15 +336,16 @@ public class SkyColorManager {
 
                 try {
                     rewriteChunks(event, targetId);
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         });
     }
 
     private void registerRegistryInterceptor() {
         // Intercept Login and Registry Data to capture IDs
-        protocolManager.addPacketListener(new PacketAdapter(plugin, ListenerPriority.NORMAL, 
-                PacketType.Play.Server.LOGIN, 
+        protocolManager.addPacketListener(new PacketAdapter(plugin, ListenerPriority.NORMAL,
+                PacketType.Play.Server.LOGIN,
                 com.comphenix.protocol.PacketType.Configuration.Server.REGISTRY_DATA) {
             @Override
             public void onPacketSending(PacketEvent event) {
@@ -395,7 +379,8 @@ public class SkyColorManager {
                         }
                         if (isBiome) captureBiomeIds(nbt);
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
         });
     }
@@ -433,7 +418,7 @@ public class SkyColorManager {
 
         World world = event.getPlayer().getWorld();
         int sectionCount = (world.getMaxHeight() - world.getMinHeight()) / 16;
-        
+
         byte[] rewritten = rewriteBiomePalette(data, sectionCount, targetBiomeId);
         bytesMod.withTarget(chunkDataObj).write(0, rewritten);
     }
@@ -445,10 +430,10 @@ public class SkyColorManager {
             for (int i = 0; i < sections; i++) {
                 if (!buf.isReadable()) break;
                 out.writeShort(buf.readShort()); // block count
-                
+
                 // Block palette (Passthrough)
                 processPalette(buf, out, true);
-                
+
                 // Biome palette (Modify)
                 skipPalette(buf);
                 out.writeByte(0); // 0 bits
@@ -482,11 +467,13 @@ public class SkyColorManager {
             }
             int dataLen = readVarInt(in);
             if (out != null) writeVarInt(out, dataLen);
-            if (out != null) in.readBytes(out, dataLen * 8); else in.skipBytes(dataLen * 8);
+            if (out != null) in.readBytes(out, dataLen * 8);
+            else in.skipBytes(dataLen * 8);
         } else {
             int dataLen = readVarInt(in);
             if (out != null) writeVarInt(out, dataLen);
-            if (out != null) in.readBytes(out, dataLen * 8); else in.skipBytes(dataLen * 8);
+            if (out != null) in.readBytes(out, dataLen * 8);
+            else in.skipBytes(dataLen * 8);
         }
     }
 
@@ -496,7 +483,7 @@ public class SkyColorManager {
 
     private void sendDimensionTypeChange(Player player, SkyPreset preset) {
         // This requires sending a Respawn packet with a different DimensionType NamespacedKey
-        // This is complex and might trigger a loading screen. 
+        // This is complex and might trigger a loading screen.
         // For now, we focus on Biome swapping which is 90% of the effect.
     }
 
@@ -528,7 +515,30 @@ public class SkyColorManager {
     private int readVarInt(ByteBuf buf) {
         int result = 0, shift = 0;
         byte b;
-        do { b = buf.readByte(); result |= (b & 0x7F) << shift; shift += 7; } while ((b & 0x80) != 0);
+        do {
+            b = buf.readByte();
+            result |= (b & 0x7F) << shift;
+            shift += 7;
+        } while ((b & 0x80) != 0);
         return result;
+    }
+
+    @Getter
+    @Setter
+    public static class SkyPreset {
+        private String id;
+        private int skyColor;
+        private int fogColor;
+        private int waterColor;
+        private float ambientLight;
+        private Long fixedTime;
+
+        public String getBiomeKey() {
+            return "vortex:" + id;
+        }
+
+        public String getDimensionTypeKey() {
+            return "vortex:" + id;
+        }
     }
 }

@@ -5,7 +5,7 @@ VortexCore registers `ItemStackSerializer` (`net.vortexdevelopment.vortexcore.vi
 - **Keys are case-sensitive** and must match the names in this document (they mirror the serializer map keys).
 - **`Name`** and **`Lore`** use **MiniMessage** strings (parsed via `AdventureUtils` / `BukkitAdventureBridges`).
 - **Nested items** (`Bundle Items`, `Shulker Contents`) use the **same** mapping shape recursively.
-- **Skull texture fields** (`UUID`, `Texture`, `Owner`) are written by `SkullProfiles` (Paper vs Spigot); install VortexCore normally so the platform service is registered.
+- **Skull texture fields** (`UUID`, `Texture`, `Owner`) are written by `SkullProfiles` using the Paper-compatible profile service; install VortexCore normally so the service is registered.
 
 ---
 
@@ -278,4 +278,4 @@ ShulkerPortable:
 
 Source of truth for behavior and edge cases: [`ItemStackSerializer.java`](../VortexCore/src/main/java/net/vortexdevelopment/vortexcore/vinject/serializer/ItemStackSerializer.java).
 
-Skull keys are produced/consumed by `SkullProfiles` (`PaperSkullProfileService` / `SpigotSkullProfileService`).
+Skull keys are produced/consumed by `SkullProfiles` through `PaperSkullProfileService`.

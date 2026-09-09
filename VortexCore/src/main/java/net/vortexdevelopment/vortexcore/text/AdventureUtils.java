@@ -34,18 +34,11 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class AdventureUtils {
-
-    public static Class<?> getComponentClass() {
-        return AdventurePlatforms.get().getServerComponentClass();
-    }
 
     private static final TagResolver languageResolver = TagResolver.resolver(
             "language", (args, context) -> {
@@ -54,8 +47,6 @@ public class AdventureUtils {
                 return Tag.selfClosingInserting(component);
             }
     );
-
-
     private static final TagResolver playerCommandResolver = TagResolver.resolver(
             "playercommand", (args, context) -> {
                 try {
@@ -71,7 +62,6 @@ public class AdventureUtils {
                 return Tag.selfClosingInserting(Component.empty());
             }
     );
-
     private static final TagResolver consoleCommandResolver = TagResolver.resolver(
             "consolecommand", (args, context) -> {
                 try {
@@ -82,8 +72,12 @@ public class AdventureUtils {
                 return Tag.selfClosingInserting(Component.empty());
             }
     );
-
+    private static final LegacyComponentSerializer SEND_FALLBACK_LEGACY = LegacyComponentSerializer.legacySection();
     private static MiniMessage miniMessage;
+
+    public static Class<?> getComponentClass() {
+        return AdventurePlatforms.get().getServerComponentClass();
+    }
 
     public static void reloadMiniMessage() {
         TagResolver.Builder builder = TagResolver.builder()
@@ -184,12 +178,10 @@ public class AdventureUtils {
         }
     }
 
-    private static final LegacyComponentSerializer SEND_FALLBACK_LEGACY = LegacyComponentSerializer.legacySection();
-
     /**
      * Sends a {@link Component} to targets. If {@link BukkitAdventureBridge} is not installed yet (e.g. messages
      * during {@code onLoad} or before Vinject finishes in {@code onEnable}), falls back to legacy section strings
-     * on {@link CommandSender#sendMessage(String)} — same as the Spigot bridge implementation.
+     * on {@link CommandSender#sendMessage(String)} when the bridge is not ready yet.
      */
     private static void deliverComponentMessage(Component message, CommandSender... targets) {
         BukkitAdventureBridge bridge = BukkitAdventureBridges.getOrNull();
@@ -259,13 +251,13 @@ public class AdventureUtils {
 
         // Serialize the component back to a MiniMessage string
         String serialized = toMiniMessage(message);
-        
+
         // MiniMessage serializes literal `<` and `>` as `\<` and `\>` to prevent them being parsed as tags.
         // We unescape them so they can be properly parsed as tags/placeholders by our TagResolver.
         serialized = serialized.replace("\\<", "<").replace("\\>", ">");
 
         Component formatted = formatComponent(serialized, placeholders);
-        
+
         // toMiniMessage strips negation tags (like <!italic>).
         // If the original message explicitly disabled a decoration (e.g. false italic for lore), restore it.
         for (TextDecoration decoration : TextDecoration.values()) {
@@ -556,7 +548,7 @@ public class AdventureUtils {
         if (VortexPlugin.getInstance() != null && VortexPlugin.getInstance().getName().equalsIgnoreCase("VortexBazaar")) {
             // Remove hardcoded currency words after placeholders (e.g. <price> coins -> <price>)
             text = text.replaceAll("(?i)(<\\w+>)\\s*(coins|érme|érmét)\\b", "$1");
-            
+
             // Replace standalone currency words with currency name from lang.yml
             String currencyName = net.vortexdevelopment.vortexcore.text.lang.Lang.getString("General.Currency Name", "coins");
             text = text.replaceAll("(?i)\\b(coins|érme|érmét)\\b", currencyName);

@@ -28,7 +28,7 @@ import java.util.List;
 public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
 
     /**
-     * §-based legacy with hex ({@code §x§r§r§g§g§b§b}); same settings as the Spigot platform bridge for any API code
+     * §-based legacy with hex ({@code §x§r§r§g§g§b§b}) for any API code
      * that must stringify components for legacy consumers.
      */
     public static final LegacyComponentSerializer LEGACY_SECTION = LegacyComponentSerializer.builder()
@@ -37,12 +37,14 @@ public class PaperBukkitAdventureBridge implements BukkitAdventureBridge {
             .useUnusualXRepeatedCharacterHexFormat()
             .build();
 
-    /** ItemMeta.itemName / hasItemName exist from 1.20.5; older servers use display name only. */
+    /**
+     * ItemMeta.itemName / hasItemName exist from 1.20.5; older servers use display name only.
+     */
     private static final boolean ITEM_NAME_COMPONENT_API = ServerVersion.isAtLeastVersion(KnownServerVersions.V1_20_5);
 
     @PostConstruct
     public void registerBridge() {
-        if (!ServerProject.isServer(ServerProject.PAPER)) {
+        if (!ServerProject.isPaperCompatible()) {
             return;
         }
         BukkitAdventureBridges.install(this);

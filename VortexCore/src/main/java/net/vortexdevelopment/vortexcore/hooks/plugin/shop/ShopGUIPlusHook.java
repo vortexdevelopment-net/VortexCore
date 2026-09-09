@@ -3,7 +3,7 @@ package net.vortexdevelopment.vortexcore.hooks.plugin.shop;
 import net.brcdev.shopgui.ShopGuiPlusApi;
 import net.vortexdevelopment.vinject.annotation.DependsOn;
 import net.vortexdevelopment.vinject.annotation.component.Element;
-import net.vortexdevelopment.vortexcore.hooks.internal.types.ShopHook;
+import net.vortexdevelopment.vortexcore.hooks.types.ShopHook;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 

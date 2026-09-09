@@ -7,6 +7,8 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.vinject.annotation.PlaceholderApiExpansion;
 import org.bukkit.Bukkit;
 
+import java.lang.reflect.Method;
+
 @Registry(annotation = PlaceholderApiExpansion.class)
 public class PlaceholderApiExpansionHandler extends AnnotationHandler {
 
@@ -20,9 +22,9 @@ public class PlaceholderApiExpansionHandler extends AnnotationHandler {
             Class<?> expansionClass = Class.forName("me.clip.placeholderapi.expansion.PlaceholderExpansion");
             if (expansionClass.isAssignableFrom(aClass)) {
                 Object instance = component != null ? component : dependencyContainer.newInstance(aClass);
-                
+
                 // Invoke register() method on PlaceholderExpansion
-                java.lang.reflect.Method registerMethod = expansionClass.getMethod("register");
+                Method registerMethod = expansionClass.getMethod("register");
                 registerMethod.invoke(instance);
 
                 // Add to VortexPlugin's registered expansions to unregister on disable

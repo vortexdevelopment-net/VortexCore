@@ -48,7 +48,9 @@ public class Hologram {
     private long asyncUpdateSequence;
     private long placeholderRevision;
 
-    /** Packet-backend render cache. Guarded by {@link #stateLock}. */
+    /**
+     * Packet-backend render cache. Guarded by {@link #stateLock}.
+     */
     private HologramPacketSnapshot cachedPacketSnapshot;
     private List<String> cachedPacketLines = List.of();
     private List<Component> cachedPacketComponents = List.of();
@@ -170,7 +172,9 @@ public class Hologram {
         return getPlaceholders().toArray(new MiniMessagePlaceholder[0]);
     }
 
-    /** Snapshot used by the packet backend. */
+    /**
+     * Snapshot used by the packet backend.
+     */
     HologramPacketSnapshot packetSnapshot() {
         synchronized (stateLock) {
             long staticRevision = Lang.getStaticPlaceholdersRevision();
@@ -295,7 +299,9 @@ public class Hologram {
         updatePlaceholders(false);
     }
 
-    /** Refreshes normal providers while preserving their synchronous contract. */
+    /**
+     * Refreshes normal providers while preserving their synchronous contract.
+     */
     public synchronized void updatePlaceholders(boolean force) {
         if (!hasSynchronousPlaceholders()) {
             return;
@@ -326,7 +332,9 @@ public class Hologram {
         }
     }
 
-    /** Refreshes only explicitly async placeholder providers off-thread. */
+    /**
+     * Refreshes only explicitly async placeholder providers off-thread.
+     */
     public void updatePlaceholdersAsync(boolean force) {
         if (!hasAsyncPlaceholders()) {
             return;
@@ -408,6 +416,10 @@ public class Hologram {
         }
     }
 
+    public void setLines(List<String> lines) {
+        setLinesIfChanged(lines);
+    }
+
     public void addLine(String line) {
         synchronized (stateLock) {
             List<String> updated = new ArrayList<>(lines);
@@ -433,10 +445,6 @@ public class Hologram {
             lines = List.copyOf(updated);
             shouldUpdate = true;
         }
-    }
-
-    public void setLines(List<String> lines) {
-        setLinesIfChanged(lines);
     }
 
     /**

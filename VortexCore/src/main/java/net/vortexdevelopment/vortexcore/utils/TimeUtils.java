@@ -7,6 +7,7 @@ public class TimeUtils {
     /**
      * Converts a time string to seconds.
      * Example imput: 1y 1mo 1w 1d 1h 1m 1s (year, month, week, day, hour, minute, second)
+     *
      * @param time The time string to convert.
      * @return The time in seconds.
      */
@@ -50,6 +51,7 @@ public class TimeUtils {
 
     /**
      * Converts seconds to a human-readable time string.
+     *
      * @param seconds The time in seconds to convert.
      * @return The human-readable time string.
      */
