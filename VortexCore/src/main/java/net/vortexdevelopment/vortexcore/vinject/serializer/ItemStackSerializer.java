@@ -127,6 +127,111 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
         return namespacedKey != null ? namespacedKey.getKey() : null;
     }
 
+    private static Attribute resolveAttribute(String rawKey) {
+        if (rawKey == null || rawKey.isBlank()) {
+            return null;
+        }
+
+        String key = rawKey.trim().toLowerCase(Locale.ROOT);
+        if (key.startsWith("minecraft:")) {
+            key = key.substring("minecraft:".length());
+        }
+
+        try {
+            Attribute attr = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(key));
+            if (attr != null) {
+                return attr;
+            }
+        } catch (Throwable ignored) {
+        }
+
+        if (!key.startsWith("generic.")) {
+            try {
+                Attribute attr = Registry.ATTRIBUTE.get(NamespacedKey.minecraft("generic." + key));
+                if (attr != null) {
+                    return attr;
+                }
+            } catch (Throwable ignored) {
+            }
+        } else {
+            try {
+                Attribute attr = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(key.substring("generic.".length())));
+                if (attr != null) {
+                    return attr;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
+        String underscoreKey = key.replace('.', '_');
+        try {
+            Attribute attr = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(underscoreKey));
+            if (attr != null) {
+                return attr;
+            }
+        } catch (Throwable ignored) {
+        }
+
+        String upperEnumName = underscoreKey.toUpperCase(Locale.ROOT);
+        try {
+            return Attribute.valueOf(upperEnumName);
+        } catch (Throwable ignored) {
+        }
+
+        if (!upperEnumName.startsWith("GENERIC_")) {
+            try {
+                return Attribute.valueOf("GENERIC_" + upperEnumName);
+            } catch (Throwable ignored) {
+            }
+        } else {
+            try {
+                return Attribute.valueOf(upperEnumName.substring("GENERIC_".length()));
+            } catch (Throwable ignored) {
+            }
+        }
+
+        return null;
+    }
+
+    private static AttributeModifier.Operation resolveOperation(String opStr) {
+        if (opStr == null || opStr.isBlank()) {
+            return AttributeModifier.Operation.ADD_NUMBER;
+        }
+        String clean = opStr.trim().toUpperCase(Locale.ROOT);
+        return switch (clean) {
+            case "0", "ADD", "ADD_NUMBER" -> AttributeModifier.Operation.ADD_NUMBER;
+            case "1", "ADD_SCALAR" -> AttributeModifier.Operation.ADD_SCALAR;
+            case "2", "MULTIPLY", "MULTIPLY_SCALAR_1" -> AttributeModifier.Operation.MULTIPLY_SCALAR_1;
+            default -> {
+                try {
+                    yield AttributeModifier.Operation.valueOf(clean);
+                } catch (Exception ignored) {
+                    yield AttributeModifier.Operation.ADD_NUMBER;
+                }
+            }
+        };
+    }
+
+    private static EquipmentSlotGroup resolveSlotGroup(String slotStr) {
+        if (slotStr == null || slotStr.isBlank()) {
+            return EquipmentSlotGroup.ANY;
+        }
+        String clean = slotStr.trim();
+        EquipmentSlotGroup group = EquipmentSlotGroup.getByName(clean);
+        if (group != null) {
+            return group;
+        }
+        group = EquipmentSlotGroup.getByName(clean.toLowerCase(Locale.ROOT));
+        if (group != null) {
+            return group;
+        }
+        group = EquipmentSlotGroup.getByName(clean.toUpperCase(Locale.ROOT));
+        if (group != null) {
+            return group;
+        }
+        return EquipmentSlotGroup.ANY;
+    }
+
     /**
      * 1.20.5+ exposes {@code getBasePotionType}; 1.18.x uses {@link PotionMeta#getBasePotionData()} only.
      * Reflection avoids {@link NoSuchMethodError} when this module is compiled against a newer Paper API.
@@ -548,13 +653,13 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
                     if (parts.length >= 3) {
                         try {
                             // Format: ATTRIBUTE:VALUE:OPERATION[:SLOT]
-                            Attribute attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(parts[0].toUpperCase(Locale.ENGLISH))); //Attribute.valueOf(parts[0].toUpperCase());
-                            double value = Double.parseDouble(parts[1]);
-                            AttributeModifier.Operation op = AttributeModifier.Operation.valueOf(parts[2].toUpperCase());
-                            EquipmentSlotGroup slot = parts.length > 3 ? EquipmentSlotGroup.getByName(parts[3].toLowerCase()) : EquipmentSlotGroup.ANY;
-                            if (slot == null) {
-                                slot = EquipmentSlotGroup.ANY;
+                            Attribute attribute = resolveAttribute(parts[0]);
+                            if (attribute == null) {
+                                continue;
                             }
+                            double value = Double.parseDouble(parts[1]);
+                            AttributeModifier.Operation op = resolveOperation(parts[2]);
+                            EquipmentSlotGroup slot = parts.length > 3 ? resolveSlotGroup(parts[3]) : EquipmentSlotGroup.ANY;
 
                             AttributeModifier modifier = new AttributeModifier(
                                     new NamespacedKey("vortexcore", "attr_" + UUID.randomUUID()),
