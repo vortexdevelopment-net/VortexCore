@@ -47,7 +47,11 @@ public final class ManagedEventHandlerInterceptor implements ComponentIntercepto
 
     static EventExecutor createExecutor(Object instance, Method method) {
         method.setAccessible(true);
+        Class<?> eventClass = method.getParameterTypes()[0];
         return (listener, event) -> {
+            if (!eventClass.isInstance(event)) {
+                return;
+            }
             try {
                 method.invoke(instance, event);
             } catch (InvocationTargetException exception) {
@@ -60,8 +64,7 @@ public final class ManagedEventHandlerInterceptor implements ComponentIntercepto
     }
 
     private static boolean usesRegisteredListenerPath(Class<?> clazz) {
-        return Listener.class.isAssignableFrom(clazz)
-                && clazz.isAnnotationPresent(RegisterListener.class);
+        return Listener.class.isAssignableFrom(clazz);
     }
 
     private static void registerEventHandler(Plugin plugin, Listener listener, Object instance, Method method) {
