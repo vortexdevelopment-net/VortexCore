@@ -12,6 +12,7 @@ import net.vortexdevelopment.vinject.di.DependencyContainer;
 import net.vortexdevelopment.vortexcore.command.CommandManager;
 import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
 import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.database.DataMigration;
 import net.vortexdevelopment.vortexcore.database.DataMigrationManager;
@@ -20,7 +21,6 @@ import net.vortexdevelopment.vortexcore.gui.GuiManager;
 import net.vortexdevelopment.vortexcore.hooks.internal.ConfigReloadHook;
 import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.scoreboard.ScoreboardService;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
 import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
@@ -190,7 +190,6 @@ public abstract class VortexPlugin extends JavaPlugin {
                             + getDescription().getVersion() + "</gray></green>",
                     Bukkit.getConsoleSender());
             VortexCore.setPlugin(this);
-            BukkitAdventureBridges.installEarlyIfAbsent(getClass(), getVortexCorePackage());
             if (!CommandMaps.installEarlyIfAbsent(getClass(), getVortexCorePackage())) {
                 getLogger().warning(
                         "CommandMapBridge was not pre-installed. Dynamic commands will fail unless platform classes "
@@ -267,13 +266,13 @@ public abstract class VortexPlugin extends JavaPlugin {
 
     private boolean validateRuntimeEnvironment() {
         ServerProject serverProject = ServerProject.getServerProject();
-        if (ServerProject.isUnsupported()) {
+        if (!ServerProject.isPaperCompatible()) {
             disableWithErrorBox(
                     "Unsupported server software",
                     "Detected: " + serverProject,
-                    "VortexCore supports Paper and Paper-compatible forks only.",
-                    "Supported projects: Paper, Purpur, Leaf, Pufferfish, and Folia.",
-                    "Bukkit and Spigot are not supported.");
+                    "VortexCore requires the Paper API and Paper-compatible server behavior.",
+                    "Supported projects: Paper, Purpur, Leaf, Pufferfish, Folia, Arclight, Mohist, Magma, Banner, and Cardboard when the Paper API is present.",
+                    "Bukkit, Spigot, and runtimes without the Paper API are not supported.");
             return false;
         }
 
@@ -344,7 +343,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             cause.printStackTrace();
         }
         AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
-        Bukkit.getScheduler().cancelTasks(this);
+        SchedulerUtils.cancelAllTasks(this);
         HandlerList.unregisterAll(this);
         Bukkit.getPluginManager().disablePlugin(this);
     }
@@ -368,7 +367,7 @@ public abstract class VortexPlugin extends JavaPlugin {
             }
         }
         registeredPlaceholderExpansions.clear();
-        Bukkit.getScheduler().cancelTasks(this); // Make sure all tasks are canceled
+        SchedulerUtils.cancelAllTasks(this); // Make sure all tasks are canceled
         if (!emergencyStop) {
             onPluginDisable();
         }
@@ -572,7 +571,7 @@ public abstract class VortexPlugin extends JavaPlugin {
         e.printStackTrace();
         AdventureUtils.sendMessage("§cPlease correctly set up your database connection in the database.yml file.", Bukkit.getConsoleSender());
         AdventureUtils.sendMessage("§cDisabling plugin...", Bukkit.getConsoleSender());
-        Bukkit.getScheduler().cancelTasks(this);
+        SchedulerUtils.cancelAllTasks(this);
         HandlerList.unregisterAll(this);
         Bukkit.getPluginManager().disablePlugin(this);
     }

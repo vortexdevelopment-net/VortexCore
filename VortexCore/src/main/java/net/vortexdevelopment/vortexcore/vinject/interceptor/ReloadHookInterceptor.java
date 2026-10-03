@@ -10,18 +10,16 @@ import net.vortexdevelopment.vortexcore.hooks.internal.ReloadHook;
 import net.vortexdevelopment.vortexcore.vinject.annotation.RegisterReloadHook;
 
 /**
- * Registers reload hooks for beans annotated with {@link RegisterReloadHook}.
+ * Registers explicit service hooks and automatic reload hooks for YAML configuration beans.
  */
 public class ReloadHookInterceptor implements ComponentInterceptor {
 
     @Override
     public void onComponentRegistered(Class<?> clazz, Object instance, DependencyContainer container) {
-        if (!clazz.isAnnotationPresent(RegisterReloadHook.class)) {
-            return;
-        }
-
         if (ReloadHook.class.isAssignableFrom(clazz)) {
-            VortexPlugin.getInstance().registerReloadHook((ReloadHook) instance);
+            if (clazz.isAnnotationPresent(RegisterReloadHook.class)) {
+                VortexPlugin.getInstance().registerReloadHook((ReloadHook) instance);
+            }
             return;
         }
 

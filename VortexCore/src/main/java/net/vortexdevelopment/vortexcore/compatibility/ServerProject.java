@@ -22,7 +22,12 @@ public enum ServerProject {
     PURPUR,
     LEAF,
     PUFFERFISH,
-    FOLIA;
+    FOLIA,
+    ARCLIGHT,
+    MOHIST,
+    MAGMA,
+    BANNER,
+    CARDBOARD;
 
     private static final ServerProject SERVER_PROJECT = checkProject();
 
@@ -34,6 +39,21 @@ public enum ServerProject {
         // Folia is a Paper fork and must be checked before generic Paper detection.
         if (hasClass("io.papermc.paper.threadedregions.RegionizedServer") || identity.contains("folia")) {
             return FOLIA;
+        }
+        if (identity.contains("arclight")) {
+            return ARCLIGHT;
+        }
+        if (identity.contains("mohist")) {
+            return MOHIST;
+        }
+        if (identity.contains("magma")) {
+            return MAGMA;
+        }
+        if (identity.contains("banner")) {
+            return BANNER;
+        }
+        if (identity.contains("cardboard")) {
+            return CARDBOARD;
         }
         if (identity.contains("purpur") || hasClass("org.purpurmc.purpur.PurpurConfig")) {
             return PURPUR;
@@ -93,16 +113,24 @@ public enum ServerProject {
     }
 
     public static boolean isUnsupported() {
-        return isServer(BUKKIT, CRAFTBUKKIT, SPIGOT);
+        return !isPaperCompatible();
     }
 
     /**
-     * Returns whether VortexCore should use its Paper implementation classes.
-     * Unknown projects are allowed to try the Paper path so new Paper forks can
-     * work before they receive an explicit detector entry.
+     * Returns whether the detected runtime exposes the Paper API required by
+     * VortexCore. Known Paper-compatible hybrids are included explicitly, while
+     * unknown runtimes are accepted only when the Paper chat API is present.
      */
     public static boolean isPaperCompatible() {
-        return !isUnsupported();
+        return switch (SERVER_PROJECT) {
+            case PAPER, PURPUR, LEAF, PUFFERFISH, FOLIA,
+                    ARCLIGHT, MOHIST, MAGMA, BANNER, CARDBOARD, UNKNOWN -> hasPaperApi();
+            case BUKKIT, CRAFTBUKKIT, SPIGOT -> false;
+        };
+    }
+
+    private static boolean hasPaperApi() {
+        return hasClass("io.papermc.paper.event.player.AsyncChatEvent");
     }
 
     public static boolean isFolia() {

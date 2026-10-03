@@ -3,11 +3,12 @@ package net.vortexdevelopment.vortexcore.vinject.serializer;
 import io.papermc.paper.datacomponent.DataComponentTypes;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
+import net.vortexdevelopment.vortexcore.compatibility.EnchantmentResolver;
 import net.vortexdevelopment.vinject.annotation.yaml.YamlSerializer;
 import net.vortexdevelopment.vinject.config.serializer.YamlSerializerBase;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.hooks.plugin.HookManager;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
+import net.vortexdevelopment.vortexcore.item.resolver.ItemResolverManager;
 import net.vortexdevelopment.vortexcore.spi.SkullProfiles;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
@@ -91,22 +92,7 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
     }
 
     private static ItemStack resolveItemReference(String reference) {
-        String trimmed = reference.trim();
-        String materialName = trimmed;
-        int separator = trimmed.indexOf(':');
-        if (separator >= 0) {
-            String namespace = trimmed.substring(0, separator);
-            if (!"minecraft".equalsIgnoreCase(namespace)) {
-                return HookManager.resolveItem(trimmed);
-            }
-            materialName = trimmed.substring(separator + 1);
-        }
-
-        Material material = Material.matchMaterial(materialName);
-        if (material != null && material.isItem()) {
-            return new ItemStack(material);
-        }
-        return HookManager.resolveItem(trimmed);
+        return ItemResolverManager.resolve(reference);
     }
 
     /**
@@ -280,15 +266,15 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
 
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            if (BukkitAdventureBridges.get().hasItemName(meta)) {
-                Component name = BukkitAdventureBridges.get().getItemName(meta);
+            if (AdventureUtils.hasItemName(meta)) {
+                Component name = AdventureUtils.getItemName(meta);
                 if (name != null) {
                     map.put("Name", AdventureUtils.toMiniMessage(name));
                 }
             }
 
-            if (BukkitAdventureBridges.get().hasItemLore(meta)) {
-                List<Component> loreComponents = BukkitAdventureBridges.get().getItemLore(meta);
+            if (AdventureUtils.hasItemLore(meta)) {
+                List<Component> loreComponents = AdventureUtils.getItemLore(meta);
                 if (!loreComponents.isEmpty()) {
                     map.put("Lore", AdventureUtils.toMiniMessage(loreComponents));
                 }
@@ -547,22 +533,23 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             return null;
         }
 
-        Material material = Material.matchMaterial(materialName);
-        if (material == null) {
+        ItemStack item = ItemResolverManager.resolve(materialName);
+        if (item == null) {
             return null;
         }
 
         int amount = 1;
         amount = readAmount(map.get("Amount"), amount);
+        item.setAmount(amount);
 
-        ItemStack item = new ItemStack(material, amount);
         ItemMeta meta = item.getItemMeta();
         if (meta == null) {
             return item;
         }
 
-        if (map.containsKey("Name")) {
-            BukkitAdventureBridges.get().applyItemName(meta, AdventureUtils.formatComponent((String) map.get("Name")));
+        Object nameObj = map.getOrDefault("Name", map.get("Display Name"));
+        if (nameObj instanceof String nameStr && !nameStr.isBlank()) {
+            AdventureUtils.applyItemName(meta, AdventureUtils.formatComponent(nameStr));
         }
 
         if (map.containsKey("Lore")) {
@@ -572,34 +559,44 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             }
         }
 
-        if (map.containsKey("Enchants")) {
-            Object enchantsObj = map.get("Enchants");
-            if (enchantsObj instanceof List<?>) {
-                for (Object o : (List<?>) enchantsObj) {
-                    String s = o.toString();
-                    String[] parts = s.split(":");
-                    if (parts.length >= 2) {
-                        try {
-                            Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(parts[0].toLowerCase()));
-                            if (ench != null) {
-                                meta.addEnchant(ench, Integer.parseInt(parts[1]), true);
-                            }
-                        } catch (Exception ignored) {
+        Object enchantsObj = map.getOrDefault("Enchants", map.get("Enchantments"));
+        if (enchantsObj instanceof List<?>) {
+            for (Object o : (List<?>) enchantsObj) {
+                String s = o.toString();
+                String[] parts = s.split(":");
+                if (parts.length >= 2) {
+                    try {
+                        var ench = EnchantmentResolver.resolve(parts[0]);
+                        if (ench != null) {
+                            meta.addEnchant(ench, Integer.parseInt(parts[1]), true);
                         }
+                    } catch (Exception ignored) {
+                    }
+                }
+            }
+        } else if (enchantsObj instanceof Map<?, ?> mapEnchants) {
+            for (Map.Entry<?, ?> entry : mapEnchants.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() instanceof Number level) {
+                    try {
+                        var ench = EnchantmentResolver.resolve(entry.getKey().toString());
+                        if (ench != null) {
+                            meta.addEnchant(ench, level.intValue(), true);
+                        }
+                    } catch (Exception ignored) {
                     }
                 }
             }
         }
 
         if (map.containsKey("Stored Enchants") && meta instanceof EnchantmentStorageMeta esm) {
-            Object enchantsObj = map.get("Stored Enchants");
-            if (enchantsObj instanceof List<?>) {
-                for (Object o : (List<?>) enchantsObj) {
+            Object storedEnchantsObj = map.get("Stored Enchants");
+            if (storedEnchantsObj instanceof List<?>) {
+                for (Object o : (List<?>) storedEnchantsObj) {
                     String s = o.toString();
                     String[] parts = s.split(":");
                     if (parts.length >= 2) {
                         try {
-                            Enchantment ench = Enchantment.getByKey(NamespacedKey.minecraft(parts[0].toLowerCase()));
+                            var ench = EnchantmentResolver.resolve(parts[0]);
                             if (ench != null) {
                                 esm.addStoredEnchant(ench, Integer.parseInt(parts[1]), true);
                             }
@@ -610,14 +607,12 @@ public class ItemStackSerializer implements YamlSerializerBase<ItemStack> {
             }
         }
 
-        if (map.containsKey("Item Flags")) {
-            Object flagsObj = map.get("Item Flags");
-            if (flagsObj instanceof List<?>) {
-                for (Object o : (List<?>) flagsObj) {
-                    try {
-                        meta.addItemFlags(ItemFlag.valueOf(o.toString().toUpperCase()));
-                    } catch (Exception ignored) {
-                    }
+        Object flagsObj = map.getOrDefault("Item Flags", map.get("Flags"));
+        if (flagsObj instanceof List<?>) {
+            for (Object o : (List<?>) flagsObj) {
+                try {
+                    meta.addItemFlags(ItemFlag.valueOf(o.toString().toUpperCase(Locale.ROOT)));
+                } catch (Exception ignored) {
                 }
             }
         }

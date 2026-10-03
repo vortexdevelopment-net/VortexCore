@@ -1,11 +1,15 @@
 package net.vortexdevelopment.vortexcore.compatibility.folia;
 
+import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.lang.reflect.Method;
 
 /**
  * Run a task on Folia Scheduler or fallback for Bukkit Scheduler
@@ -15,6 +19,9 @@ public class SchedulerUtils {
 
     private static boolean isFolia;
     private static FoliaDelegate foliaDelegate;
+    private static final Method IS_OWNED_BY_CURRENT_LOCATION = resolveOwnershipMethod(Location.class);
+    private static final Method IS_OWNED_BY_CURRENT_BLOCK = resolveOwnershipMethod(Block.class);
+    private static final Method IS_OWNED_BY_CURRENT_ENTITY = resolveOwnershipMethod(Entity.class);
 
     static {
         try {
@@ -32,15 +39,38 @@ public class SchedulerUtils {
     }
 
     public static boolean isOwnedByCurrentRegion(Location location) {
-        return Bukkit.isOwnedByCurrentRegion(location);
+        return isOwnedByCurrentRegion(IS_OWNED_BY_CURRENT_LOCATION, location);
     }
 
     public static boolean isOwnedByCurrentRegion(Block block) {
-        return Bukkit.isOwnedByCurrentRegion(block);
+        return isOwnedByCurrentRegion(IS_OWNED_BY_CURRENT_BLOCK, block);
     }
 
     public static boolean isOwnedByCurrentRegion(Entity entity) {
-        return Bukkit.isOwnedByCurrentRegion(entity);
+        return isOwnedByCurrentRegion(IS_OWNED_BY_CURRENT_ENTITY, entity);
+    }
+
+    private static Method resolveOwnershipMethod(Class<?> subjectType) {
+        try {
+            return Bukkit.class.getMethod("isOwnedByCurrentRegion", subjectType);
+        } catch (NoSuchMethodException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isOwnedByCurrentRegion(Method method, Object subject) {
+        if (!isFolia || !ServerVersion.isAtLeastVersion("1.19.4")) {
+            return Bukkit.isPrimaryThread();
+        }
+        if (method == null) {
+            throw new IllegalStateException("This Folia server does not expose region ownership checks.");
+        }
+
+        try {
+            return (boolean) method.invoke(null, subject);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Could not check Folia region ownership.", exception);
+        }
     }
 
     //Entity
@@ -58,6 +88,18 @@ public class SchedulerUtils {
     public static SchedulerTask runEntityTask(@NotNull Plugin plugin, @NotNull Entity entity, @NotNull Runnable runnable) {
         if (isFolia && foliaDelegate != null) {
             return new SchedulerTask(foliaDelegate.runEntity(plugin, entity, runnable, null));
+        }
+        return new SchedulerTask(Bukkit.getScheduler().runTask(plugin, runnable));
+    }
+
+    public static @Nullable SchedulerTask runEntityTask(@NotNull Plugin plugin, @NotNull Entity entity, @NotNull Runnable runnable, @NotNull Runnable retired) {
+        if (isFolia && foliaDelegate != null) {
+            Object task = foliaDelegate.runEntity(plugin, entity, runnable, retired);
+            if (task == null) {
+                runTask(plugin, retired);
+                return null;
+            }
+            return new SchedulerTask(task);
         }
         return new SchedulerTask(Bukkit.getScheduler().runTask(plugin, runnable));
     }
@@ -210,7 +252,7 @@ public class SchedulerUtils {
 
     public static SchedulerTask runTaskLaterAsynchronously(@NotNull Plugin plugin, @NotNull SchedulerRunnable runnable, long delay) {
         if (isFolia && foliaDelegate != null) {
-            SchedulerTask task = new SchedulerTask(foliaDelegate.runAsyncLater(plugin, runnable, correctDelay(delay)));
+            SchedulerTask task = new SchedulerTask(foliaDelegate.runAsyncLater(plugin, runnable, asyncDelayMillis(delay)));
             runnable.setTask(task);
             return task;
         }
@@ -221,7 +263,7 @@ public class SchedulerUtils {
 
     public static SchedulerTask runTaskLaterAsynchronously(@NotNull Plugin plugin, @NotNull Runnable runnable, long delay) {
         if (isFolia && foliaDelegate != null) {
-            return new SchedulerTask(foliaDelegate.runAsyncLater(plugin, runnable, correctDelay(delay)));
+            return new SchedulerTask(foliaDelegate.runAsyncLater(plugin, runnable, asyncDelayMillis(delay)));
         }
         return new SchedulerTask(Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, runnable, delay));
     }
@@ -282,7 +324,7 @@ public class SchedulerUtils {
 
     public static SchedulerTask runTaskTimerAsynchronously(@NotNull Plugin plugin, @NotNull SchedulerRunnable runnable, long delay, long period) {
         if (isFolia && foliaDelegate != null) {
-            SchedulerTask task = new SchedulerTask(foliaDelegate.runAsyncTimer(plugin, runnable, correctDelay(delay), correctDelay(period)));
+            SchedulerTask task = new SchedulerTask(foliaDelegate.runAsyncTimer(plugin, runnable, asyncDelayMillis(delay), asyncDelayMillis(period)));
             runnable.setTask(task);
             return task;
         }
@@ -293,7 +335,7 @@ public class SchedulerUtils {
 
     public static SchedulerTask runTaskTimerAsynchronously(@NotNull Plugin plugin, @NotNull Runnable runnable, long delay, long period) {
         if (isFolia && foliaDelegate != null) {
-            return new SchedulerTask(foliaDelegate.runAsyncTimer(plugin, runnable, correctDelay(delay), correctDelay(period)));
+            return new SchedulerTask(foliaDelegate.runAsyncTimer(plugin, runnable, asyncDelayMillis(delay), asyncDelayMillis(period)));
         }
         return new SchedulerTask(Bukkit.getScheduler().runTaskTimerAsynchronously(plugin, runnable, delay, period));
     }
@@ -337,5 +379,10 @@ public class SchedulerUtils {
             return 1;
         }
         return delay;
+    }
+
+    private static long asyncDelayMillis(long delayTicks) {
+        long safeTicks = Math.max(1L, delayTicks);
+        return safeTicks > Long.MAX_VALUE / 50L ? Long.MAX_VALUE : safeTicks * 50L;
     }
 }

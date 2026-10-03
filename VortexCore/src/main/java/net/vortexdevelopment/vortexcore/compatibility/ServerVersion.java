@@ -24,22 +24,31 @@ public class ServerVersion {
     private static String resolveMinecraftVersion() {
         try {
             return (String) Bukkit.class.getMethod("getMinecraftVersion").invoke(null);
-        } catch (ReflectiveOperationException ignored) {
+        } catch (Throwable ignored) {
             // Older Paper implementations do not expose this method.
         }
-        String bukkitVersion = Bukkit.getBukkitVersion();
-        int releaseMarker = bukkitVersion.indexOf("-R");
-        if (releaseMarker > 0) {
-            return bukkitVersion.substring(0, releaseMarker);
+        try {
+            String bukkitVersion = Bukkit.getBukkitVersion();
+            if (bukkitVersion != null) {
+                int releaseMarker = bukkitVersion.indexOf("-R");
+                if (releaseMarker > 0) {
+                    return bukkitVersion.substring(0, releaseMarker);
+                }
+                Matcher matcher = MC_VERSION_IN_PARENS.matcher(Bukkit.getVersion());
+                if (matcher.find()) {
+                    return matcher.group(1);
+                }
+                return bukkitVersion;
+            }
+        } catch (Throwable ignored) {
         }
-        Matcher matcher = MC_VERSION_IN_PARENS.matcher(Bukkit.getVersion());
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-        return bukkitVersion;
+        return "1.21";
     }
 
     private static KnownServerVersions init() {
+        if (SERVER_VERSION == null) {
+            return null;
+        }
         for (KnownServerVersions version : KnownServerVersions.values()) {
             if (SERVER_VERSION.equals(version.getVersionString())) {
                 return version;

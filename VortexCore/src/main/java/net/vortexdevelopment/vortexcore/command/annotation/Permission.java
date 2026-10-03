@@ -20,8 +20,8 @@ public @interface Permission {
     String value();
 
     /**
-     * Message to display when permission is denied.
-     * If empty, a default message will be used.
+     * Message to display when permission is denied. Prefix a value with {@code lang:} to resolve it from lang.yml.
+     * If empty, {@code General.No Permission} will be used.
      *
      * @return The permission denied message
      */

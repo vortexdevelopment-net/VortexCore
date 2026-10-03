@@ -67,7 +67,7 @@ AdventureUtils.formatItemLore(lines);
 ```
 
 - Paper: native Adventure components.
-- Paper and supported Paper forks: native Adventure components via `BukkitAdventureBridges`.
+- Paper and supported Paper-API hybrids: native Adventure components through the Paper API.
 - Legacy `&` / `§` in strings auto-converted via `replaceLegacy()`.
 
 ---

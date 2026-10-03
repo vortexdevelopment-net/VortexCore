@@ -15,9 +15,10 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.kyori.adventure.title.Title;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
+import net.vortexdevelopment.vortexcore.compatibility.ServerProject;
+import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.spi.AdventurePlatforms;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridge;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -39,6 +40,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class AdventureUtils {
+
+    /** ItemMeta.itemName / hasItemName exist from 1.20.5; older Paper uses displayName. */
+    private static final boolean ITEM_NAME_COMPONENT_API =
+            ServerVersion.isAtLeastVersion(KnownServerVersions.V1_20_5);
+    private static final LegacyComponentSerializer SEND_FALLBACK_LEGACY = LegacyComponentSerializer.legacySection();
 
     private static final TagResolver languageResolver = TagResolver.resolver(
             "language", (args, context) -> {
@@ -72,7 +78,6 @@ public class AdventureUtils {
                 return Tag.selfClosingInserting(Component.empty());
             }
     );
-    private static final LegacyComponentSerializer SEND_FALLBACK_LEGACY = LegacyComponentSerializer.legacySection();
     private static MiniMessage miniMessage;
 
     public static Class<?> getComponentClass() {
@@ -178,22 +183,16 @@ public class AdventureUtils {
         }
     }
 
-    /**
-     * Sends a {@link Component} to targets. If {@link BukkitAdventureBridge} is not installed yet (e.g. messages
-     * during {@code onLoad} or before Vinject finishes in {@code onEnable}), falls back to legacy section strings
-     * on {@link CommandSender#sendMessage(String)} when the bridge is not ready yet.
-     */
     private static void deliverComponentMessage(Component message, CommandSender... targets) {
-        BukkitAdventureBridge bridge = BukkitAdventureBridges.getOrNull();
-        if (bridge != null) {
-            for (CommandSender sender : targets) {
-                bridge.sendComponentMessage(sender, message);
-            }
-        } else {
+        if (!ServerProject.isPaperCompatible()) {
             String legacy = SEND_FALLBACK_LEGACY.serialize(message);
             for (CommandSender sender : targets) {
                 sender.sendMessage(legacy);
             }
+            return;
+        }
+        for (CommandSender sender : targets) {
+            sender.sendMessage(message);
         }
     }
 
@@ -225,16 +224,14 @@ public class AdventureUtils {
         if (itemMeta == null) {
             return;
         }
-        BukkitAdventureBridge adventureBridge = BukkitAdventureBridges.get();
-
         // check for name and lore
-        if (adventureBridge.hasItemName(itemMeta)) {
-            adventureBridge.applyItemName(itemMeta, formatPlaceholders(adventureBridge.getItemName(itemMeta), placeholders));
+        if (hasItemName(itemMeta)) {
+            applyItemName(itemMeta, formatPlaceholders(getItemName(itemMeta), placeholders));
         }
 
         // Check for Lore
-        if (adventureBridge.hasItemLore(itemMeta)) {
-            adventureBridge.applyItemLore(itemMeta, formatPlaceholders(adventureBridge.getItemLore(itemMeta), placeholders));
+        if (hasItemLore(itemMeta)) {
+            applyItemLore(itemMeta, formatPlaceholders(getItemLore(itemMeta), placeholders));
         }
     }
 
@@ -367,32 +364,37 @@ public class AdventureUtils {
 
     public static void appendItemLore(ItemStack item, List<Component> lore) {
         ItemMeta meta = item.getItemMeta();
-        if (meta == null || !BukkitAdventureBridges.get().hasItemLore(meta)) {
+        if (meta == null || !hasItemLore(meta)) {
             return;
         }
-        List<Component> currentLore = new ArrayList<>(BukkitAdventureBridges.get().getItemLore(meta));
+        List<Component> currentLore = new ArrayList<>(getItemLore(meta));
         currentLore.addAll(lore);
         setItemLore(item, currentLore.toArray(new Component[0]));
     }
 
     public static void appendItemLore(ItemMeta meta, List<Component> lore) {
-        if (meta == null || !BukkitAdventureBridges.get().hasItemLore(meta)) {
+        if (meta == null || !hasItemLore(meta)) {
             return;
         }
-        List<Component> currentLore = new ArrayList<>(BukkitAdventureBridges.get().getItemLore(meta));
+        List<Component> currentLore = new ArrayList<>(getItemLore(meta));
         currentLore.addAll(lore);
         setItemLore(meta, currentLore.toArray(new Component[0]));
     }
 
     private static void setItemName(ItemStack item, Component name) {
-        BukkitAdventureBridges.get().applyItemName(item, name);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+        applyItemName(meta, name);
+        item.setItemMeta(meta);
     }
 
     private static void setItemName(ItemMeta meta, Component name) {
         if (name == null || meta == null) {
             return;
         }
-        BukkitAdventureBridges.get().applyItemName(meta, name);
+        applyItemName(meta, name);
     }
 
     private static void setItemLore(ItemMeta meta, Component... lore) {
@@ -403,7 +405,7 @@ public class AdventureUtils {
         for (Component line : lore) {
             formatted.add(line.style(builder -> builder.decoration(TextDecoration.ITALIC, false)));
         }
-        BukkitAdventureBridges.get().applyItemLore(meta, formatted);
+        applyItemLore(meta, formatted);
     }
 
     private static void setItemLore(ItemStack item, Component... lore) {
@@ -418,7 +420,8 @@ public class AdventureUtils {
         for (Component line : lore) {
             formatted.add(line.style(builder -> builder.decoration(TextDecoration.ITALIC, false)));
         }
-        BukkitAdventureBridges.get().applyItemLore(item, formatted);
+        applyItemLore(meta, formatted);
+        item.setItemMeta(meta);
     }
 
     // Formatting stuff
@@ -698,6 +701,55 @@ public class AdventureUtils {
     }
 
     public static Inventory createInventory(InventoryHolder owner, int rows, Component title) {
-        return BukkitAdventureBridges.get().createInventory(owner, rows * 9, title);
+        return Bukkit.createInventory(owner, rows * 9, title);
+    }
+
+    public static void applyItemName(ItemMeta meta, Component name) {
+        if (name == null || meta == null) {
+            return;
+        }
+        if (ITEM_NAME_COMPONENT_API) {
+            try {
+                meta.itemName(name);
+                return;
+            } catch (Throwable ignored) {
+            }
+        }
+        meta.displayName(name.decoration(TextDecoration.ITALIC, false));
+    }
+
+    public static boolean hasItemName(ItemMeta meta) {
+        if (meta == null) {
+            return false;
+        }
+        return (ITEM_NAME_COMPONENT_API && meta.hasItemName()) || meta.hasDisplayName();
+    }
+
+    public static Component getItemName(ItemMeta meta) {
+        if (meta == null) {
+            return null;
+        }
+        if (ITEM_NAME_COMPONENT_API && meta.hasItemName()) {
+            return meta.itemName();
+        }
+        return meta.hasDisplayName() ? meta.displayName() : null;
+    }
+
+    public static boolean hasItemLore(ItemMeta meta) {
+        return meta != null && meta.hasLore();
+    }
+
+    public static List<Component> getItemLore(ItemMeta meta) {
+        if (meta == null || !meta.hasLore()) {
+            return List.of();
+        }
+        List<Component> lore = meta.lore();
+        return lore == null ? List.of() : new ArrayList<>(lore);
+    }
+
+    public static void applyItemLore(ItemMeta meta, List<Component> lore) {
+        if (meta != null && lore != null && !lore.isEmpty()) {
+            meta.lore(lore);
+        }
     }
 }

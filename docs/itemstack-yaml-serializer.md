@@ -3,7 +3,7 @@
 VortexCore registers `ItemStackSerializer` (`net.vortexdevelopment.vortexcore.vinject.serializer.ItemStackSerializer`) as a Vinject `@YamlSerializer`. Any **`ItemStack`-typed field** in a `@YamlConfiguration` class, `@YamlItem` mapping, or `@YamlDirectory` batch DTO deserializes from a YAML mapping using the keys below.
 
 - **Keys are case-sensitive** and must match the names in this document (they mirror the serializer map keys).
-- **`Name`** and **`Lore`** use **MiniMessage** strings (parsed via `AdventureUtils` / `BukkitAdventureBridges`).
+- **`Name`** and **`Lore`** use **MiniMessage** strings (parsed via `AdventureUtils` and the Paper API).
 - **Nested items** (`Bundle Items`, `Shulker Contents`) use the **same** mapping shape recursively.
 - **Skull texture fields** (`UUID`, `Texture`, `Owner`) are written by `SkullProfiles` using the Paper-compatible profile service; install VortexCore normally so the service is registered.
 
@@ -13,8 +13,24 @@ VortexCore registers `ItemStackSerializer` (`net.vortexdevelopment.vortexcore.vi
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `Material` | string | Bukkit `Material` enum name (e.g. `DIAMOND_SWORD`). Required for a non-empty stack; missing or unknown material yields `null` on deserialize. |
+| `Material` | string | Bukkit `Material` enum name (e.g. `DIAMOND_SWORD`), with optional `minecraft:` prefix (stripped automatically), or a custom item resolver reference (e.g. `nexo:ruby`, `mmoitems:SWORD:KATANA`, `itemsadder:ruby_sword`, `oraxen:custom_item`). Missing or unknown material yields `null` on deserialize. |
 | `Amount` | number | Stack size. Default `1` if omitted. |
+
+---
+
+## Custom item resolvers
+
+The `Material` string integrates with VortexCore's extensible `ItemResolverManager`:
+
+- **Vanilla materials**: e.g. `DIAMOND_SWORD`, `minecraft:diamond_sword`, `stone`
+- **VortexPacks**: `vortexpacks:<item_id>` or `vp:<item_id>`
+- **Nexo**: `nexo:<item_id>`
+- **MMOItems**: `mmoitems:<type>:<item_id>` (e.g. `mmoitems:SWORD:CUTLASS`)
+- **ItemsAdder**: `itemsadder:<namespace>:<item_id>` or `ia:<namespace>:<item_id>`
+- **Oraxen**: `oraxen:<item_id>`
+- **Custom plugins**: Implement `CustomItemResolver` and annotate with `@Element` or register via `ItemResolverManager.registerResolver(resolver)`.
+
+When a custom item is resolved, configured YAML overrides (such as `Name`, `Lore`, `Amount`, `Enchants`) are applied on top of the resolved custom base item.
 
 ---
 

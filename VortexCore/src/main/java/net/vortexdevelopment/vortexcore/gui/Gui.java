@@ -4,6 +4,8 @@ import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vortexcore.VortexCore;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
+import net.vortexdevelopment.vortexcore.item.resolver.ItemResolverManager;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -21,11 +23,12 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 /**
  * Inventory GUI. Titles and item names/lore go through {@link net.vortexdevelopment.vortexcore.text.AdventureUtils},
- * which uses {@link net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges}.
+ * which uses Paper's native Adventure API.
  */
 public class Gui implements GuiHolder {
 
@@ -36,7 +39,7 @@ public class Gui implements GuiHolder {
     private final int rows;
     private final Inventory inventory;
     private final List<GuiItem> items = new ArrayList<>();
-    private final List<Player> openers = new ArrayList<>();
+    private final List<Player> openers = new CopyOnWriteArrayList<>();
     @Getter
     private Consumer<InventoryClickEvent> onGlobalClick;
     @Getter
@@ -195,8 +198,8 @@ public class Gui implements GuiHolder {
     }
 
     public Gui show(Player player) {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), () -> show(player));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(player)) {
+            SchedulerUtils.runEntityTask(VortexCore.getPlugin(), player, () -> show(player));
             return this;
         }
         player.openInventory(inventory);
@@ -212,8 +215,10 @@ public class Gui implements GuiHolder {
     }
 
     public Gui close(Player player) {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), () -> close(player));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(player)) {
+            if (VortexCore.getPlugin().isEnabled()) {
+                SchedulerUtils.runEntityTask(VortexCore.getPlugin(), player, () -> close(player));
+            }
             return this;
         }
 
@@ -226,16 +231,13 @@ public class Gui implements GuiHolder {
     }
 
     public Gui closeAll() {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), this::closeAll);
-            return this;
-        }
         // Copy: closeInventory() fires InventoryCloseEvent synchronously and onClose() mutates openers.
-        for (Player player : new ArrayList<>(openers)) {
-            player.closeInventory();
+        for (Player player : openers) {
+            close(player);
         }
-        openers.clear();
-        GuiManager.markAsClosed(this);
+        if (openers.isEmpty()) {
+            GuiManager.markAsClosed(this);
+        }
         return this;
     }
 
@@ -245,18 +247,11 @@ public class Gui implements GuiHolder {
         if (itemsToUpdate.isEmpty()) {
             return;
         }
-        // Sync task if not on main thread
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexCore.getPlugin(), () -> {
-                for (GuiItem item : itemsToUpdate) {
-                    updateItem(item);
-                }
-            });
-        } else {
+        SchedulerUtils.runTask(VortexCore.getPlugin(), () -> {
             for (GuiItem item : itemsToUpdate) {
                 updateItem(item);
             }
-        }
+        });
     }
 
     public List<Player> getOpeners() {
@@ -327,20 +322,26 @@ public class Gui implements GuiHolder {
     public Gui fetchFills(ConfigurationSection config) {
         String fillEmpty = config.getString("Fill Empty");
         if (fillEmpty != null) {
-            ItemStack fillEmptyItem = new ItemStack(Material.valueOf(fillEmpty));
-            fillEmpty(fillEmptyItem);
+            ItemStack fillEmptyItem = ItemResolverManager.resolve(fillEmpty);
+            if (fillEmptyItem != null) {
+                fillEmpty(fillEmptyItem);
+            }
         }
 
         String fillBorder = config.getString("Fill Border");
         if (fillBorder != null) {
-            ItemStack fillBorderItem = new ItemStack(Material.valueOf(fillBorder));
-            fillBorder(fillBorderItem);
+            ItemStack fillBorderItem = ItemResolverManager.resolve(fillBorder);
+            if (fillBorderItem != null) {
+                fillBorder(fillBorderItem);
+            }
         }
 
         String fillBottom = config.getString("Fill Bottom");
         if (fillBottom != null) {
-            ItemStack fillBottomItem = new ItemStack(Material.valueOf(fillBottom));
-            fillBottom(fillBottomItem);
+            ItemStack fillBottomItem = ItemResolverManager.resolve(fillBottom);
+            if (fillBottomItem != null) {
+                fillBottom(fillBottomItem);
+            }
         }
         return this;
     }

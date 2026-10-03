@@ -1,5 +1,7 @@
 package net.vortexdevelopment.vortexcore.gui;
 
+import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -27,31 +29,49 @@ public class GuiManager {
     public static void disable() {
         // Snapshot so closeAll / events cannot mutate the set we iterate; also used to find stragglers.
         Set<GuiHolder> snapshot = Set.copyOf(openGuis);
-        for (GuiHolder gui : snapshot) {
-            gui.closeAll();
-        }
-        // If openers ever desynced from the real client view, close by top-inventory holder.
-        // Reflection: InventoryView was a class on older servers and is an interface on newer API;
-        // compiling against either breaks the other with IncompatibleClassChangeError.
-        if (Bukkit.isPrimaryThread()) {
+        Plugin plugin = VortexPlugin.getInstance();
+        boolean pluginEnabled = plugin.isEnabled();
+        boolean canCloseSynchronously = !SchedulerUtils.isFolia() && Bukkit.isPrimaryThread();
+
+        if (pluginEnabled || canCloseSynchronously) {
+            for (GuiHolder gui : snapshot) {
+                gui.closeAll();
+            }
+
+            // If openers ever desynced from the real client view, close by top-inventory holder.
+            // Reflection: InventoryView was a class on older servers and is an interface on newer API;
+            // compiling against either breaks the other with IncompatibleClassChangeError.
             for (Player player : Bukkit.getOnlinePlayers()) {
-                Inventory top = openTopInventory(player);
-                if (top == null) {
-                    continue;
-                }
-                InventoryHolder holder = top.getHolder();
-                if (holder instanceof GuiHolder gh && snapshot.contains(gh)) {
-                    player.closeInventory();
+                if (pluginEnabled) {
+                    SchedulerUtils.runEntityTask(plugin, player, () -> closeTrackedInventory(player, snapshot));
+                } else {
+                    closeTrackedInventory(player, snapshot);
                 }
             }
         }
         openGuis.clear();
     }
 
+    private static void closeTrackedInventory(Player player, Set<GuiHolder> snapshot) {
+        if (!player.isOnline()) {
+            return;
+        }
+
+        Inventory top = openTopInventory(player);
+        if (top == null) {
+            return;
+        }
+
+        InventoryHolder holder = top.getHolder();
+        if (holder instanceof GuiHolder guiHolder && snapshot.contains(guiHolder)) {
+            player.closeInventory();
+        }
+    }
+
     public static void register(Plugin plugin) {
         plugin.getServer().getPluginManager().registerEvents(inventoryListener, plugin);
         //Schedule taks to auto update items in open GUIs
-        plugin.getServer().getScheduler().runTaskTimerAsynchronously(plugin, () -> {
+        SchedulerUtils.runTaskTimerAsynchronously(plugin, () -> {
             for (GuiHolder gui : openGuis) {
                 gui.autoUpdate();
             }

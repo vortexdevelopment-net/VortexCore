@@ -54,7 +54,7 @@ public enum ReflectionAdventurePlatform implements AdventurePlatform {
             if (original instanceof Component c) {
                 return c;
             }
-            throw new IllegalStateException("Adventure bridge not available on this server");
+            throw new IllegalStateException("Adventure component conversion is not available on this server");
         }
         try {
             String json = gsonSerializeMethod.invoke(gsonComponentSerializer, original).toString();

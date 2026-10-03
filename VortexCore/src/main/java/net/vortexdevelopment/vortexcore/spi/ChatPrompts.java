@@ -1,6 +1,8 @@
 package net.vortexdevelopment.vortexcore.spi;
 
 import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -14,11 +16,34 @@ public final class ChatPrompts {
     private ChatPrompts() {
     }
 
-    public static void setService(ChatPromptService service) {
+    /**
+     * Register the platform prompt service.
+     *
+     * @param service the service exposed to plugins
+     */
+    public static void setService(@NotNull ChatPromptService service) {
         ChatPrompts.service = service;
     }
 
-    public static void promptPlayer(Player player, Consumer<String> consumer) {
+    /**
+     * Clear the service only if it is still the expected instance.
+     *
+     * @param expectedService the service being removed
+     */
+    public static void clearService(@NotNull ChatPromptService expectedService) {
+        if (service == expectedService) {
+            service = null;
+        }
+    }
+
+    /**
+     * Begin a chat prompt for a player.
+     *
+     * @param player the player to prompt
+     * @param consumer receives the response on the player's entity scheduler, or {@code null} from the player's quit event
+     * @throws IllegalStateException if the platform prompt service has not been initialized
+     */
+    public static void promptPlayer(@NotNull Player player, @NotNull Consumer<@Nullable String> consumer) {
         ChatPromptService s = service;
         if (s == null) {
             throw new IllegalStateException("ChatPromptService not initialized (wrong VortexCore artifact or startup order)");

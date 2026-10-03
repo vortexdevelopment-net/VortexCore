@@ -4,7 +4,6 @@ import net.vortexdevelopment.vortexcore.VortexPlugin;
 import net.vortexdevelopment.vortexcore.compatibility.KnownServerVersions;
 import net.vortexdevelopment.vortexcore.compatibility.ServerVersion;
 import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.text.lang.Lang;
@@ -125,15 +124,12 @@ public class HologramManager {
         if (hologram.useViewers()) {
             applyVisibleByDefault(stand, false);
             for (UUID uuid : hologram.getViewers()) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    player.showEntity(VortexPlugin.getInstance(), stand);
-                }
+                updatePlayerVisibility(uuid, stand, true);
             }
             if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     if (!hologram.getViewers().contains(player.getUniqueId())) {
-                        player.hideEntity(VortexPlugin.getInstance(), stand);
+                        updatePlayerVisibility(player.getUniqueId(), stand, false);
                     }
                 }
             }
@@ -141,9 +137,33 @@ public class HologramManager {
             applyVisibleByDefault(stand, true);
             if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    player.showEntity(VortexPlugin.getInstance(), stand);
+                    updatePlayerVisibility(player.getUniqueId(), stand, true);
                 }
             }
+        }
+    }
+
+    private static void updatePlayerVisibility(UUID playerId, ArmorStand stand, boolean visible) {
+        Player player = Bukkit.getPlayer(playerId);
+        if (player == null) {
+            return;
+        }
+
+        Runnable updateVisibility = () -> {
+            if (!player.isOnline()) {
+                return;
+            }
+            if (visible) {
+                player.showEntity(VortexPlugin.getInstance(), stand);
+            } else {
+                player.hideEntity(VortexPlugin.getInstance(), stand);
+            }
+        };
+
+        if (SchedulerUtils.isOwnedByCurrentRegion(player)) {
+            updateVisibility.run();
+        } else {
+            SchedulerUtils.runEntityTask(VortexPlugin.getInstance(), player, updateVisibility);
         }
     }
 
@@ -166,13 +186,14 @@ public class HologramManager {
             if (!hologram.useViewers()) {
                 continue;
             }
-            for (ArmorStand stand : hologram.getArmorStands()) {
-                if (hologram.getViewers().contains(uuid)) {
-                    player.showEntity(VortexPlugin.getInstance(), stand);
-                } else if (ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
-                    player.hideEntity(VortexPlugin.getInstance(), stand);
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), hologram.getLocation(), () -> {
+                boolean visible = hologram.getViewers().contains(uuid);
+                if (visible || ENTITY_SET_VISIBLE_BY_DEFAULT == null) {
+                    for (ArmorStand stand : hologram.getArmorStands()) {
+                        updatePlayerVisibility(uuid, stand, visible);
+                    }
                 }
-            }
+            });
         }
     }
 
@@ -264,7 +285,7 @@ public class HologramManager {
         }
 
         //Create a bukkit scheduler task to tick all holograms
-        Bukkit.getScheduler().runTaskTimerAsynchronously(VortexPlugin.getInstance(), () -> {
+        SchedulerUtils.runTaskTimerAsynchronously(VortexPlugin.getInstance(), () -> {
             for (Set<Hologram> hologramsSet : holograms.values()) {
                 for (Hologram hologram : hologramsSet) {
                     hologram.tickAsync();
@@ -347,14 +368,13 @@ public class HologramManager {
             return;
         }
 
-        // Do not create hologram if the chunk is not loaded
-        if (!WorldUtils.isChunkLoadedAtLocation(location)) return;
-
-        //Check if we at the main thread
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> createHologram(hologram));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), location, () -> createHologram(hologram));
             return;
         }
+
+        // Do not create hologram if the chunk is not loaded
+        if (!WorldUtils.isChunkLoadedAtLocation(location)) return;
 
         List<MiniMessagePlaceholder> placeholders = new ArrayList<>(hologram.getPlaceholders());
         placeholders.addAll(Lang.staticPlaceholders);
@@ -374,8 +394,7 @@ public class HologramManager {
                 stand.setCollidable(false);
                 stand.setPersistent(false);
 
-                BukkitAdventureBridges.get().setEntityCustomName(stand,
-                        AdventureUtils.formatComponent(hologram.getLines().get(lineIndex), placeholders));
+                stand.customName(AdventureUtils.formatComponent(hologram.getLines().get(lineIndex), placeholders));
                 stand.setCustomNameVisible(true);
 
                 PersistentDataContainer data = stand.getPersistentDataContainer();
@@ -404,8 +423,10 @@ public class HologramManager {
      * @return The created armor stand
      */
     public static ArmorStand createArmorStand(Hologram hologram, Location location) {
-        //Check if we at the main thread
-        if (!Bukkit.isPrimaryThread()) {
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            if (SchedulerUtils.isFolia()) {
+                throw new IllegalStateException("Armor stands must be created on the region that owns the location.");
+            }
             Callable<ArmorStand> callable = () -> createArmorStand(hologram, location);
             try {
                 return Bukkit.getScheduler().callSyncMethod(VortexPlugin.getInstance(), callable).get();
@@ -458,18 +479,9 @@ public class HologramManager {
             hologramsByChunk.clear();
             return;
         }
-        if (!Bukkit.isPrimaryThread() && !BukkitAdventureBridges.get().isServerStopping()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), HologramManager::clear);
-            return;
-        }
-        //get all entities with the hologram key from all worlds
-        for (World world : Bukkit.getWorlds()) {
-            for (ArmorStand armorStand : world.getEntitiesByClass(ArmorStand.class)) {
-                PersistentDataContainer data = armorStand.getPersistentDataContainer();
-                if (data.has(HOLOGRAM_KEY, PersistentDataType.STRING) || data.has(getSessionIdKey(), PersistentDataType.STRING)) {
-                    armorStand.remove();
-                }
-            }
+        Set<Hologram> registeredHolograms = getHologramsView();
+        for (Hologram hologram : registeredHolograms) {
+            hologram.remove();
         }
         holograms.clear();
         hologramsByChunk.clear();
@@ -517,8 +529,9 @@ public class HologramManager {
             updateFake(hologram, true);
             return;
         }
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> updateViewers(hologram));
+        Location location = hologram.getLocation();
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), location, () -> updateViewers(hologram));
             return;
         }
         for (ArmorStand armorStand : hologram.getArmorStands()) {
@@ -526,10 +539,7 @@ public class HologramManager {
             String rawOld = data.get(VIEWERS_KEY, PersistentDataType.STRING);
             List<UUID> oldViewers = decodeViewers(rawOld);
             for (UUID uuid : oldViewers) {
-                Player player = Bukkit.getPlayer(uuid);
-                if (player != null) {
-                    player.hideEntity(VortexPlugin.getInstance(), armorStand);
-                }
+                updatePlayerVisibility(uuid, armorStand, false);
             }
 
             if (hologram.useViewers()) {

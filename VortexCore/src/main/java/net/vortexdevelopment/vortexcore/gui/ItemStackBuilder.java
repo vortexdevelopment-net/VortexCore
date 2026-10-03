@@ -1,6 +1,7 @@
 package net.vortexdevelopment.vortexcore.gui;
 
 import net.vortexdevelopment.vortexcore.VortexCore;
+import net.vortexdevelopment.vortexcore.item.resolver.ItemResolverManager;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import org.bukkit.Material;
@@ -19,6 +20,19 @@ public class ItemStackBuilder {
         this.itemStack = new ItemStack(Material.AIR);
     }
 
+    public ItemStackBuilder(ItemStack itemStack) {
+        this.itemStack = itemStack != null ? itemStack : new ItemStack(Material.AIR);
+    }
+
+    public ItemStackBuilder(Material material) {
+        this.itemStack = material != null ? new ItemStack(material) : new ItemStack(Material.AIR);
+    }
+
+    public ItemStackBuilder(String material) {
+        this();
+        setMaterial(material);
+    }
+
     public ItemStackBuilder setItemStack(ItemStack itemStack) {
         this.itemStack = itemStack;
         return this;
@@ -26,6 +40,24 @@ public class ItemStackBuilder {
 
     public ItemStackBuilder setType(Material material) {
         itemStack.setType(material);
+        return this;
+    }
+
+    public ItemStackBuilder setMaterial(Material material) {
+        return setType(material);
+    }
+
+    public ItemStackBuilder setMaterial(String material) {
+        if (material != null && !material.isEmpty()) {
+            ItemStack resolved = ItemResolverManager.resolve(material);
+            if (resolved != null) {
+                int currentAmount = this.itemStack != null ? this.itemStack.getAmount() : 1;
+                if (currentAmount > 1) {
+                    resolved.setAmount(currentAmount);
+                }
+                this.itemStack = resolved;
+            }
+        }
         return this;
     }
 

@@ -56,7 +56,7 @@ public final class MyPlugin extends VortexPlugin {
 | Phase | Action |
 | --- | --- |
 | `onLoad` | `ConfigurationContainer.setRootDirectory(dataFolder)`, license check, `CommandManager.init` |
-| `onEnable` | Server-project/version checks, Paper bridge setup, `GuiManager.register`, `DependencyContainer` build, migrations |
+| `onEnable` | Server-project/version checks, Paper platform-service setup, `GuiManager.register`, `DependencyContainer` build, migrations |
 | `onDisable` | `GuiManager.disable`, container teardown |
 
 ---
@@ -104,8 +104,8 @@ public class StackedEntityManagerImpl implements StackedEntityManager { }
 
 Use unified `VortexCore` artifact. In `maven-shade-plugin`:
 
-- Do **not** use `minimizeJar` without keeping `net/**/platform/**` (breaks the reflectively loaded Paper bridge classes).
-- VortexCore detects Bukkit and Spigot and disables the plugin before initialization. Supported projects are Paper, Purpur, Leaf, Pufferfish, and Folia; unknown projects are allowed to try the Paper path.
+- Do **not** use `minimizeJar` without keeping `net/**/platform/**` (the command-map and skull-profile services are still loaded reflectively).
+- VortexCore detects runtimes without the Paper API and disables the plugin before initialization. Supported projects are Paper, Purpur, Leaf, Pufferfish, Folia, and known Paper-API hybrids.
 - The minimum supported Minecraft version is 1.18.2. Each `VortexPlugin` implementation must override `getMinimumServerVersion()` with `KnownServerVersions.V1_18_2` or a newer enum value.
 - Relocate VortexCore under your scan package if using narrow `packageName`.
 - Add `MavenYamlTransformer` for `plugin.yml` / `paper-plugin.yml`.

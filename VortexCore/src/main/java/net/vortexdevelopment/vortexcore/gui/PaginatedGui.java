@@ -4,6 +4,8 @@ import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vinject.config.ConfigurationSection;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
+import net.vortexdevelopment.vortexcore.item.resolver.ItemResolverManager;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -23,18 +25,19 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 /**
- * Paginated GUI; inventory title and items use {@link AdventureUtils} / {@code BukkitAdventureBridges} like {@link Gui}.
+ * Paginated GUI; inventory title and items use {@link AdventureUtils} and Paper's native Adventure API like {@link Gui}.
  */
 public class PaginatedGui implements GuiHolder {
     private static final UUID UID = UUID.randomUUID();
 
     private final int rows;
     private final Inventory inventory;
-    private final List<Player> openers = new ArrayList<>();
+    private final List<Player> openers = new CopyOnWriteArrayList<>();
     private final Map<Integer, List<GuiItem>> pages = new LinkedHashMap<>();
     // Static items that don't change with pagination
     private final List<GuiItem> staticItems = new ArrayList<>();
@@ -189,20 +192,26 @@ public class PaginatedGui implements GuiHolder {
     public PaginatedGui fetchFills(ConfigurationSection config) {
         String fillEmpty = config.getString("Fill Empty");
         if (fillEmpty != null) {
-            ItemStack fillEmptyItem = new ItemStack(Material.valueOf(fillEmpty));
-            fillEmpty(fillEmptyItem);
+            ItemStack fillEmptyItem = ItemResolverManager.resolve(fillEmpty);
+            if (fillEmptyItem != null) {
+                fillEmpty(fillEmptyItem);
+            }
         }
 
         String fillBorder = config.getString("Fill Border");
         if (fillBorder != null) {
-            ItemStack fillBorderItem = new ItemStack(Material.valueOf(fillBorder));
-            fillBorder(fillBorderItem);
+            ItemStack fillBorderItem = ItemResolverManager.resolve(fillBorder);
+            if (fillBorderItem != null) {
+                fillBorder(fillBorderItem);
+            }
         }
 
         String fillBottom = config.getString("Fill Bottom");
         if (fillBottom != null) {
-            ItemStack fillBottomItem = new ItemStack(Material.valueOf(fillBottom));
-            fillBottom(fillBottomItem);
+            ItemStack fillBottomItem = ItemResolverManager.resolve(fillBottom);
+            if (fillBottomItem != null) {
+                fillBottom(fillBottomItem);
+            }
         }
         return this;
     }
@@ -582,8 +591,8 @@ public class PaginatedGui implements GuiHolder {
     }
 
     public PaginatedGui show(Player player) {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> show(player));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(player)) {
+            SchedulerUtils.runEntityTask(VortexPlugin.getInstance(), player, () -> show(player));
             return this;
         }
 
@@ -655,6 +664,12 @@ public class PaginatedGui implements GuiHolder {
     }
 
     public PaginatedGui close(Player player) {
+        if (!SchedulerUtils.isOwnedByCurrentRegion(player)) {
+            if (VortexPlugin.getInstance().isEnabled()) {
+                SchedulerUtils.runEntityTask(VortexPlugin.getInstance(), player, () -> close(player));
+            }
+            return this;
+        }
         player.closeInventory();
         openers.remove(player);
         if (openers.isEmpty()) {
@@ -788,12 +803,7 @@ public class PaginatedGui implements GuiHolder {
 
     @Override
     public GuiHolder closeAll() {
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::closeAll);
-            return this;
-        }
-
-        for (Player player : new ArrayList<>(openers)) {
+        for (Player player : openers) {
             close(player);
         }
         return this;
@@ -805,17 +815,11 @@ public class PaginatedGui implements GuiHolder {
         if (itemsToUpdate.isEmpty()) {
             return;
         }
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> {
-                for (GuiItem item : itemsToUpdate) {
-                    item.updateItem();
-                }
-            });
-        } else {
+        SchedulerUtils.runTask(VortexPlugin.getInstance(), () -> {
             for (GuiItem item : itemsToUpdate) {
                 item.updateItem();
             }
-        }
+        });
     }
 
     @Override

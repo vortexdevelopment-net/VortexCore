@@ -27,6 +27,7 @@
         <dep.jackson.databind.version>2.22.2</dep.jackson.databind.version>
         <dep.adventure.platform.bukkit.version>4.4.1</dep.adventure.platform.bukkit.version>
         <vinject.version>2.0.0-SNAPSHOT</vinject.version>
+        <skipServerCopy>true</skipServerCopy>
     </properties>
 
     <build>
@@ -205,6 +206,7 @@
                             <goal>run</goal>
                         </goals>
                         <configuration>
+                            <skip>${skipServerCopy}</skip>
                             <target>
                                 <copy file="${project.build.directory}/${project.build.finalName}.jar"
                                       todir="H:/DevTest/Paper-26.1.2/plugins"/>
@@ -249,6 +251,23 @@
         <repository>
             <id>dmulloy2-repo</id>
             <url>https://repo.dmulloy2.net/repository/public/</url>
+        </repository>
+        <!-- MMOItems + MythicLib -->
+        <repository>
+            <id>phoenix</id>
+            <url>https://nexus.phoenixdevt.fr/repository/maven-public/</url>
+        </repository>
+
+        <!-- Nexo -->
+        <repository>
+            <id>nexo</id>
+            <url>https://repo.nexomc.com/releases</url>
+        </repository>
+
+        <!-- Oraxen -->
+        <repository>
+            <id>oraxen</id>
+            <url>https://repo.oraxen.com/releases</url>
         </repository>
     </repositories>
 
@@ -424,6 +443,72 @@
             <scope>compile</scope>
         </dependency>
 
+        <!-- ItemsAdder -->
+        <dependency>
+            <groupId>beer.devs</groupId>
+            <artifactId>itemsadder-api</artifactId>
+            <version>4.0.17</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- MMOItems dependency -->
+        <dependency>
+            <groupId>io.lumine</groupId>
+            <artifactId>MythicLib-dist</artifactId>
+            <version>1.6.2-SNAPSHOT</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- MMOItems -->
+        <dependency>
+            <groupId>net.Indyuce</groupId>
+            <artifactId>MMOItems-API</artifactId>
+            <version>6.9.5-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Nexo -->
+        <dependency>
+            <groupId>com.nexomc</groupId>
+            <artifactId>nexo</artifactId>
+            <version>1.28.0</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- Oraxen -->
+        <dependency>
+            <groupId>io.th0rgal</groupId>
+            <artifactId>oraxen</artifactId>
+            <version>1.219.1</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- VortexPacks -->
+        <dependency>
+            <groupId>net.vortexdevelopment</groupId>
+            <artifactId>VortexPacks-API</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>provided</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.vortexdevelopment</groupId>
+                    <artifactId>VortexCore</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
 
         <!-- Testing Dependencies -->
         <dependency>
@@ -434,12 +519,13 @@
         </dependency>
 
         <!-- Recommended for testing Bukkit plugins -->
-        <!-- Uncomment to use MockBukkit for testing -->
+        <!-- Uncomment to use MockBukkit for testing
         <dependency>
             <groupId>org.mockbukkit.mockbukkit</groupId>
             <artifactId>mockbukkit-v1.21</artifactId>
             <version>4.45.1</version>
             <scope>test</scope>
         </dependency>
+        -->
     </dependencies>
 </project>

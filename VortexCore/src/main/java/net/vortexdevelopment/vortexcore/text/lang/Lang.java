@@ -323,6 +323,25 @@ public class Lang implements ReloadHook {
                 }
             }
 
+            InputStream coreDefaultsStream = Lang.class.getResourceAsStream("/vortexcore-default-lang.yml");
+            if (coreDefaultsStream != null) {
+                String coreDefaultsContent = new String(coreDefaultsStream.readAllBytes(), StandardCharsets.UTF_8);
+                YamlConfig coreDefaults = YamlConfig.load(coreDefaultsContent);
+                boolean changed = false;
+                for (String key : coreDefaults.getKeys(true)) {
+                    if (coreDefaults.isSection(key)) {
+                        continue;
+                    }
+                    if (!lang.contains(key) || lang.get(key) == null || lang.getString(key).isEmpty()) {
+                        lang.set(key, coreDefaults.get(key));
+                        changed = true;
+                    }
+                }
+                if (changed) {
+                    lang.save();
+                }
+            }
+
             staticPlaceholders.add(new MiniMessagePlaceholder("prefix", lang.getString("General.Plugin Prefix", VortexPlugin.getInstance().getPrefixString())));
             if (lang.getConfigurationSection("Colors") != null) {
                 for (String placeholder : lang.getConfigurationSection("Colors").getKeys(false)) {

@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.kyori.adventure.text.Component;
 import net.vortexdevelopment.vortexcore.VortexPlugin;
-import net.vortexdevelopment.vortexcore.spi.BukkitAdventureBridges;
+import net.vortexdevelopment.vortexcore.compatibility.folia.SchedulerUtils;
 import net.vortexdevelopment.vortexcore.text.AdventureUtils;
 import net.vortexdevelopment.vortexcore.text.MiniMessagePlaceholder;
 import net.vortexdevelopment.vortexcore.text.lang.Lang;
@@ -256,8 +256,8 @@ public class Hologram {
             return;
         }
 
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> update(force));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), location, () -> update(force));
             return;
         }
         if (!WorldUtils.isChunkLoadedAtLocation(location)) {
@@ -283,7 +283,7 @@ public class Hologram {
             Location correctLocation = location.clone().add(0, yOffset, 0);
 
             HologramManager.registerArmorStandInWorldIfNeeded(armorStand);
-            BukkitAdventureBridges.get().teleportLivingEntity(armorStand, correctLocation);
+            armorStand.teleportAsync(correctLocation);
             updateArmorStandName(armorStand, line, resolvedPlaceholders);
             armorStand.setCustomNameVisible(true);
         }
@@ -291,8 +291,7 @@ public class Hologram {
 
     private void updateArmorStandName(ArmorStand armorStand, String line,
                                       MiniMessagePlaceholder[] resolvedPlaceholders) {
-        BukkitAdventureBridges.get().setEntityCustomName(armorStand,
-                AdventureUtils.formatComponent(line, resolvedPlaceholders));
+        armorStand.customName(AdventureUtils.formatComponent(line, resolvedPlaceholders));
     }
 
     public synchronized void updatePlaceholders() {
@@ -306,8 +305,8 @@ public class Hologram {
         if (!hasSynchronousPlaceholders()) {
             return;
         }
-        if (!Bukkit.isPrimaryThread()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), () -> updatePlaceholders(force));
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), location, () -> updatePlaceholders(force));
             return;
         }
         if (!HologramManager.isUsingFakeArmorStands() && !WorldUtils.isChunkLoadedAtLocation(location)) {
@@ -473,8 +472,12 @@ public class Hologram {
             HologramManager.removeFake(this);
             return;
         }
-        if (!Bukkit.isPrimaryThread() && !BukkitAdventureBridges.get().isServerStopping()) {
-            Bukkit.getScheduler().runTask(VortexPlugin.getInstance(), this::remove);
+        if (SchedulerUtils.isFolia() && !Bukkit.isTickingWorlds()) {
+            armorStands.clear();
+            return;
+        }
+        if (!SchedulerUtils.isOwnedByCurrentRegion(location)) {
+            SchedulerUtils.runLocationTask(VortexPlugin.getInstance(), location, this::remove);
             return;
         }
         for (ArmorStand armorStand : armorStands) {

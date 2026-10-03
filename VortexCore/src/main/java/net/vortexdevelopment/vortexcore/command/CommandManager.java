@@ -10,6 +10,8 @@ import net.vortexdevelopment.vortexcore.command.annotation.Sender;
 import net.vortexdevelopment.vortexcore.command.annotation.SubCommand;
 import net.vortexdevelopment.vortexcore.command.annotation.TabArgs;
 import net.vortexdevelopment.vortexcore.command.annotation.TabComplete;
+import net.vortexdevelopment.vortexcore.text.AdventureUtils;
+import net.vortexdevelopment.vortexcore.text.lang.Lang;
 import net.vortexdevelopment.vortexcore.spi.CommandMaps;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -91,7 +93,18 @@ public class CommandManager {
             return;
         }
 
-        String commandName = commandAnnotation.value();
+        registerCommand(commandAnnotation.value(), commandAnnotation.aliases(), instance);
+    }
+
+    /**
+     * Registers an annotated command handler under a runtime-configured command name.
+     */
+    public void registerCommand(String commandName, String[] aliases, Object instance) {
+        if (commandName == null || commandName.isBlank() || instance == null) {
+            plugin.getLogger().warning("Cannot register a dynamic command with a blank name or null handler");
+            return;
+        }
+
         PluginCommand command = plugin.getServer().getPluginCommand(commandName);
         boolean dynamic = false;
 
@@ -109,7 +122,6 @@ public class CommandManager {
         }
 
         // Set command aliases
-        String[] aliases = commandAnnotation.aliases();
         if (aliases.length > 0) {
             command.setAliases(Arrays.asList(aliases));
             plugin.getLogger().info("Registered aliases for command " + commandName + ": " +
@@ -616,11 +628,11 @@ public class CommandManager {
                     // Check sender type compatibility
                     if (!requiredType.isAssignableFrom(sender.getClass())) {
                         if (Player.class.isAssignableFrom(requiredType)) {
-                            sender.sendMessage("This command can only be executed by a player.");
+                            Lang.send(sender, "General.Player Only Command");
                         } else if (ConsoleCommandSender.class.isAssignableFrom(requiredType)) {
-                            sender.sendMessage("This command can only be executed from the console.");
+                            Lang.send(sender, "General.Console Only Command");
                         } else {
-                            sender.sendMessage("You cannot execute this command.");
+                            Lang.send(sender, "General.Invalid Command Sender");
                         }
                         return true; // Return true to indicate we handled the command
                     }
@@ -654,9 +666,12 @@ public class CommandManager {
                 if (!tabcomplete) {
                     String message = permission.message();
                     if (message.isEmpty()) {
-                        message = "§cYou don't have permission to use this command.";
+                        Lang.send(sender, "General.No Permission");
+                    } else if (message.startsWith("lang:")) {
+                        Lang.send(sender, message.substring("lang:".length()));
+                    } else {
+                        AdventureUtils.sendMessage(AdventureUtils.formatComponent(message), sender);
                     }
-                    sender.sendMessage(message);
                 }
                 return false;
             }
@@ -669,9 +684,12 @@ public class CommandManager {
                 if (!tabcomplete) {
                     String message = permission.message();
                     if (message.isEmpty()) {
-                        message = "§cYou don't have permission to use this command.";
+                        Lang.send(sender, "General.No Permission");
+                    } else if (message.startsWith("lang:")) {
+                        Lang.send(sender, message.substring("lang:".length()));
+                    } else {
+                        AdventureUtils.sendMessage(AdventureUtils.formatComponent(message), sender);
                     }
-                    sender.sendMessage(message);
                 }
                 return false;
             }

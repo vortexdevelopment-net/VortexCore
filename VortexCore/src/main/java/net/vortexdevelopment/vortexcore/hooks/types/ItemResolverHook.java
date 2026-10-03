@@ -10,7 +10,11 @@ import org.jetbrains.annotations.Nullable;
  *
  * <p>The reference is deliberately kept as a string so providers can use their own
  * item API without VortexCore depending on a particular item plugin.</p>
+ *
+ * @deprecated Replaced by {@link net.vortexdevelopment.vortexcore.item.resolver.CustomItemResolver}
+ * and {@link net.vortexdevelopment.vortexcore.item.resolver.ItemResolverManager}.
  */
+@Deprecated
 public abstract class ItemResolverHook extends PluginHook {
 
     /**

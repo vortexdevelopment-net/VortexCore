@@ -14,7 +14,7 @@ A modern Minecraft development framework built on the Paper API, designed to sim
 
 ## Features
 
-- Paper runtime support with automatic detection for Paper, Purpur, Leaf, Pufferfish, Folia, and future forks
+- Paper runtime support with automatic detection for Paper, Purpur, Leaf, Pufferfish, Folia, Arclight, Mohist, Magma, Banner, Cardboard, and other Paper-API hybrids
 - Comprehensive plugin management system
 - Advanced configuration handling
 - Built-in command framework
@@ -44,9 +44,9 @@ mvn clean install
 
 The build publishes one unified `VortexCore` artifact:
 
-- **`VortexCore`**: the runtime artifact for Paper-compatible servers. Bukkit and Spigot are detected and disabled with a clear startup message; unknown projects are allowed to use the Paper path so new forks can work before explicit detection is added.
+- **`VortexCore`**: the runtime artifact for Paper-compatible servers. Bukkit, Spigot, and runtimes without the Paper API are detected and disabled with a clear startup message. Known Paper-API hybrids are supported explicitly.
 
-**Adventure on items and GUIs:** In code you author with MiniMessage / `Component` via `AdventureUtils`. Paper and supported Paper forks use the native Adventure Bukkit APIs.
+**Adventure on items and GUIs:** In code you author with MiniMessage / `Component` via `AdventureUtils`. Paper and supported Paper-API hybrids use the native Paper Adventure APIs.
 
 Every plugin extending `VortexPlugin` must declare its minimum supported Minecraft version. It must be `1.18.2` or newer:
 
